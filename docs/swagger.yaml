@@ -1,0 +1,146 @@
+basePath: /
+host: localhost:8080
+info:
+  contact: {}
+  description: This is a mock HTTP server inspired by httpbin, built with Go and Gorilla
+    Mux.
+  title: MockHTTP API
+  version: "1.0"
+paths:
+  /anything:
+    get:
+      description: Returns the method, headers, query parameters, and URL of the request
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Echo request information
+      tags:
+      - anything
+  /delay/{seconds}:
+    get:
+      description: Returns a response after a specified delay in seconds
+      parameters:
+      - description: Delay in seconds
+        in: path
+        name: seconds
+        required: true
+        type: integer
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Response after {seconds} second(s)
+          schema:
+            type: string
+        "400":
+          description: Invalid delay time
+          schema:
+            type: string
+      summary: Delayed response
+      tags:
+      - delay
+  /get:
+    get:
+      description: Returns the query parameters, headers, and URL of the request
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get request information
+      tags:
+      - get
+  /headers:
+    get:
+      description: Returns the headers of the request
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                type: string
+              type: array
+            type: object
+      summary: Get request headers
+      tags:
+      - headers
+  /ip:
+    get:
+      description: Returns the IP address of the requester
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get requester's IP address
+      tags:
+      - ip
+  /json:
+    get:
+      description: Returns a sample JSON payload
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get a sample JSON response
+      tags:
+      - json
+  /post:
+    post:
+      consumes:
+      - application/json
+      description: Returns the posted data, headers, and URL of the request
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Post request information
+      tags:
+      - post
+  /status/{code}:
+    get:
+      description: Returns a response with the specified status code
+      parameters:
+      - description: Status code
+        in: path
+        name: code
+        required: true
+        type: integer
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Invalid status code
+          schema:
+            type: string
+      summary: Return custom status code
+      tags:
+      - status
+swagger: "2.0"

@@ -1,5 +1,5 @@
 # mockhttp
-A simple HTTP server that can be used to mock HTTP responses for testing purposes. Inspired by [httpbin](https://httpbin.org/) and built using `golang` with the idea of running it via https://mockhttp.org, via docker `jaredwray/mockhttp`, or nodejs `npm install -g mockhttp`.
+A simple HTTP server that can be used to mock HTTP responses for testing purposes. Inspired by [httpbin](https://httpbin.org/) and built using `nodejs` and `fastify` with the idea of running it via https://mockhttp.org, via docker `jaredwray/mockhttp`, or nodejs `npm install jaredwray/mockhttp`.
 
 # Deploy via Docker
 ```bash
@@ -8,7 +8,7 @@ docker run -d -p 8080:8080 jaredwray/mockhttp
 
 # Deploy via NodeJS
 ```bash
-npm install mockhttp --save
+npm install jaredwray/mockhttp --save
 ```
 
 then run `mockhttp` in your code.

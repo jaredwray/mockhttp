@@ -1,0 +1,33 @@
+{
+  "name": "mockhttp",
+  "version": "0.0.1",
+  "description": "Mock Http - Easy way to mock http with  httpbin replacement",
+  "main": "dist/index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "xo --fix && vitest run --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaredwray/mockhttp.git"
+  },
+  "keywords": [
+    "mock",
+    "http",
+    "httpbin",
+    "test"
+  ],
+  "author": "Jared Wray <me@jaredwray.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jaredwray/mockhttp/issues"
+  },
+  "homepage": "https://github.com/jaredwray/mockhttp#readme",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.5",
+    "vitest": "^2.1.5",
+    "xo": "^0.59.3"
+  }
+}

@@ -8,15 +8,15 @@ docker run -d -p 8080:8080 jaredwray/mockhttp
 
 # Deploy via NodeJS
 ```bash
-npm install jaredwray/mockhttp --save
+npm install @jaredwray/mockhttp --save
 ```
 
 then run `mockhttp` in your code.
 
 ```javascript
-import mockhttp from 'mockhttp';
+import { mockhttp } from '@jaredwray/mockhttp';
 mockhttp.start(); // start the server
-const response = await fetch('http://localhost:8080/anything');
+const response = await fetch('http://localhost:8080/ip');
 mockhttp.stop(); // stop the server
 ```
 

@@ -6,6 +6,7 @@ type StatusRequest = FastifyRequest<{Params: {code: string}}>;
 
 const statusSchema: FastifySchema = {
 	description: 'Returns a response with the provided status code',
+	tags: ['Status Codes'],
 	params: {
 		type: 'object',
 		properties: {
@@ -24,7 +25,7 @@ const statusSchema: FastifySchema = {
 	},
 };
 
-export const statusRoute = (fastify: FastifyInstance) => {
+export const getStatusCodeRoute = (fastify: FastifyInstance) => {
 	fastify.get('/status/:code', {schema: statusSchema}, async (request: StatusRequest, reply: FastifyReply) => {
 		const {code} = request.params;
 		await reply.code(Number(code));

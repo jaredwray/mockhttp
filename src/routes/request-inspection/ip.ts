@@ -2,6 +2,7 @@ import {type FastifyInstance, type FastifyRequest, type FastifySchema} from 'fas
 
 const ipSchema: FastifySchema = {
 	description: 'Returns the IP address of the client',
+	tags: ['Request Inspection'],
 	response: {
 		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {

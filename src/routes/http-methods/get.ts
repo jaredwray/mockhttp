@@ -4,6 +4,7 @@ import {
 
 export const getSchema: FastifySchema = {
 	description: 'Returns request information for GET requests',
+	tags: ['HTTP Methods'],
 	querystring: {
 		type: 'object',
 		additionalProperties: true,

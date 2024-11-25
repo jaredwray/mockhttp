@@ -2,6 +2,7 @@ import {type FastifyInstance, type FastifyRequest, type FastifySchema} from 'fas
 
 const putSchema: FastifySchema = {
 	description: 'Handles a PUT request and returns request information',
+	tags: ['HTTP Methods'],
 	body: {
 		type: 'object',
 		additionalProperties: true,

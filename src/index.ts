@@ -1,5 +1,7 @@
 import process from 'node:process';
+import path from 'node:path';
 import Fastify from 'fastify';
+import fastifyStatic from '@fastify/static';
 import {fastifySwagger} from '@fastify/swagger';
 import {indexRoute} from './routes/index-route.js';
 import {fastifyConfig} from './fastify-config.js';
@@ -12,6 +14,10 @@ import {getStatusCodeRoute} from './routes/status-codes/index.js';
 
 // eslint-disable-next-line new-cap
 const fastify = Fastify(fastifyConfig);
+
+await fastify.register(fastifyStatic, {
+	root: path.resolve('./public'),
+});
 
 // Set up Swagger for API documentation
 await fastify.register(fastifySwagger, fastifySwaggerConfig);

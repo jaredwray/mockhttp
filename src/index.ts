@@ -8,7 +8,7 @@ import {fastifyConfig} from './fastify-config.js';
 import {fastifySwaggerConfig, registerSwaggerUi} from './swagger.js';
 import {ipRoute} from './routes/request-inspection/index.js';
 import {
-	getRoute, postRoute, deleteRoute, putRoute,
+	getRoute, postRoute, deleteRoute, putRoute, patchRoute,
 } from './routes/http-methods/index.js';
 import {getStatusCodeRoute} from './routes/status-codes/index.js';
 
@@ -25,13 +25,18 @@ await fastify.register(fastifySwagger, fastifySwaggerConfig);
 // Register Swagger UI
 await registerSwaggerUi(fastify);
 
-await fastify.register(getRoute);
+// Register the index / home page route
 await fastify.register(indexRoute);
-await fastify.register(getStatusCodeRoute);
+// Register the HTTP method routes
+await fastify.register(getRoute);
 await fastify.register(postRoute);
 await fastify.register(deleteRoute);
 await fastify.register(putRoute);
+await fastify.register(patchRoute);
+// Register the request inspection routes
 await fastify.register(ipRoute);
+// Register the status code routes
+await fastify.register(getStatusCodeRoute);
 
 // Start the Fastify server
 const start = async () => {

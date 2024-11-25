@@ -1,4 +1,5 @@
-# mockhttp
+![public/logo.svg](public/logo.svg)
+
 A simple HTTP server that can be used to mock HTTP responses for testing purposes. Inspired by [httpbin](https://httpbin.org/) and built using `nodejs` and `fastify` with the idea of running it via https://mockhttp.org, via docker `jaredwray/mockhttp`, or nodejs `npm install jaredwray/mockhttp`.
 
 # Deploy via Docker

@@ -41,11 +41,12 @@ await fastify.register(userAgentRoute);
 await fastify.register(statusCodeRoute);
 
 // Start the Fastify server
-const start = async () => {
+export const start = async () => {
 	try {
 		await fastify.listen({port: 3000, host: '127.0.0.1'});
 		fastify.log.info('Server is running at http://localhost:3000');
 	} catch (error) {
+		/* c8 ignore next 4 */
 		fastify.log.error(error);
 		// eslint-disable-next-line unicorn/no-process-exit
 		process.exit(1);

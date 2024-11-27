@@ -1,0 +1,39 @@
+name: release
+
+on:
+  workflow_dispatch:
+  release:
+    types: [released]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: ['22']
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Install Dependencies
+      run: npm install pnpm -g && pnpm install
+
+    - name: Build    
+      run: pnpm build
+
+    - name: Testing    
+      run: pnpm test
+
+    - name: Publish
+      run: |
+        npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
+        npm publish --ignore-scripts
+      env:
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+

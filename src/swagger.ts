@@ -5,7 +5,7 @@ export const fastifySwaggerConfig = {
 	swagger: {
 		info: {
 			title: 'Mock HTTP API',
-			description: 'A replacement for httpbin built using Fastify, TypeScript, and ReDoc',
+			description: 'A replacement for httpbin built using Fastify and Typescript',
 			version: '1.0.0',
 		},
 		consumes: ['application/json'],

@@ -55,28 +55,28 @@ jobs:
 
       # Deploy image to Cloud Run
       - name: Deploy to [us-central1]
-        run: |-
-          gcloud run deploy $SERVICE_NAME-us-central \
-            --image=gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA \
-            --cpu=1 --memory=2Gi \
-            --platform=managed \
-            --region=us-central1 \
-            --allow-unauthenticated
+        run: ./scripts/deploy-region.sh us-central1
 
+      # Deploy image to Cloud Run
       - name: Deploy to [us-west1]
-        run: |-
-          gcloud run deploy $SERVICE_NAME-us-west \
-            --image=gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA \
-            --cpu=1 --memory=2Gi \
-            --platform=managed \
-            --region=us-west1 \
-            --allow-unauthenticated
+        run: ./scripts/deploy-region.sh us-west1
 
-      - name: Deploy to [us-east3]
-        run: |-
-              gcloud run deploy $SERVICE_NAME-us-east \
-                --image=gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA \
-                --cpu=1 --memory=2Gi \
-                --platform=managed \
-                --region=us-east3 \
-                --allow-unauthenticated           
+      # Deploy image to Cloud Run
+      - name: Deploy to [us-east1]
+        run: ./scripts/deploy-region.sh us-east1
+
+      # Deploy image to Cloud Run
+      - name: Deploy to [europe-west1]
+        run: ./scripts/deploy-region.sh europe-west1
+
+      # Deploy image to Cloud Run
+      - name: Deploy to [europe-west3]
+        run: ./scripts/deploy-region.sh europe-west3
+
+      # Deploy image to Cloud Run
+      - name: Deploy to [asia-northeast1]
+        run: ./scripts/deploy-region.sh asia-northeast1
+
+      # Deploy image to Cloud Run
+      - name: Deploy to [asia-southeast1]
+        run: ./scripts/deploy-region.sh asia-southeast1

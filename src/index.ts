@@ -43,8 +43,17 @@ await fastify.register(statusCodeRoute);
 // Start the Fastify server
 export const start = async () => {
 	try {
-		await fastify.listen({port: 3000, host: '127.0.0.1'});
-		fastify.log.info('Server is running at http://localhost:3000');
+		let port = 3000;
+		if (process.env.PORT) {
+			port = Number.parseInt(process.env.PORT, 10);
+		}
+
+		let host = '0.0.0.0';
+		if (process.env.HOST) {
+			host = process.env.HOST;
+		}
+
+		await fastify.listen({port, host});
 	} catch (error) {
 		/* c8 ignore next 4 */
 		fastify.log.error(error);

@@ -7,16 +7,17 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 COPY tsconfig.json ./
+COPY src/ ./src/
 
 # Install dependencies
-RUN npm install --production
-
-# Build the application
-RUN npm run build
+RUN npm install
 
 # Copy the rest of the application
 COPY dist/ ./dist/
 COPY public/ ./public/
+
+# Remove the source files
+RUN rm -rf src
 
 # Expose the port the app will run on
 EXPOSE 3000

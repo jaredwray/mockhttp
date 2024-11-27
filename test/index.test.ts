@@ -1,3 +1,4 @@
+import process from 'node:process';
 import {
 	describe, it, expect, vi,
 } from 'vitest';
@@ -25,7 +26,15 @@ describe('start', () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		await start();
-		expect(fastify.listen).toHaveBeenCalledWith({port: 3000, host: '127.0.0.1'});
-		expect(fastify.log.info).toHaveBeenCalledWith('Server is running at http://localhost:3000');
+		expect(fastify.listen).toHaveBeenCalledWith({port: 3000, host: '0.0.0.0'});
+	});
+
+	it('should start the server and log info with different host and port', async () => {
+		// eslint-disable-next-line new-cap
+		const fastify = Fastify();
+		process.env.PORT = '8080';
+		process.env.HOST = 'localhost';
+		await start();
+		expect(fastify.listen).toHaveBeenCalledWith({port: 8080, host: 'localhost'});
 	});
 });

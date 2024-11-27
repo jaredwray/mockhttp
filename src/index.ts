@@ -6,7 +6,7 @@ import {fastifySwagger} from '@fastify/swagger';
 import {indexRoute} from './routes/index-route.js';
 import {fastifyConfig} from './fastify-config.js';
 import {fastifySwaggerConfig, registerSwaggerUi} from './swagger.js';
-import {ipRoute} from './routes/request-inspection/index.js';
+import {ipRoute, headersRoute, userAgentRoute} from './routes/request-inspection/index.js';
 import {
 	getRoute, postRoute, deleteRoute, putRoute, patchRoute,
 } from './routes/http-methods/index.js';
@@ -35,6 +35,8 @@ await fastify.register(putRoute);
 await fastify.register(patchRoute);
 // Register the request inspection routes
 await fastify.register(ipRoute);
+await fastify.register(headersRoute);
+await fastify.register(userAgentRoute);
 // Register the status code routes
 await fastify.register(getStatusCodeRoute);
 

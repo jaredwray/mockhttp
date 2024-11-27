@@ -7,14 +7,14 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 COPY tsconfig.json ./
+COPY public/ ./public/
 COPY src/ ./src/
 
 # Install dependencies
 RUN npm install
 
-# Copy the rest of the application
-COPY dist/ ./dist/
-COPY public/ ./public/
+# Build the application
+RUN npm run build
 
 # Remove the source files
 RUN rm -rf src

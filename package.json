@@ -1,5 +1,5 @@
 {
-  "name": "mockhttp",
+  "name": "@jaredwray/mockhttp",
   "version": "0.0.1",
   "description": "Mock Http - Easy way to mock http with httpbin replacement",
   "type": "module",

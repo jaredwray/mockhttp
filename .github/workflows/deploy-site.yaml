@@ -53,6 +53,9 @@ jobs:
       - name: Docker Push to Google Cloud
         run: docker push gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA
 
+      - name: Make deploy-region.sh executable
+        run: chmod +x ./scripts/deploy-region.sh 
+
       # Deploy image to Cloud Run
       - name: Deploy to [us-central1]
         run: ./scripts/deploy-region.sh us-central1

@@ -1,0 +1,82 @@
+name: deploy-site
+
+on:
+  workflow_dispatch:
+  release:
+    types: [ released ]
+
+env:
+  PROJECT_ID: jaredwray
+  SERVICE_NAME: mockhttp
+
+jobs:
+  setup-build-deploy:
+    name: Setup and Deploy to Prod
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Setup Node
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      # Setup gcloud CLI
+      - name: Authenticate with Google Cloud
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      # Build and push image to Google Container Registry
+      - name: Docker Auth
+        run: gcloud auth configure-docker
+
+      - name: Build Docker Image
+        run: docker build -t gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA .
+
+      - name: Docker Push to Google Cloud
+        run: docker push gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA
+
+      # Deploy image to Cloud Run
+      - name: Deploy to [us-central1]
+        run: |-
+          gcloud run deploy $SERVICE_NAME-us-central \
+            --image=gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA \
+            --cpu=1 --memory=2Gi \
+            --platform=managed \
+            --region=us-central1 \
+            --allow-unauthenticated
+
+      - name: Deploy to [us-west1]
+        run: |-
+          gcloud run deploy $SERVICE_NAME-us-west \
+            --image=gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA \
+            --cpu=1 --memory=2Gi \
+            --platform=managed \
+            --region=us-west1 \
+            --allow-unauthenticated
+
+      - name: Deploy to [us-east3]
+        run: |-
+              gcloud run deploy $SERVICE_NAME-us-east \
+                --image=gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA \
+                --cpu=1 --memory=2Gi \
+                --platform=managed \
+                --region=us-east3 \
+                --allow-unauthenticated           

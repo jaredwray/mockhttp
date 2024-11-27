@@ -10,7 +10,7 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 
 # Deploy via Docker
 ```bash
-docker run -d -p 8080:8080 jaredwray/mockhttp
+docker run -d -p 3000:3000 jaredwray/mockhttp
 ```
 
 # Deploy via NodeJS

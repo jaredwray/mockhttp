@@ -11,6 +11,10 @@
     "test": "xo --fix && vitest run --coverage",
     "dev": "xo --fix && npx tsx src/index.ts --watch",
     "build": "tsc",
+    "docker:build": "docker build -t jaredwray/mockhttp .",
+    "docker:run": "docker run -p 3000:3000 jaredwray/mockhttp",
+    "docker:push": "docker push jaredwray/mockhttp",
+    "docker:stop": "docker stop $(docker ps -a -q --filter ancestor=jaredwray/mockhttp --format=\"{{.ID}}\")",
     "prepare": "npm run build",
     "start": "node dist/index.js"
   },

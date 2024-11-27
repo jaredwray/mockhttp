@@ -21,6 +21,7 @@ export const registerSwaggerUi = async (fastify: FastifyInstance) => {
 			deepLinking: false,
 		},
 		uiHooks: {
+			/* c8 ignore next 6 */
 			onRequest(_request, _reply, next) {
 				next();
 			},

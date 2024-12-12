@@ -6,7 +6,7 @@ export const indexRoute = (fastify: FastifyInstance) => {
 	<!doctype html>
 <html>
   <head>
-    <title>{ mockhttp } </title>
+    <title>{ mockhttp }</title>
     <meta charset="utf-8" />
     <meta
       name="viewport"

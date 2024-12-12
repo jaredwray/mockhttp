@@ -39,7 +39,7 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.5",
-    "xo": "^0.59.3"
+    "xo": "^0.60.0"
   },
   "dependencies": {
     "@fastify/helmet": "^13.0.0",

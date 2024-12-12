@@ -1,12 +1,13 @@
 import {type FastifyInstance} from 'fastify';
 import {fastifySwaggerUi} from '@fastify/swagger-ui';
+import pkg from '../package.json' assert { type: 'json' };
 
 export const fastifySwaggerConfig = {
-	swagger: {
+	openapi: {
 		info: {
 			title: 'Mock HTTP API',
 			description: 'A replacement for httpbin built using Fastify and Typescript',
-			version: '1.0.0',
+			version: pkg.version,
 		},
 		consumes: ['application/json'],
 		produces: ['application/json'],

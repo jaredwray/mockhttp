@@ -60,7 +60,7 @@ export const indexRoute = (fastify: FastifyInstance) => {
       id="api-reference"
       data-url="/docs/json"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+    <script src="/scalar/browser/standalone.js"></script>
   </body>
 </html>
 `;

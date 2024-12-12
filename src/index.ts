@@ -16,7 +16,13 @@ import {statusCodeRoute} from './routes/status-codes/index.js';
 const fastify = Fastify(fastifyConfig);
 
 await fastify.register(fastifyStatic, {
+	root: path.resolve('./node_modules/@scalar/api-reference/dist'),
+	prefix: '/scalar',
+});
+
+await fastify.register(fastifyStatic, {
 	root: path.resolve('./public'),
+	decorateReply: false,
 });
 
 // Set up Swagger for API documentation

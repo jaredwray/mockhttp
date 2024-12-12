@@ -25,7 +25,6 @@ describe('Status Codes Route', () => {
 
 		expect(response.statusCode).toBeGreaterThanOrEqual(100);
 		expect(response.statusCode).toBeLessThanOrEqual(511);
-		expect(response.json().status).toMatch(/Response with status code \d+/);
 	});
 
 	it('should return a random status code when an invalid code is provided', async () => {

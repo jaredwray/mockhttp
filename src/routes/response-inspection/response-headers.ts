@@ -28,7 +28,11 @@ export const responseHeadersRoutes = (fastify: FastifyInstance) => {
 			reply.header(key, escape(value));
 		}
 
-		await reply.send(queryParameters);
+		const cleanedResponse = Object.fromEntries(
+			Object.entries(queryParameters).map(([key, value]) => [key, escape(value)]),
+		);
+
+		await reply.send(cleanedResponse);
 	});
 
 	fastify.post('/response-headers', {schema: responseHeadersSchema}, async (request: FastifyRequest, reply) => {

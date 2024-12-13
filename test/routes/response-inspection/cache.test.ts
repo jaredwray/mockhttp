@@ -2,7 +2,7 @@ import {
 	describe, it, expect, beforeAll, afterAll,
 } from 'vitest';
 import Fastify from 'fastify';
-import {cacheRoutes} from '../../../src/routes/response-inspection/cache.js';
+import {cacheRoutes} from '../../../src/routes/response-inspection/index.js';
 
 describe('Cache Routes', () => {
 	// eslint-disable-next-line new-cap

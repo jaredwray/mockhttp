@@ -1,4 +1,5 @@
 import {type FastifyInstance, type FastifyRequest, type FastifySchema} from 'fastify';
+import {escape} from 'html-escaper';
 
 const responseHeadersSchema: FastifySchema = {
 	description: 'Returns a set of response headers based on the query string.',
@@ -24,7 +25,7 @@ export const responseHeadersRoutes = (fastify: FastifyInstance) => {
 
 		for (const [key, value] of Object.entries(queryParameters)) {
 			// eslint-disable-next-line @typescript-eslint/no-floating-promises
-			reply.header(key, value);
+			reply.header(key, escape(value));
 		}
 
 		await reply.send(queryParameters);
@@ -36,7 +37,7 @@ export const responseHeadersRoutes = (fastify: FastifyInstance) => {
 
 		for (const [key, value] of Object.entries(queryParameters)) {
 			// eslint-disable-next-line @typescript-eslint/no-floating-promises
-			reply.header(key, value);
+			reply.header(key, escape(value));
 		}
 
 		await reply.send({...queryParameters, ...body});

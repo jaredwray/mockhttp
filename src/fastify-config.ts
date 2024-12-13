@@ -7,6 +7,7 @@ export const fastifyConfig = {
 				colorize: true,
 				translateTime: true,
 				ignore: 'pid,hostname',
+				singleLine: true,
 			},
 		},
 	},

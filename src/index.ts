@@ -12,6 +12,7 @@ import {
 	getRoute, postRoute, deleteRoute, putRoute, patchRoute,
 } from './routes/http-methods/index.js';
 import {statusCodeRoute} from './routes/status-codes/index.js';
+import {cacheRoutes, etagRoutes, responseHeadersRoutes} from './routes/response-inspection/index.js';
 
 // eslint-disable-next-line new-cap
 const fastify = Fastify(fastifyConfig);
@@ -45,12 +46,16 @@ await fastify.register(postRoute);
 await fastify.register(deleteRoute);
 await fastify.register(putRoute);
 await fastify.register(patchRoute);
+// Register the status code routes
+await fastify.register(statusCodeRoute);
 // Register the request inspection routes
 await fastify.register(ipRoute);
 await fastify.register(headersRoute);
 await fastify.register(userAgentRoute);
-// Register the status code routes
-await fastify.register(statusCodeRoute);
+// Register the response inspection routes
+await fastify.register(cacheRoutes);
+await fastify.register(etagRoutes);
+await fastify.register(responseHeadersRoutes);
 
 // Start the Fastify server
 export const start = async () => {

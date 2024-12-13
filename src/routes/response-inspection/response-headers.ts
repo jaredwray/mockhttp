@@ -32,14 +32,23 @@ export const responseHeadersRoutes = (fastify: FastifyInstance) => {
 	});
 
 	fastify.post('/response-headers', {schema: responseHeadersSchema}, async (request: FastifyRequest, reply) => {
-		const queryParameters = request.query as Record<string, string>;
-		const body = request.body as Record<string, string>;
+		const queryParameters = (request.query ?? {}) as Record<string, string>;
+		const body = (request.body ?? {}) as Record<string, string>;
 
 		for (const [key, value] of Object.entries(queryParameters)) {
 			// eslint-disable-next-line @typescript-eslint/no-floating-promises
 			reply.header(key, escape(value));
 		}
 
-		await reply.send({...queryParameters, ...body});
+		for (const [key, value] of Object.entries(body)) {
+			// eslint-disable-next-line @typescript-eslint/no-floating-promises
+			reply.header(key, escape(value));
+		}
+
+		const cleanedResponse = Object.fromEntries(
+			Object.entries({...queryParameters, ...body}).map(([key, value]) => [key, escape(value)]),
+		);
+
+		await reply.send(cleanedResponse);
 	});
 };

@@ -54,9 +54,12 @@ describe('Response Headers Routes', () => {
 		const response = await fastify.inject({
 			method: 'POST',
 			url: '/response-headers',
+			payload: {
+				foo: 'bar',
+			},
 		});
 
 		expect(response.statusCode).toBe(200);
-		expect(response.json()).toEqual({});
+		expect(response.json()).toEqual({foo: 'bar'});
 	});
 });

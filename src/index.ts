@@ -46,12 +46,12 @@ await fastify.register(postRoute);
 await fastify.register(deleteRoute);
 await fastify.register(putRoute);
 await fastify.register(patchRoute);
+// Register the status code routes
+await fastify.register(statusCodeRoute);
 // Register the request inspection routes
 await fastify.register(ipRoute);
 await fastify.register(headersRoute);
 await fastify.register(userAgentRoute);
-// Register the status code routes
-await fastify.register(statusCodeRoute);
 // Register the response inspection routes
 await fastify.register(cacheRoutes);
 

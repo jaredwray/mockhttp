@@ -1,4 +1,3 @@
-/* c8 ignore next 34 */
 import fs from 'node:fs';
 
 async function copyAndReplaceText(originalFile: string, newFile: string, searchValue: string, replaceValue: string) {

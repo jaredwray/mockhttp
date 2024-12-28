@@ -1,4 +1,4 @@
-![public/logo.svg](public/logo.svg)
+[![public/logo.svg](public/logo.svg)](https://mockhttp.org)
 
 [![tests](https://github.com/jaredwray/mockhttp/actions/workflows/tests.yaml/badge.svg)](https://github.com/jaredwray/mockhttp/actions/workflows/tests.yaml)
 [![GitHub license](https://img.shields.io/github/license/jaredwray/mockhttp)](https://github.com/jaredwray/mockhttp/blob/master/LICENSE)

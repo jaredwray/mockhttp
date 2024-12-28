@@ -39,6 +39,9 @@ jobs:
           push: true
           tags: jaredwray/mockhttp:latest
 
+      - name: Build Docker Markdown
+        run: npm run docker:readme
+
         # Update Docker Hub description
       - name: Update Docker Hub description
         uses: peter-evans/dockerhub-description@v2
@@ -46,3 +49,5 @@ jobs:
          username: ${{ secrets.DOCKER_USERNAME }}
          password: ${{ secrets.DOCKER_PASSWORD }}
          repository: jaredwray/mockhttp
+         short-description: ${{ github.event.repository.description }}
+         readme-filepath: ./DOCKER.md

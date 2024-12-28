@@ -1,6 +1,6 @@
 {
   "name": "@jaredwray/mockhttp",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Mock Http - Easy way to mock http with httpbin replacement",
   "type": "module",
   "main": "dist/index.js",

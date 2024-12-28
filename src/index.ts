@@ -4,7 +4,6 @@ import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import {fastifySwagger} from '@fastify/swagger';
 import fastifyHelmet from '@fastify/helmet';
-import fastifyCors from '@fastify/cors';
 import {indexRoute} from './routes/index-route.js';
 import {fastifyConfig} from './fastify-config.js';
 import {fastifySwaggerConfig, registerSwaggerUi} from './swagger.js';
@@ -28,10 +27,6 @@ await fastify.register(fastifyStatic, {
 await fastify.register(fastifyStatic, {
 	root: path.resolve('./public'),
 	decorateReply: false,
-});
-
-await fastify.register(fastifyCors, {
-	origin: '*',
 });
 
 // Register the Helmet plugin for security headers

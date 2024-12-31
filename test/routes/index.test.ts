@@ -2,7 +2,7 @@ import {
 	describe, it, expect, vi,
 } from 'vitest';
 import Fastify from 'fastify';
-import {indexRoute} from '../../src/routes/index-route.js'; // Adjust the path as necessary
+import {indexRoute} from '../../src/routes/index.js'; // Adjust the path as necessary
 
 describe('index-route', () => {
 	it('should return the Redoc HTML page on GET /', async () => {

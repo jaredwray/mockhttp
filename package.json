@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "xo --fix && vitest run --coverage",
-    "dev": "xo --fix && npx tsx src/index.ts --watch",
+    "dev": "xo --fix && tsx src/index.ts --watch",
     "build": "rimraf ./dist && tsup src/index.ts --format esm --dts --clean",
     "docker:build": "docker build -t jaredwray/mockhttp .",
     "docker:run": "docker run -p 3000:3000 jaredwray/mockhttp",

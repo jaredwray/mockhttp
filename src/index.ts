@@ -4,7 +4,8 @@ import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import {fastifySwagger} from '@fastify/swagger';
 import fastifyHelmet from '@fastify/helmet';
-import {indexRoute} from './routes/index-route.js';
+import {indexRoute} from './routes/index.js';
+import {sitemapRoute} from './routes/sitemap.js';
 import {fastifyConfig} from './fastify-config.js';
 import {fastifySwaggerConfig, registerSwaggerUi} from './swagger.js';
 import {ipRoute, headersRoute, userAgentRoute} from './routes/request-inspection/index.js';
@@ -40,6 +41,8 @@ await registerSwaggerUi(fastify);
 
 // Register the index / home page route
 await fastify.register(indexRoute);
+// Register the sitemap route
+await fastify.register(sitemapRoute);
 // Register the HTTP method routes
 await fastify.register(getRoute);
 await fastify.register(postRoute);

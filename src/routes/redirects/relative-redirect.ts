@@ -2,7 +2,7 @@ import {type FastifyInstance, type FastifyRequest, type FastifySchema} from 'fas
 import {type FastifyReply} from 'fastify/types/reply';
 
 const relativeRedirectSchema: FastifySchema = {
-	tags: ['redirects'],
+	tags: ['Redirects'],
 	description: 'Redirects the request to the target URL using an relative URL',
 	params: {
 		type: 'object',
@@ -45,6 +45,6 @@ export const relativeRedirectRoute = (fastify: FastifyInstance) => {
             `;
 		}
 
-        await reply.header('Location', url).status(302).type('text/html').send(html);
+		await reply.header('Location', url).status(302).type('text/html').send(html);
 	});
 };

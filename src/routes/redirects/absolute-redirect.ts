@@ -2,7 +2,7 @@ import {type FastifyInstance, type FastifyRequest, type FastifySchema} from 'fas
 import {type FastifyReply} from 'fastify/types/reply';
 
 const absoluteRedirectSchema: FastifySchema = {
-	tags: ['redirects'],
+	tags: ['Redirects'],
 	description: 'Redirects the request to the target URL using an absolute URL',
 	params: {
 		type: 'object',

@@ -1,9 +1,3 @@
 # Security Policy
 
-## Reporting a Vulnerability
-
-Use this section to tell people how to report a vulnerability.
-
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+We want to ensure that the project is safe for everyone. If you have discovered a security vulnerability, please report it to us at https://github.com/jaredwray/mockhttp as an issue. We will review all reports and do our best to quickly fix the problem.

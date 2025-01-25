@@ -1,5 +1,5 @@
 import {Hookified, type HookifiedOptions} from 'hookified';
-import {fastify, type FastifyInstance} from 'fastify';
+import Fastify, {type FastifyInstance} from 'fastify';
 
 // eslint-disable-next-line unicorn/prevent-abbreviations
 export type HttpBinOptions = {
@@ -43,7 +43,8 @@ export class MockHttp extends Hookified {
 	private _helmet = true;
 	private _apiDocs = true;
 	private _httpBin: boolean | HttpBinOptions = true;
-	private readonly _server = fastify();
+	// eslint-disable-next-line new-cap
+	private readonly _server: FastifyInstance = Fastify();
 
 	constructor(options?: MockHttpOptions) {
 		super(options?.hookOptions);
@@ -112,6 +113,25 @@ export class MockHttp extends Hookified {
 
 	public get server(): FastifyInstance {
 		return this._server;
+	}
+
+	public async start(): Promise<void> {
+		try {
+			const {port, host} = this;
+
+			if (this._server) {
+				await this._server.close();
+			}
+
+			await this._server.listen({port, host});
+		} catch (error) {
+			/* c8 ignore next 2 */
+			this._server.log.error(error);
+		}
+	}
+
+	public async close(): Promise<void> {
+		await this._server.close();
 	}
 }
 

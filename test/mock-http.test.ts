@@ -1,5 +1,5 @@
 import {describe, test, expect} from 'vitest';
-import {MockHttp, mockhttp} from '../src/mock-http.js';
+import {MockHttp, mockhttp, type MockHttpOptions} from '../src/mock-http.js';
 
 describe('MockHttp', () => {
 	test('should be a class', () => {
@@ -12,19 +12,19 @@ describe('MockHttp', () => {
 	});
 
 	test('should be able to pass in options', () => {
-		const options = {
+		const options: MockHttpOptions = {
 			port: 8080,
 			host: 'localhost',
 			helmet: true,
 			apiDocs: true,
-			httpBin: true,
+			httpBin: {httpMethods: false},
 		};
 		const mock = new MockHttp(options);
 
 		expect(mock.host).toBe('localhost');
 		expect(mock.helmet).toBe(true);
 		expect(mock.apiDocs).toBe(true);
-		expect(mock.httpBin).toBe(true);
+		expect(mock.httpBin).toBe(options.httpBin);
 	});
 
 	test('should be able to set options', () => {
@@ -34,19 +34,25 @@ describe('MockHttp', () => {
 		expect(mock.host).toBe('0.0.0.0');
 		expect(mock.helmet).toBe(true);
 		expect(mock.apiDocs).toBe(true);
-		expect(mock.httpBin).toBe(true);
+		expect(mock.httpBin.httpMethods).toBe(true);
 
 		mock.port = 3001;
 		mock.host = 'localhost';
 		mock.helmet = false;
 		mock.apiDocs = false;
-		mock.httpBin = false;
+		mock.httpBin = {
+			httpMethods: false,
+			redirects: false,
+			requestInspection: false,
+			responseInspection: false,
+			statusCodes: false,
+		};
 
 		expect(mock.port).toBe(3001);
 		expect(mock.host).toBe('localhost');
 		expect(mock.helmet).toBe(false);
 		expect(mock.apiDocs).toBe(false);
-		expect(mock.httpBin).toBe(false);
+		expect(mock.httpBin.httpMethods).toBe(false);
 	});
 
 	test('should be able to get the Fastify server', () => {

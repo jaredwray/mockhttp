@@ -1,5 +1,20 @@
+import path from 'node:path';
+import fastifyStatic from '@fastify/static';
+import fastifyHelmet from '@fastify/helmet';
+import {fastifySwagger} from '@fastify/swagger';
 import {Hookified, type HookifiedOptions} from 'hookified';
 import Fastify, {type FastifyInstance} from 'fastify';
+import {fastifySwaggerConfig, registerSwaggerUi} from './swagger.js';
+import {fastifyConfig} from './fastify-config.js';
+import {indexRoute} from './routes/index.js';
+import {sitemapRoute} from './routes/sitemap.js';
+import {
+	getRoute, postRoute, deleteRoute, putRoute, patchRoute,
+} from './routes/http-methods/index.js';
+import {statusCodeRoute} from './routes/status-codes/index.js';
+import {ipRoute, headersRoute, userAgentRoute} from './routes/request-inspection/index.js';
+import {cacheRoutes, etagRoutes, responseHeadersRoutes} from './routes/response-inspection/index.js';
+import {absoluteRedirectRoute, relativeRedirectRoute, redirectToRoute} from './routes/redirects/index.js';
 
 // eslint-disable-next-line unicorn/prevent-abbreviations
 export type HttpBinOptions = {
@@ -30,7 +45,7 @@ export type MockHttpOptions = {
 	/**
 	 * Whether to use Swagger UI. Defaults to true.
 	 */
-	httpBin?: HttpBinOptions | boolean;
+	httpBin?: HttpBinOptions;
 	/**
 	 * Hookified options.
 	 */
@@ -42,9 +57,16 @@ export class MockHttp extends Hookified {
 	private _host = '0.0.0.0';
 	private _helmet = true;
 	private _apiDocs = true;
-	private _httpBin: boolean | HttpBinOptions = true;
+	private _httpBin: HttpBinOptions = {
+		httpMethods: true,
+		redirects: true,
+		requestInspection: true,
+		responseInspection: true,
+		statusCodes: true,
+	};
+
 	// eslint-disable-next-line new-cap
-	private readonly _server: FastifyInstance = Fastify();
+	private _server: FastifyInstance = Fastify();
 
 	constructor(options?: MockHttpOptions) {
 		super(options?.hookOptions);
@@ -103,16 +125,20 @@ export class MockHttp extends Hookified {
 		this._apiDocs = apiDocs;
 	}
 
-	public get httpBin(): boolean | HttpBinOptions {
+	public get httpBin(): HttpBinOptions {
 		return this._httpBin;
 	}
 
-	public set httpBin(httpBinary: boolean | HttpBinOptions) {
+	public set httpBin(httpBinary: HttpBinOptions) {
 		this._httpBin = httpBinary;
 	}
 
 	public get server(): FastifyInstance {
 		return this._server;
+	}
+
+	public set server(server: FastifyInstance) {
+		this._server = server;
 	}
 
 	public async start(): Promise<void> {
@@ -121,6 +147,55 @@ export class MockHttp extends Hookified {
 
 			if (this._server) {
 				await this._server.close();
+			}
+
+			// eslint-disable-next-line new-cap
+			this._server = Fastify(fastifyConfig);
+
+			// Register Scalar API client
+			await this._server.register(fastifyStatic, {
+				root: path.resolve('./node_modules/@scalar/api-reference/dist'),
+				prefix: '/scalar',
+			});
+
+			// Register the Public for favicon
+			await this.server.register(fastifyStatic, {
+				root: path.resolve('./public'),
+				decorateReply: false,
+			});
+
+			// Register the site map route
+			await this._server.register(sitemapRoute);
+
+			// Register the Helmet plugin for security headers
+			if (this._helmet) {
+				await this._server.register(fastifyHelmet);
+			}
+
+			if (this._apiDocs) {
+				await this.registerApiDocs();
+			}
+
+			const {httpMethods, redirects, requestInspection, responseInspection, statusCodes} = this._httpBin;
+
+			if (httpMethods) {
+				await this.registerHttpMethods();
+			}
+
+			if (statusCodes) {
+				await this.registerStatusCodeRoutes();
+			}
+
+			if (requestInspection) {
+				await this.registerRequestInspectionRoutes();
+			}
+
+			if (responseInspection) {
+				await this.registerResponseInspectionRoutes();
+			}
+
+			if (redirects) {
+				await this.registerRedirectRoutes();
 			}
 
 			await this._server.listen({port, host});
@@ -132,6 +207,54 @@ export class MockHttp extends Hookified {
 
 	public async close(): Promise<void> {
 		await this._server.close();
+	}
+
+	public async registerApiDocs(fastifyInstance?: FastifyInstance): Promise<void> {
+		const fastify = fastifyInstance ?? this._server;
+
+		// Set up Swagger for API documentation
+		await fastify.register(fastifySwagger, fastifySwaggerConfig);
+
+		// Register Swagger UI
+		await registerSwaggerUi(fastify);
+
+		// Register the index / home page route
+		await fastify.register(indexRoute);
+	}
+
+	public async registerHttpMethods(fastifyInstance?: FastifyInstance): Promise<void> {
+		const fastify = fastifyInstance ?? this._server;
+		await fastify.register(getRoute);
+		await fastify.register(postRoute);
+		await fastify.register(deleteRoute);
+		await fastify.register(putRoute);
+		await fastify.register(patchRoute);
+	}
+
+	public async registerStatusCodeRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
+		const fastify = fastifyInstance ?? this._server;
+		await fastify.register(statusCodeRoute);
+	}
+
+	public async registerRequestInspectionRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
+		const fastify = fastifyInstance ?? this._server;
+		await fastify.register(ipRoute);
+		await fastify.register(headersRoute);
+		await fastify.register(userAgentRoute);
+	}
+
+	public async registerResponseInspectionRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
+		const fastify = fastifyInstance ?? this._server;
+		await fastify.register(cacheRoutes);
+		await fastify.register(etagRoutes);
+		await fastify.register(responseHeadersRoutes);
+	}
+
+	public async registerRedirectRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
+		const fastify = fastifyInstance ?? this._server;
+		await fastify.register(absoluteRedirectRoute);
+		await fastify.register(relativeRedirectRoute);
+		await fastify.register(redirectToRoute);
 	}
 }
 

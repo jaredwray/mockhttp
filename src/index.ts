@@ -14,6 +14,7 @@ import {
 } from './routes/http-methods/index.js';
 import {statusCodeRoute} from './routes/status-codes/index.js';
 import {cacheRoutes, etagRoutes, responseHeadersRoutes} from './routes/response-inspection/index.js';
+import {absoluteRedirectRoute, relativeRedirectRoute} from './routes/redirects/index.js';
 
 // eslint-disable-next-line new-cap
 const fastify = Fastify(fastifyConfig);
@@ -59,6 +60,9 @@ await fastify.register(userAgentRoute);
 await fastify.register(cacheRoutes);
 await fastify.register(etagRoutes);
 await fastify.register(responseHeadersRoutes);
+// Register the absolute redirect route
+await fastify.register(absoluteRedirectRoute);
+await fastify.register(relativeRedirectRoute);
 
 // Start the Fastify server
 export const start = async () => {

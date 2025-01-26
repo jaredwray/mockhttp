@@ -11,8 +11,8 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 
 # Features
 * All the features of [httpbin](https://httpbin.org/)
-* CORS and Helmet support
-* Built with `nodejs` and `fastify`
+* `@fastify/helmet` built in by default
+* Built with `nodejs`, `typescript`, and `fastify`
 * Deploy via `docker` or `nodejs`
 * Global deployment via [mockhttp.org](https://mockhttp.org) (free service)
 * Better API documentation and examples
@@ -33,7 +33,7 @@ then run `mockhttp` in your code.
 ```javascript
 import { mockhttp } from '@jaredwray/mockhttp';
 await mockhttp.start(); // start the server
-const response = await fetch('http://localhost:8080/ip');
+const response = await fetch('http://localhost:3000/get');
 await mockhttp.stop(); // stop the server
 ```
 

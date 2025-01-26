@@ -1,4 +1,7 @@
-import {describe, test, expect} from 'vitest';
+import {
+	describe, test, expect,
+} from 'vitest';
+import Fastify from 'fastify';
 import {MockHttp, mockhttp, type MockHttpOptions} from '../src/mock-http.js';
 
 describe('MockHttp', () => {
@@ -9,6 +12,15 @@ describe('MockHttp', () => {
 	test('mockhttp should be an instance of MockHttp', () => {
 		// eslint-disable-next-line new-cap
 		expect(new mockhttp()).toBeInstanceOf(MockHttp);
+	});
+
+	test('should be able to set the server', () => {
+		const mock = new MockHttp();
+		// eslint-disable-next-line new-cap
+		const app = Fastify();
+		mock.server = app;
+
+		expect(mock.server).toBe(app);
 	});
 
 	test('should be able to pass in options', () => {

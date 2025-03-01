@@ -16,6 +16,7 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 * Deploy via `docker` or `nodejs`
 * Global deployment via [mockhttp.org](https://mockhttp.org) (free service)
 * Better API documentation and examples
+* Auto detect the port that is not is use
 * Maintained and updated regularly!
 
 # Deploy via Docker

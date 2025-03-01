@@ -2,8 +2,9 @@ import path from 'node:path';
 import fastifyStatic from '@fastify/static';
 import fastifyHelmet from '@fastify/helmet';
 import {fastifySwagger} from '@fastify/swagger';
-import {Hookified, type HookifiedOptions} from 'hookified';
 import Fastify, {type FastifyInstance} from 'fastify';
+import {Hookified, type HookifiedOptions} from 'hookified';
+import {detect} from 'detect-port';
 import {fastifySwaggerConfig, registerSwaggerUi} from './swagger.js';
 import {fastifyConfig} from './fastify-config.js';
 import {indexRoute} from './routes/index.js';
@@ -27,13 +28,18 @@ export type HttpBinOptions = {
 
 export type MockHttpOptions = {
 	/**
-	 * The port to listen on. If not provided, defaults to 3000 and falls back to 3001 if the PORT is in use.
+	 * The port to listen on. If not provided, defaults to 3000 and detects the next available port if in use.
 	 */
 	port?: number;
 	/**
 	 * The host to listen on. If not provided, defaults to '0.0.0.0'.
 	 */
 	host?: string;
+	/**
+	 * Whether to automatically detect the next available port if the provided port is in use. Defaults
+	 * to true.
+	 */
+	autoDetectPort?: boolean;
 	/**
 	 * Whether to use Helmet for security headers. Defaults to true.
 	 */
@@ -55,6 +61,7 @@ export type MockHttpOptions = {
 export class MockHttp extends Hookified {
 	private _port = 3000;
 	private _host = '0.0.0.0';
+	private _autoDetectPort = true;
 	private _helmet = true;
 	private _apiDocs = true;
 	private _httpBin: HttpBinOptions = {
@@ -92,59 +99,121 @@ export class MockHttp extends Hookified {
 		}
 	}
 
+	/**
+	 * The port to listen on. If not provided, defaults to 3000 and detects the next available port if in use.
+	 * @default 3000
+	 */
 	public get port(): number {
 		return this._port;
 	}
 
+	/**
+	 * The port to listen on. If not provided, defaults to 3000 and detects the next available port if in use.
+	 * @default 3000
+	 */
 	public set port(port: number) {
 		this._port = port;
 	}
 
+	/**
+	 * The host to listen on. If not provided, defaults to 'localhost'.
+	 * @default 'localhost'
+	 */
 	public get host(): string {
 		return this._host;
 	}
 
+	/**
+	 * The host to listen on. If not provided, defaults to 'localhost'.
+	 * @default 'localhost'
+	 */
 	public set host(host: string) {
 		this._host = host;
 	}
 
+	/**
+	 * Whether to automatically detect the next available port if the provided port is in use. Defaults to true.
+	 * @default true
+	 */
+	public get autoDetectPort(): boolean {
+		return this._autoDetectPort;
+	}
+
+	/**
+	 * Whether to automatically detect the next available port if the provided port is in use. Defaults to true.
+	 * @default true
+	 */
+	public set autoDetectPort(autoDetectPort: boolean) {
+		this._autoDetectPort = autoDetectPort;
+	}
+
+	/**
+	 * Whether to use Helmet for security headers. Defaults to true.
+	 * @default true
+	 */
 	public get helmet(): boolean {
 		return this._helmet;
 	}
 
+	/**
+	 * Whether to use Helmet for security headers. Defaults to true.
+	 * @default true
+	 */
 	public set helmet(helmet: boolean) {
 		this._helmet = helmet;
 	}
+
+	/**
+	 * Whether to use Swagger for API documentation. Defaults to true.
+	 * @default true
+	 */
 
 	public get apiDocs(): boolean {
 		return this._apiDocs;
 	}
 
+	/**
+	 * Whether to use Swagger for API documentation. Defaults to true.
+	 * @default true
+	 */
 	// eslint-disable-next-line unicorn/prevent-abbreviations
 	public set apiDocs(apiDocs: boolean) {
 		this._apiDocs = apiDocs;
 	}
 
+	/**
+	 * HTTP Bin options. Defaults to all enabled.
+	 */
 	public get httpBin(): HttpBinOptions {
 		return this._httpBin;
 	}
 
+	/**
+	 * HTTP Bin options. Defaults to all enabled.
+	 */
 	public set httpBin(httpBinary: HttpBinOptions) {
 		this._httpBin = httpBinary;
 	}
 
+	/**
+	 * The Fastify server instance.
+	 */
 	public get server(): FastifyInstance {
 		return this._server;
 	}
 
+	/**
+	 * The Fastify server instance.
+	 */
 	public set server(server: FastifyInstance) {
 		this._server = server;
 	}
 
+	/**
+	 * Start the Fastify server. If the server is already running, it will be closed and restarted.
+	 */
 	public async start(): Promise<void> {
 		try {
-			const {port, host} = this;
-
 			if (this._server) {
 				await this._server.close();
 			}
@@ -198,17 +267,42 @@ export class MockHttp extends Hookified {
 				await this.registerRedirectRoutes();
 			}
 
-			await this._server.listen({port, host});
+			if (this._autoDetectPort) {
+				const originalPort = this._port;
+				this._port = await this.detectPort();
+
+				if (originalPort !== this._port) {
+					this._server.log.info(`Port ${originalPort} is in use, detected next available port: ${this._port}`);
+				}
+			}
+
+			await this._server.listen({port: this._port, host: this._host});
 		} catch (error) {
 			/* c8 ignore next 2 */
 			this._server.log.error(error);
 		}
 	}
 
+	/**
+	 * Close the Fastify server.
+	 */
 	public async close(): Promise<void> {
 		await this._server.close();
 	}
 
+	/**
+	 * Detect the next available port to run on.
+	 * @returns The port that is available to run on
+	 */
+	public async detectPort(): Promise<number> {
+		const {port} = this;
+		return detect(port);
+	}
+
+	/**
+	 * This will register the API documentation routes including openapi and swagger ui.
+	 * @param fastifyInstance - the server instance to register the routes on.
+	 */
 	public async registerApiDocs(fastifyInstance?: FastifyInstance): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 
@@ -222,6 +316,10 @@ export class MockHttp extends Hookified {
 		await fastify.register(indexRoute);
 	}
 
+	/**
+	 * Register the HTTP methods routes.
+	 * @param fastifyInstance - the server instance to register the routes on.
+	 */
 	public async registerHttpMethods(fastifyInstance?: FastifyInstance): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(getRoute);
@@ -231,11 +329,19 @@ export class MockHttp extends Hookified {
 		await fastify.register(patchRoute);
 	}
 
+	/**
+	 * Register the status code routes.
+	 * @param fastifyInstance - the server instance to register the routes on.
+	 */
 	public async registerStatusCodeRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(statusCodeRoute);
 	}
 
+	/**
+	 * Register the request inspection routes.
+	 * @param fastifyInstance - the server instance to register the routes on.
+	 */
 	public async registerRequestInspectionRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(ipRoute);
@@ -243,6 +349,10 @@ export class MockHttp extends Hookified {
 		await fastify.register(userAgentRoute);
 	}
 
+	/**
+	 * Register the response inspection routes.
+	 * @param fastifyInstance - the server instance to register the routes on.
+	 */
 	public async registerResponseInspectionRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(cacheRoutes);
@@ -250,6 +360,10 @@ export class MockHttp extends Hookified {
 		await fastify.register(responseHeadersRoutes);
 	}
 
+	/**
+	 * Register the redirect routes.
+	 * @param fastifyInstance - the server instance to register the routes on.
+	 */
 	public async registerRedirectRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(absoluteRedirectRoute);

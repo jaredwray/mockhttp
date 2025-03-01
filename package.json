@@ -53,7 +53,7 @@
     "@fastify/swagger-ui": "^5.2.1",
     "@scalar/api-reference": "^1.25.108",
     "fastify": "^5.2.1",
-    "hookified": "^1.7.0",
+    "hookified": "^1.7.1",
     "html-escaper": "^3.0.3",
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0"

@@ -37,6 +37,12 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
+          tags: jaredwray/mockhttp:${{ github.event.release.tag_name }}
+
+      - name: Build and push Docker image with Version Tag
+        uses: docker/build-push-action@v5
+        with:
+          push: true
           tags: jaredwray/mockhttp:latest
 
       - name: Build Docker Markdown

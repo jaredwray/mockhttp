@@ -75,4 +75,19 @@ describe('MockHttp', () => {
 
 		expect(mock.server).toBeDefined();
 	});
+
+	test('should be able to auto detect the port if in use', async () => {
+		const mock1 = new MockHttp();
+		await mock1.start();
+
+		expect(mock1.port).toBe(3000);
+
+		const mock2 = new MockHttp();
+		await mock2.start();
+
+		expect(mock2.port).to.not.toBe(3000);
+
+		await mock1.close();
+		await mock2.close();
+	});
 });

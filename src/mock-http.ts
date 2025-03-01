@@ -2,8 +2,9 @@ import path from 'node:path';
 import fastifyStatic from '@fastify/static';
 import fastifyHelmet from '@fastify/helmet';
 import {fastifySwagger} from '@fastify/swagger';
-import {Hookified, type HookifiedOptions} from 'hookified';
 import Fastify, {type FastifyInstance} from 'fastify';
+import {Hookified, type HookifiedOptions} from 'hookified';
+import {detect} from 'detect-port';
 import {fastifySwaggerConfig, registerSwaggerUi} from './swagger.js';
 import {fastifyConfig} from './fastify-config.js';
 import {indexRoute} from './routes/index.js';
@@ -213,8 +214,6 @@ export class MockHttp extends Hookified {
 	 */
 	public async start(): Promise<void> {
 		try {
-			const {port, host} = this;
-
 			if (this._server) {
 				await this._server.close();
 			}
@@ -268,7 +267,16 @@ export class MockHttp extends Hookified {
 				await this.registerRedirectRoutes();
 			}
 
-			await this._server.listen({port, host});
+			if (this._autoDetectPort) {
+				const originalPort = this._port;
+				this._port = await this.detectPort();
+
+				if (originalPort !== this._port) {
+					this._server.log.info(`Port ${originalPort} is in use, detected next available port: ${this._port}`);
+				}
+			}
+
+			await this._server.listen({port: this._port, host: this._host});
 		} catch (error) {
 			/* c8 ignore next 2 */
 			this._server.log.error(error);
@@ -280,6 +288,15 @@ export class MockHttp extends Hookified {
 	 */
 	public async close(): Promise<void> {
 		await this._server.close();
+	}
+
+	/**
+	 * Detect the next available port to run on.
+	 * @returns The port that is available to run on
+	 */
+	public async detectPort(): Promise<number> {
+		const {port} = this;
+		return detect(port);
 	}
 
 	/**

@@ -44,12 +44,14 @@ describe('MockHttp', () => {
 
 		expect(mock.port).toBe(3000);
 		expect(mock.host).toBe('0.0.0.0');
+		expect(mock.autoDetectPort).toBe(true);
 		expect(mock.helmet).toBe(true);
 		expect(mock.apiDocs).toBe(true);
 		expect(mock.httpBin.httpMethods).toBe(true);
 
 		mock.port = 3001;
 		mock.host = 'localhost';
+		mock.autoDetectPort = false;
 		mock.helmet = false;
 		mock.apiDocs = false;
 		mock.httpBin = {
@@ -62,6 +64,7 @@ describe('MockHttp', () => {
 
 		expect(mock.port).toBe(3001);
 		expect(mock.host).toBe('localhost');
+		expect(mock.autoDetectPort).toBe(false);
 		expect(mock.helmet).toBe(false);
 		expect(mock.apiDocs).toBe(false);
 		expect(mock.httpBin.httpMethods).toBe(false);

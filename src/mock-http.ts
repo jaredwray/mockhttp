@@ -166,7 +166,7 @@ export class MockHttp extends Hookified {
 	 * Whether to use Swagger for API documentation. Defaults to true.
 	 * @default true
 	 */
-	// eslint-disable-next-line unicorn/prevent-abbreviations
+
 	public get apiDocs(): boolean {
 		return this._apiDocs;
 	}

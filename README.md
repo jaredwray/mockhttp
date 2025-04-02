@@ -35,6 +35,7 @@ then run `mockhttp` in your code.
 import { mockhttp } from '@jaredwray/mockhttp';
 await mockhttp.start(); // start the server
 const response = await fetch('http://localhost:3000/get');
+console.log(reaponse);
 await mockhttp.stop(); // stop the server
 ```
 

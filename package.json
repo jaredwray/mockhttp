@@ -16,7 +16,7 @@
     "docker:push": "docker push jaredwray/mockhttp",
     "docker:stop": "docker stop $(docker ps -a -q --filter ancestor=jaredwray/mockhttp --format=\"{{.ID}}\")",
     "docker:readme": "tsx ./scripts/create-docker-readme.ts",
-    "prepare": "npm run build",
+    "prepare": "pnpm build",
     "start": "node dist/index.js"
   },
   "repository": {

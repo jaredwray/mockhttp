@@ -29,10 +29,10 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Install Dependencies
-        run: npm install
+        run: npm install pnpm -g && pnpm install
 
       - name: Build
-        run: npm run build
+        run: pnpm build
 
       # Setup gcloud CLI
       - name: Authenticate with Google Cloud

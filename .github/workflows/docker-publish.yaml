@@ -19,10 +19,10 @@ jobs:
          node-version: 22
 
       - name: Install Dependencies
-        run: npm install
+        run: npm install pnpm -g && pnpm install
 
       - name: Build
-        run: npm run build
+        run: pnpm build
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -46,7 +46,7 @@ jobs:
           tags: jaredwray/mockhttp:latest
 
       - name: Build Docker Markdown
-        run: npm run docker:readme
+        run: pnpm docker:readme
 
         # Update Docker Hub description
       - name: Update Docker Hub description

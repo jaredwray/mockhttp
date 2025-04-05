@@ -1,0 +1,7 @@
+services:
+  mockhttp:
+    image: jaredwray/mockhttp:latest
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001

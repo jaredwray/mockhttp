@@ -24,6 +24,29 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 docker run -d -p 3000:3000 jaredwray/mockhttp
 ```
 
+# Deploy via Docker Compose
+```yaml
+services:
+  mockhttp:
+    image: jaredwray/mockhttp:latest
+    ports:
+      - "3000:3000"
+```
+
+If you want to run it on a different port, just change the `3000` to whatever port you want and add in the environment variable `PORT` to the environment.
+
+```yaml
+services:
+  mockhttp:
+    image: jaredwray/mockhttp:latest
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+```
+
+You can see an example of this in the [docker-compose.yaml](docker-compose.yaml) file.
+
 # Deploy via NodeJS
 ```bash
 npm install @jaredwray/mockhttp --save

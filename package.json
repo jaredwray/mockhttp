@@ -18,7 +18,7 @@
     "docker:readme": "tsx ./scripts/create-docker-readme.ts",
     "docker:compose:up": "docker-compose up -d",
     "docker:compose:down": "docker-compose down",
-    "prepare": "pnpm build",
+    "prepare": "npm run build",
     "start": "node dist/index.js"
   },
   "repository": {

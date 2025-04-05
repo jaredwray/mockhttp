@@ -18,12 +18,19 @@ jobs:
         with:
          node-version: 22
 
+      # DO NOT USE pnpm here, it will cause issues with Docker build
       - name: Install Dependencies
-        run: npm install
+        run: npm install 
+
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Build
         run: npm run build
 
+      - name: Set version variable
+        run: echo "VERSION=$(node -p \"require('./package.json').version\")" >> $GITHUB_ENV
+      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -37,7 +44,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: jaredwray/mockhttp:${{ github.event.release.tag_name }}
+          tags: jaredwray/mockhttp:${{ env.VERSION }}
 
       - name: Build and push Docker image as Latest
         uses: docker/build-push-action@v5

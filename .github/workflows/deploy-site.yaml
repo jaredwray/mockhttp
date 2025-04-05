@@ -28,6 +28,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      # DO NOT USE pnpm here, it will cause issues with Docker build
       - name: Install Dependencies
         run: npm install
 

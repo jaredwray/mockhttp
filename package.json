@@ -1,6 +1,6 @@
 {
   "name": "@jaredwray/mockhttp",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Mock Http - Easy way to mock http with httpbin replacement",
   "type": "module",
   "main": "dist/index.js",
@@ -16,6 +16,8 @@
     "docker:push": "docker push jaredwray/mockhttp",
     "docker:stop": "docker stop $(docker ps -a -q --filter ancestor=jaredwray/mockhttp --format=\"{{.ID}}\")",
     "docker:readme": "tsx ./scripts/create-docker-readme.ts",
+    "docker:compose:up": "docker-compose up -d",
+    "docker:compose:down": "docker-compose down",
     "prepare": "pnpm build",
     "start": "node dist/index.js"
   },

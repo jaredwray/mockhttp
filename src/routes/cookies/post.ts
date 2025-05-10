@@ -43,6 +43,6 @@ export const postCookieRoute = (fastify: FastifyInstance) => {
 		}
 
 		// Send back the current cookies
-		return reply.send({cookies: request.cookies});
+		return reply.status(200).send();
 	});
 };

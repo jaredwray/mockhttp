@@ -60,4 +60,21 @@ describe('Cookies route', async () => {
 		expect(setCookieHeader).toBeDefined();
 		expect(setCookieHeader).toContain('testCookieNoExpires=testValueNoExpires');
 	});
+
+	it('should delete a cookie', async () => {
+		const deleteCookieResponse = await fastify.inject({
+			method: 'DELETE',
+			url: '/cookies',
+			query: {
+				name: 'testCookieToDelete',
+			},
+		});
+
+		expect(deleteCookieResponse.statusCode).toBe(204);
+
+		const deleteCookieHeader = deleteCookieResponse.headers['set-cookie'];
+
+		expect(deleteCookieHeader).toBeDefined();
+		expect(deleteCookieHeader).toContain('testCookieToDelete=; Max-Age=0; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax');
+	});
 });

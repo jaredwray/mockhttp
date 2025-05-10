@@ -21,15 +21,11 @@ jobs:
         with:
          node-version: 22
 
-      # DO NOT USE pnpm here, it will cause issues with Docker build
-      - name: Install Dependencies
-        run: npm install 
-
       - name: Install pnpm
         run: npm install -g pnpm
 
       - name: Build
-        run: npm run build
+        run: pnpm build
 
       - name: Set version variable
         run: |

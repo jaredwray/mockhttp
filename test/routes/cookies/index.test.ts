@@ -42,4 +42,22 @@ describe('Cookies route', async () => {
 		expect(setCookieHeader).toBeDefined();
 		expect(setCookieHeader).toContain('testCookie=testValue');
 	});
+
+	it('should set a cookie with no expires', async () => {
+		const setCookieResponse = await fastify.inject({
+			method: 'POST',
+			url: '/cookies',
+			payload: {
+				name: 'testCookieNoExpires',
+				value: 'testValueNoExpires',
+			},
+		});
+
+		expect(setCookieResponse.statusCode).toBe(200);
+
+		const setCookieHeader = setCookieResponse.headers['set-cookie'];
+
+		expect(setCookieHeader).toBeDefined();
+		expect(setCookieHeader).toContain('testCookieNoExpires=testValueNoExpires');
+	});
 });

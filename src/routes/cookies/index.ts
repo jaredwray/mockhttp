@@ -59,10 +59,6 @@ export const cookiesRoute = (fastify: FastifyInstance) => {
 		const {name, value, expires} = request.body;
 		if (expires) {
 			const date = new Date(expires);
-			if (Number.isNaN(date.getTime())) {
-				return reply.status(400).send({error: 'Invalid date format'});
-			}
-
 			// eslint-disable-next-line @typescript-eslint/no-floating-promises
 			reply.setCookie(name, value, {path: '/', expires: date});
 		} else {

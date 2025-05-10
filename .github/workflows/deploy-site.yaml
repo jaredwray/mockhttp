@@ -29,10 +29,10 @@ jobs:
 
       # DO NOT USE pnpm here, it will cause issues with Docker build
       - name: Install Dependencies
-        run: npm install
+        run: npm install -g pnpm && pnpm install
 
       - name: Build
-        run: npm run build
+        run: pnpm build
 
       # Setup gcloud CLI
       - name: Authenticate with Google Cloud

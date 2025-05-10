@@ -12,7 +12,7 @@ const cookiesSchema: FastifySchema = {
 			properties: {
 				cookies: {
 					type: 'object',
-					additionalProperties: { type: 'string' },
+					additionalProperties: {type: 'string'},
 				},
 			},
 			required: ['cookies'],
@@ -26,12 +26,12 @@ const cookiesPostSchema: FastifySchema = {
 	body: {
 		type: 'object',
 		properties: {
-			name: { type: 'string' },
-			value: { type: 'string' },
-			expires: { type: 'string', format: 'date-time' }
+			name: {type: 'string'},
+			value: {type: 'string'},
+			expires: {type: 'string', format: 'date-time'},
 		},
 		required: ['name', 'value'],
-		additionalProperties: false
+		additionalProperties: false,
 	},
 	response: {
 		// eslint-disable-next-line  @typescript-eslint/naming-convention
@@ -40,35 +40,38 @@ const cookiesPostSchema: FastifySchema = {
 			properties: {
 				cookies: {
 					type: 'object',
-					additionalProperties: { type: 'string' }
-				}
+					additionalProperties: {type: 'string'},
+				},
 			},
-			required: ['cookies']
-		}
-	}
+			required: ['cookies'],
+		},
+	},
 };
 
 export const cookiesRoute = (fastify: FastifyInstance) => {
-	fastify.get('/cookies', { schema: cookiesSchema }, async (request: FastifyRequest, reply: FastifyReply) => {
+	fastify.get('/cookies', {schema: cookiesSchema}, async (request: FastifyRequest, reply: FastifyReply) => {
 		await reply.send({
 			cookies: request.cookies,
 		});
 	});
 
-	fastify.post<{ Body: { name: string; value: string; expires?: string } }>('/cookies', { schema: cookiesPostSchema }, async (request, reply) => {
-		const { name, value, expires } = request.body;
+	fastify.post<{Body: {name: string; value: string; expires?: string}}>('/cookies', {schema: cookiesPostSchema}, async (request, reply) => {
+		const {name, value, expires} = request.body;
 		if (expires) {
-			const date = new Date(expires)
-			if (isNaN(date.getTime())) {
-				return reply.status(400).send({ error: 'Invalid date format' })
+			const date = new Date(expires);
+			if (Number.isNaN(date.getTime())) {
+				return reply.status(400).send({error: 'Invalid date format'});
 			}
-			reply.setCookie(name, value, { path: '/', expires: date })
+
+			// eslint-disable-next-line @typescript-eslint/no-floating-promises
+			reply.setCookie(name, value, {path: '/', expires: date});
 		} else {
-			reply.setCookie(name, value, { path: '/' })
+			// eslint-disable-next-line @typescript-eslint/no-floating-promises
+			reply.setCookie(name, value, {path: '/'});
 		}
 
-		// send back the current cookies
-		return reply.send({ cookies: request.cookies })
-	}
+		// Send back the current cookies
+		return reply.send({cookies: request.cookies});
+	},
 	);
 };

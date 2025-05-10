@@ -22,6 +22,8 @@ const getCookiesRouteSchema: FastifySchema = {
 
 export const getCookiesRoute = (fastify: FastifyInstance) => {
 	fastify.get('/cookies', {schema: getCookiesRouteSchema}, async (request: FastifyRequest, reply: FastifyReply) => {
+		// eslint-disable-next-line @typescript-eslint/no-floating-promises
+		reply.type('application/json');
 		await reply.send({
 			cookies: request.cookies,
 		});

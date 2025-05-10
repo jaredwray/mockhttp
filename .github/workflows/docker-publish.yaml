@@ -32,9 +32,6 @@ jobs:
         run: |
           VERSION=$(node -p 'require("./package.json").version')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -50,12 +47,6 @@ jobs:
 
       - name: Build and push Docker image as Latest
         run: docker push docker.io/jaredwray/mockhttp:latest
-
-      - name: Build and push Docker image as Latest
-        uses: docker/build-push-action@v5
-        with:
-          push: true
-          tags: jaredwray/mockhttp:latest
 
       - name: Build Docker Markdown
         run: pnpm docker:readme

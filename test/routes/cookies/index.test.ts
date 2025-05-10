@@ -1,14 +1,16 @@
 import {describe, it, expect} from 'vitest';
 import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
-import {Q} from 'vitest/dist/chunks/reporters.d.DG9VKi4m.js';
-import {cookiesRoute} from '../../../src/routes/cookies/index.js';
+import {getCookiesRoute, postCookieRoute, deleteCookieRoute} from '../../../src/routes/cookies/index.js';
 
 describe('Cookies route', async () => {
 	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 	await fastify.register(fastifyCookie);
-	cookiesRoute(fastify);
+	await fastify.register(getCookiesRoute);
+	await fastify.register(postCookieRoute);
+	await fastify.register(deleteCookieRoute);
+	await fastify.ready();
 
 	it('should return no cookies in the response', async () => {
 		const response = await fastify.inject({

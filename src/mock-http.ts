@@ -17,7 +17,7 @@ import {statusCodeRoute} from './routes/status-codes/index.js';
 import {ipRoute, headersRoute, userAgentRoute} from './routes/request-inspection/index.js';
 import {cacheRoutes, etagRoutes, responseHeadersRoutes} from './routes/response-inspection/index.js';
 import {absoluteRedirectRoute, relativeRedirectRoute, redirectToRoute} from './routes/redirects/index.js';
-import {cookiesRoute} from './routes/cookies/index.js';
+import {getCookiesRoute, postCookieRoute, deleteCookieRoute} from './routes/cookies/index.js';
 
 // eslint-disable-next-line unicorn/prevent-abbreviations
 export type HttpBinOptions = {
@@ -386,7 +386,9 @@ export class MockHttp extends Hookified {
 	public async registerCookieRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(fastifyCookie);
-		await fastify.register(cookiesRoute);
+		await fastify.register(getCookiesRoute);
+		await fastify.register(postCookieRoute);
+		await fastify.register(deleteCookieRoute);
 	}
 }
 

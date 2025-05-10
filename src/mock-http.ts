@@ -2,6 +2,7 @@ import path from 'node:path';
 import fastifyStatic from '@fastify/static';
 import fastifyHelmet from '@fastify/helmet';
 import {fastifySwagger} from '@fastify/swagger';
+import fastifyCookie from '@fastify/cookie';
 import Fastify, {type FastifyInstance} from 'fastify';
 import {Hookified, type HookifiedOptions} from 'hookified';
 import {detect} from 'detect-port';
@@ -16,6 +17,7 @@ import {statusCodeRoute} from './routes/status-codes/index.js';
 import {ipRoute, headersRoute, userAgentRoute} from './routes/request-inspection/index.js';
 import {cacheRoutes, etagRoutes, responseHeadersRoutes} from './routes/response-inspection/index.js';
 import {absoluteRedirectRoute, relativeRedirectRoute, redirectToRoute} from './routes/redirects/index.js';
+import {cookiesRoute} from './routes/cookies/index.js';
 
 // eslint-disable-next-line unicorn/prevent-abbreviations
 export type HttpBinOptions = {
@@ -24,6 +26,7 @@ export type HttpBinOptions = {
 	requestInspection?: boolean;
 	responseInspection?: boolean;
 	statusCodes?: boolean;
+	cookies?: boolean;
 };
 
 export type MockHttpOptions = {
@@ -70,6 +73,7 @@ export class MockHttp extends Hookified {
 		requestInspection: true,
 		responseInspection: true,
 		statusCodes: true,
+		cookies: true,
 	};
 
 	// eslint-disable-next-line new-cap
@@ -245,7 +249,7 @@ export class MockHttp extends Hookified {
 				await this.registerApiDocs();
 			}
 
-			const {httpMethods, redirects, requestInspection, responseInspection, statusCodes} = this._httpBin;
+			const {httpMethods, redirects, requestInspection, responseInspection, statusCodes, cookies} = this._httpBin;
 
 			if (httpMethods) {
 				await this.registerHttpMethods();
@@ -265,6 +269,10 @@ export class MockHttp extends Hookified {
 
 			if (redirects) {
 				await this.registerRedirectRoutes();
+			}
+
+			if (cookies) {
+				await this.registerCookieRoutes();
 			}
 
 			if (this._autoDetectPort) {
@@ -369,6 +377,16 @@ export class MockHttp extends Hookified {
 		await fastify.register(absoluteRedirectRoute);
 		await fastify.register(relativeRedirectRoute);
 		await fastify.register(redirectToRoute);
+	}
+
+	/**
+	 * Register the cookie routes.
+	 * @param fastifyInstance - the server instance to register the routes on.
+	 */
+	public async registerCookieRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
+		const fastify = fastifyInstance ?? this._server;
+		await fastify.register(fastifyCookie);
+		await fastify.register(cookiesRoute);
 	}
 }
 

@@ -22,7 +22,7 @@ export const cookiesDeleteSchema: FastifySchema = {
 };
 
 export const deleteCookieRoute = (fastify: FastifyInstance) => {
-	fastify.delete('/cookies', async (request, reply) => {
+	fastify.delete('/cookies', {schema: cookiesDeleteSchema}, async (request, reply) => {
 		const {name} = request.query as {name: string};
 		// eslint-disable-next-line @typescript-eslint/no-floating-promises
 		reply.clearCookie(name, {path: '/'});

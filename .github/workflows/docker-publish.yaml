@@ -24,6 +24,7 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm && pnpm install
 
+
       - name: Build
         run: pnpm build
 
@@ -41,11 +42,14 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image with Version Tag
-        uses: docker/build-push-action@v5
-        with:
-          push: true
-          tags: jaredwray/mockhttp:${{ env.VERSION }}
+      - name: Build Docker Image
+        run: docker build -t jaredwray/mockhttp:${{ env.VERSION }} -t jaredwray/mockhttp:latest .
+
+      - name: Build and push Docker image as SHA
+        run: docker push docker.io/jaredwray/mockhttp:${{ env.VERSION }}
+
+      - name: Build and push Docker image as Latest
+        run: docker push docker.io/jaredwray/mockhttp:latest
 
       - name: Build and push Docker image as Latest
         uses: docker/build-push-action@v5

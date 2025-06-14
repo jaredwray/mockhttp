@@ -38,12 +38,12 @@
   },
   "homepage": "https://github.com/jaredwray/mockhttp#readme",
   "devDependencies": {
-    "@swc/core": "^1.11.24",
+    "@swc/core": "^1.12.1",
     "@types/html-escaper": "^3.0.4",
     "@vitest/coverage-v8": "^3.2.3",
     "rimraf": "^6.0.1",
-    "tsup": "^8.4.0",
-    "tsx": "^4.19.4",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "vitest": "^3.2.3",
     "xo": "^0.60.0"

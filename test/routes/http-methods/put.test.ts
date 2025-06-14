@@ -20,11 +20,11 @@ describe('PUT /put route', () => {
 		});
 
 		expect(response.statusCode).toBe(200);
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 		const responseBody = response.json();
 		expect(responseBody).toEqual({
 			method: 'PUT',
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 			headers: expect.objectContaining({
 				'content-type': 'application/json',
 			}),
@@ -48,11 +48,11 @@ describe('PUT /put route', () => {
 		});
 
 		expect(response.statusCode).toBe(200);
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 		const responseBody = response.json();
 		expect(responseBody).toEqual({
 			method: 'PUT',
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 			headers: expect.objectContaining({
 				'content-type': 'application/json',
 			}),

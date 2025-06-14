@@ -19,7 +19,7 @@ describe('Cookies route', async () => {
 		});
 
 		expect(response.statusCode).toBe(200);
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 		const responseBody = response.json();
 		expect(responseBody).toEqual({
 			cookies: {},

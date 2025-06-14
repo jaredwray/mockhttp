@@ -21,7 +21,7 @@ const headersSchema: FastifySchema = {
 
 export const headersRoute = (fastify: FastifyInstance) => {
 	fastify.get('/headers', {schema: headersSchema}, async (request: FastifyRequest) => {
-		const headers = request.headers;
+		const {headers} = request;
 
 		return {
 			headers,

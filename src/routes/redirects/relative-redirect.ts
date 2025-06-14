@@ -28,7 +28,7 @@ const relativeRedirectSchema: FastifySchema = {
 
 export const relativeRedirectRoute = (fastify: FastifyInstance) => {
 	fastify.get<{Params: {value: number}}>('/relative-redirect/:value', {schema: relativeRedirectSchema}, async (request: FastifyRequest, reply: FastifyReply) => {
-		const value = (request.params as {value: number}).value;
+		const {value} = (request.params as {value: number});
 		let url = '/get';
 		let html = `
         <title>Redirecting...</title>

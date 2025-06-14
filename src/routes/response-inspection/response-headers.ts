@@ -28,9 +28,7 @@ export const responseHeadersRoutes = (fastify: FastifyInstance) => {
 			reply.header(key, escape(value));
 		}
 
-		const cleanedResponse = Object.fromEntries(
-			Object.entries(queryParameters).map(([key, value]) => [key, escape(value)]),
-		);
+		const cleanedResponse = Object.fromEntries(Object.entries(queryParameters).map(([key, value]) => [key, escape(value)]));
 
 		await reply.send(cleanedResponse);
 	});
@@ -49,9 +47,7 @@ export const responseHeadersRoutes = (fastify: FastifyInstance) => {
 			reply.header(key, escape(value));
 		}
 
-		const cleanedResponse = Object.fromEntries(
-			Object.entries({...queryParameters, ...body}).map(([key, value]) => [key, escape(value)]),
-		);
+		const cleanedResponse = Object.fromEntries(Object.entries({...queryParameters, ...body}).map(([key, value]) => [key, escape(value)]));
 
 		await reply.send(cleanedResponse);
 	});

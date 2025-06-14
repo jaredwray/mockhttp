@@ -25,7 +25,7 @@ async function copyAndReplaceText(originalFile: string, newFile: string, searchV
 // File paths and replacement values
 const originalFile = 'README.md';
 const newFile = 'DOCKER.md';
-const searchValue = '\\[\\!\\[public/logo\\.svg\\]\\(public/logo\\.svg\\)\\]\\(https://mockhttp\\.org\\)';
+const searchValue = String.raw`\[\!\[public/logo\.svg\]\(public/logo\.svg\)\]\(https://mockhttp\.org\)`;
 const replaceValue = '';
 
 // Run

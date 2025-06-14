@@ -46,7 +46,7 @@
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "vitest": "^3.2.3",
-    "xo": "^0.60.0"
+    "xo": "^1.1.0"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
@@ -73,5 +73,11 @@
       "esbuild",
       "vue-demi"
     ]
+  },
+  "xo": {
+    "rules": {
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off"
+    }
   }
 }

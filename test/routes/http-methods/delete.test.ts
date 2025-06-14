@@ -20,7 +20,7 @@ describe('DELETE /delete', () => {
 		});
 
 		expect(response.statusCode).toBe(200);
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 		const responseBody = response.json();
 		expect(responseBody.method).toBe('DELETE');
 		expect(responseBody.headers['content-type']).toBe('application/json');
@@ -38,7 +38,7 @@ describe('DELETE /delete', () => {
 		});
 
 		expect(response.statusCode).toBe(200);
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 		const responseBody = response.json();
 		expect(responseBody.method).toBe('DELETE');
 		expect(responseBody.headers['content-type']).toBe('application/json');
@@ -59,7 +59,7 @@ describe('DELETE /delete', () => {
 		});
 
 		expect(response.statusCode).toBe(200);
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 		const responseBody = response.json();
 		expect(responseBody.method).toBe('DELETE');
 		expect(responseBody.headers['content-type']).toBe('application/json');

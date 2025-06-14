@@ -19,7 +19,6 @@ import {cacheRoutes, etagRoutes, responseHeadersRoutes} from './routes/response-
 import {absoluteRedirectRoute, relativeRedirectRoute, redirectToRoute} from './routes/redirects/index.js';
 import {getCookiesRoute, postCookieRoute, deleteCookieRoute} from './routes/cookies/index.js';
 
-// eslint-disable-next-line unicorn/prevent-abbreviations
 export type HttpBinOptions = {
 	httpMethods?: boolean;
 	redirects?: boolean;
@@ -180,7 +179,7 @@ export class MockHttp extends Hookified {
 	 * Whether to use Swagger for API documentation. Defaults to true.
 	 * @default true
 	 */
-	// eslint-disable-next-line unicorn/prevent-abbreviations
+
 	public set apiDocs(apiDocs: boolean) {
 		this._apiDocs = apiDocs;
 	}

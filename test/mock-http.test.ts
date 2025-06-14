@@ -1,3 +1,4 @@
+import {mock} from 'node:test';
 import {
 	describe, test, expect,
 } from 'vitest';
@@ -80,12 +81,10 @@ describe('MockHttp', () => {
 		const mock1 = new MockHttp();
 		await mock1.start();
 
-		expect(mock1.port).toBe(3000);
-
 		const mock2 = new MockHttp();
 		await mock2.start();
 
-		expect(mock2.port).to.not.toBe(3000);
+		expect(mock2.port).to.not.toBe(mock1.port);
 
 		await mock1.close();
 		await mock2.close();

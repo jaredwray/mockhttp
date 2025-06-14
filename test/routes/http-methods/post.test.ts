@@ -20,7 +20,7 @@ describe('POST /post route', async () => {
 		});
 
 		expect(response.statusCode).toBe(200);
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 		const responseBody = response.json();
 		expect(responseBody).toHaveProperty('method', 'POST');
 		expect(responseBody).toHaveProperty('headers');
@@ -42,7 +42,7 @@ describe('POST /post route', async () => {
 		});
 
 		expect(response.statusCode).toBe(200);
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 		const responseBody = response.json();
 		expect(responseBody.body).toEqual({key1: 'value1', key2: 'value2'});
 	});
@@ -61,7 +61,7 @@ describe('POST /post route', async () => {
 		});
 
 		expect(response.statusCode).toBe(200);
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 		const responseBody = response.json();
 		expect(responseBody.headers).toHaveProperty('content-type', 'application/json');
 		expect(responseBody.headers).toHaveProperty('custom-header', 'CustomValue');

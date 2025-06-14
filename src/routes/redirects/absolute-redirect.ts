@@ -28,9 +28,9 @@ const absoluteRedirectSchema: FastifySchema = {
 
 export const absoluteRedirectRoute = (fastify: FastifyInstance) => {
 	fastify.get<{Params: {value: number}}>('/absolute-redirect/:value', {schema: absoluteRedirectSchema}, async (request: FastifyRequest, reply: FastifyReply) => {
-		const value = (request.params as {value: number}).value;
+		const {value} = (request.params as {value: number});
 		const {host} = request.headers;
-		const protocol = request.protocol;
+		const {protocol} = request;
 		let url = `${protocol}://${host}/get`;
 		let html = `
         <title>Redirecting...</title>

@@ -18,6 +18,7 @@ import {ipRoute, headersRoute, userAgentRoute} from './routes/request-inspection
 import {cacheRoutes, etagRoutes, responseHeadersRoutes} from './routes/response-inspection/index.js';
 import {absoluteRedirectRoute, relativeRedirectRoute, redirectToRoute} from './routes/redirects/index.js';
 import {getCookiesRoute, postCookieRoute, deleteCookieRoute} from './routes/cookies/index.js';
+import {anythingRoute} from './routes/anything/index.js';
 
 export type HttpBinOptions = {
 	httpMethods?: boolean;
@@ -26,6 +27,7 @@ export type HttpBinOptions = {
 	responseInspection?: boolean;
 	statusCodes?: boolean;
 	cookies?: boolean;
+	anything?: boolean;
 };
 
 export type MockHttpOptions = {
@@ -73,6 +75,7 @@ export class MockHttp extends Hookified {
 		responseInspection: true,
 		statusCodes: true,
 		cookies: true,
+		anything: true,
 	};
 
 	// eslint-disable-next-line new-cap
@@ -248,7 +251,7 @@ export class MockHttp extends Hookified {
 				await this.registerApiDocs();
 			}
 
-			const {httpMethods, redirects, requestInspection, responseInspection, statusCodes, cookies} = this._httpBin;
+			const {httpMethods, redirects, requestInspection, responseInspection, statusCodes, cookies, anything} = this._httpBin;
 
 			if (httpMethods) {
 				await this.registerHttpMethods();
@@ -272,6 +275,10 @@ export class MockHttp extends Hookified {
 
 			if (cookies) {
 				await this.registerCookieRoutes();
+			}
+
+			if (anything) {
+				await this.registerAnythingRoutes();
 			}
 
 			if (this._autoDetectPort) {
@@ -388,6 +395,15 @@ export class MockHttp extends Hookified {
 		await fastify.register(getCookiesRoute);
 		await fastify.register(postCookieRoute);
 		await fastify.register(deleteCookieRoute);
+	}
+
+	/**
+	 * Register the anything routes.
+	 * @param fastifyInstance - the server instance to register the routes on.
+	 */
+	public async registerAnythingRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
+		const fastify = fastifyInstance ?? this._server;
+		await fastify.register(anythingRoute);
 	}
 }
 

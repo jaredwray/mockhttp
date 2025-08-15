@@ -19,6 +19,9 @@ import {cacheRoutes, etagRoutes, responseHeadersRoutes} from './routes/response-
 import {absoluteRedirectRoute, relativeRedirectRoute, redirectToRoute} from './routes/redirects/index.js';
 import {getCookiesRoute, postCookieRoute, deleteCookieRoute} from './routes/cookies/index.js';
 import {anythingRoute} from './routes/anything/index.js';
+import {
+	basicAuthRoute, hiddenBasicAuthRoute, bearerAuthRoute, digestAuthRoute,
+} from './routes/auth/index.js';
 
 export type HttpBinOptions = {
 	httpMethods?: boolean;
@@ -28,6 +31,7 @@ export type HttpBinOptions = {
 	statusCodes?: boolean;
 	cookies?: boolean;
 	anything?: boolean;
+	auth?: boolean;
 };
 
 export type MockHttpOptions = {
@@ -76,6 +80,7 @@ export class MockHttp extends Hookified {
 		statusCodes: true,
 		cookies: true,
 		anything: true,
+		auth: true,
 	};
 
 	// eslint-disable-next-line new-cap
@@ -251,7 +256,7 @@ export class MockHttp extends Hookified {
 				await this.registerApiDocs();
 			}
 
-			const {httpMethods, redirects, requestInspection, responseInspection, statusCodes, cookies, anything} = this._httpBin;
+			const {httpMethods, redirects, requestInspection, responseInspection, statusCodes, cookies, anything, auth} = this._httpBin;
 
 			if (httpMethods) {
 				await this.registerHttpMethods();
@@ -279,6 +284,10 @@ export class MockHttp extends Hookified {
 
 			if (anything) {
 				await this.registerAnythingRoutes();
+			}
+
+			if (auth) {
+				await this.registerAuthRoutes();
 			}
 
 			if (this._autoDetectPort) {
@@ -404,6 +413,18 @@ export class MockHttp extends Hookified {
 	public async registerAnythingRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(anythingRoute);
+	}
+
+	/**
+	 * Register the auth routes.
+	 * @param fastifyInstance - the server instance to register the routes on.
+	 */
+	public async registerAuthRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
+		const fastify = fastifyInstance ?? this._server;
+		await fastify.register(basicAuthRoute);
+		await fastify.register(hiddenBasicAuthRoute);
+		await fastify.register(bearerAuthRoute);
+		await fastify.register(digestAuthRoute);
 	}
 }
 

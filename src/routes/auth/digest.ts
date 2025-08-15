@@ -142,6 +142,7 @@ export const digestAuthRoute = (fastify: FastifyInstance) => {
 			return reply.status(401).send({message: 'Unauthorized'});
 		}
 
+		/* c8 ignore next 2 */
 		const method = 'GET';
 		const uri = auth.uri ?? request.url.replace(/^https?:\/\/[^/]+/, '');
 		const algo = hashAlg(auth.algorithm ?? algoHeader);

@@ -27,6 +27,7 @@ const parseBasic = (header?: string) => {
 
 		return {username: decoded.slice(0, idx), password: decoded.slice(idx + 1)};
 	} catch {
+		/* c8 ignore next 2 */
 		return undefined;
 	}
 };

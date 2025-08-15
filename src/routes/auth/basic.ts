@@ -1,4 +1,5 @@
 import {Buffer} from 'node:buffer';
+import {timingSafeEqual} from 'node:crypto';
 import {
 	type FastifyInstance, type FastifyReply, type FastifyRequest, type FastifySchema,
 } from 'fastify';
@@ -9,12 +10,20 @@ type BasicAuthParameters = {
 };
 
 const parseBasic = (header?: string) => {
-	if (!header) {
+	if (!header || typeof header !== 'string') {
 		return undefined;
 	}
 
-	const [scheme, value] = header.split(' ');
-	if (!scheme || scheme.toLowerCase() !== 'basic' || !value) {
+	// Split only on the first space to handle potential spaces in base64
+	const spaceIndex = header.indexOf(' ');
+	if (spaceIndex === -1) {
+		return undefined;
+	}
+
+	const scheme = header.slice(0, spaceIndex);
+	const value = header.slice(spaceIndex + 1);
+
+	if (scheme.toLowerCase() !== 'basic' || !value) {
 		return undefined;
 	}
 
@@ -25,10 +34,34 @@ const parseBasic = (header?: string) => {
 			return undefined;
 		}
 
-		return {username: decoded.slice(0, idx), password: decoded.slice(idx + 1)};
+		const username = decoded.slice(0, idx);
+		const password = decoded.slice(idx + 1);
+
+		// Return undefined for empty username (password can be empty)
+		if (username === '') {
+			return undefined;
+		}
+
+		return {username, password};
+	/* c8 ignore next 4 */
 	} catch {
-		/* c8 ignore next 2 */
+		// Invalid base64 or encoding errors
 		return undefined;
+	}
+};
+
+// Constant-time string comparison to prevent timing attacks
+const safeCompare = (a: string, b: string): boolean => {
+	if (a.length !== b.length) {
+		return false;
+	}
+
+	try {
+		return timingSafeEqual(Buffer.from(a, 'utf8'), Buffer.from(b, 'utf8'));
+	/* c8 ignore next 4 */
+	} catch {
+		// Fallback for any encoding issues
+		return false;
 	}
 };
 
@@ -67,9 +100,19 @@ export const basicAuthSchema: FastifySchema = {
 export const basicAuthRoute = (fastify: FastifyInstance) => {
 	fastify.get('/basic-auth/:user/:passwd', {schema: basicAuthSchema}, async (request: FastifyRequest<{Params: BasicAuthParameters}>, reply: FastifyReply) => {
 		const {user, passwd} = request.params;
+
+		// Validate route parameters (allow empty passwd but not empty user)
+		if (!user || typeof user !== 'string' || typeof passwd !== 'string') {
+			void reply.header('WWW-Authenticate', 'Basic realm="mockhttp"');
+			return reply.status(401).send({message: 'Unauthorized'});
+		}
+
 		const parsed = parseBasic(request.headers.authorization);
 
-		if (!parsed || parsed.username !== user || parsed.password !== passwd) {
+		// Use constant-time comparison to prevent timing attacks
+		if (!parsed
+			|| !safeCompare(parsed.username, user)
+			|| !safeCompare(parsed.password, passwd)) {
 			void reply.header('WWW-Authenticate', 'Basic realm="mockhttp"');
 			return reply.status(401).send({message: 'Unauthorized'});
 		}

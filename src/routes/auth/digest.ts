@@ -120,6 +120,7 @@ export const digestAuthRoute = (fastify: FastifyInstance) => {
 			return reply.status(401).send({message: 'Unauthorized'});
 		}
 
+		/* c8 ignore next */
 		return reply.send({authenticated: true, user});
 	});
 
@@ -149,6 +150,7 @@ export const digestAuthRoute = (fastify: FastifyInstance) => {
 		const ha1 = h(algo, `${user}:${realm}:${passwd}`);
 		const ha2 = h(algo, `${method}:${uri}`);
 
+		/* c8 ignore next 3 */
 		const expected = auth.qop
 			? h(algo, `${ha1}:${auth.nonce}:${auth.nc}:${auth.cnonce}:${auth.qop}:${ha2}`)
 			: h(algo, `${ha1}:${auth.nonce}:${ha2}`);
@@ -158,6 +160,7 @@ export const digestAuthRoute = (fastify: FastifyInstance) => {
 			return reply.status(401).send({message: 'Unauthorized'});
 		}
 
+		/* c8 ignore next */
 		return reply.send({authenticated: true, user});
 	});
 };

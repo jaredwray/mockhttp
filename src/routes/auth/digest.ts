@@ -56,14 +56,48 @@ const parseDigest = (header?: string): Record<string, string> | undefined => {
 
 	const out: Record<string, string> = {};
 	// Split on comma not inside quotes
-	const parts = rest.match(/\w+\s*=\s*(?:"[^"]*"|[^,]+?)/g);
-	if (!parts) {
+	const parts: string[] = [];
+	let current = '';
+	let inQuotes = false;
+
+	for (const char of rest) {
+		if (char === '"') {
+			inQuotes = !inQuotes;
+			current += char;
+		} else if (char === ',' && !inQuotes) {
+			if (current.trim()) {
+				parts.push(current.trim());
+			}
+
+			current = '';
+		} else {
+			current += char;
+		}
+	}
+
+	if (current.trim()) {
+		parts.push(current.trim());
+	}
+
+	if (parts.length === 0) {
 		return out;
 	}
 
 	for (const p of parts) {
-		const [k, v] = p.split('=');
-		out[k.trim()] = v.trim().replaceAll(/^"|"$/g, '');
+		const equalIndex = p.indexOf('=');
+		if (equalIndex === -1) {
+			continue; // Skip malformed parts without '='
+		}
+
+		const k = p.slice(0, equalIndex).trim();
+		const v = p.slice(equalIndex + 1).trim();
+
+		let value = v;
+		if (value.startsWith('"') && value.endsWith('"')) {
+			value = value.slice(1, -1);
+		}
+
+		out[k] = value;
 	}
 
 	return out;

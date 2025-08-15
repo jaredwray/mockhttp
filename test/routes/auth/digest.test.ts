@@ -85,6 +85,19 @@ describe('GET /digest-auth', () => {
 		expect(response.statusCode).toBe(401);
 	});
 
+	// Test lines 82-84: Empty parts array (no valid key=value pairs)
+	it('401 when digest auth header has no valid key=value pairs', async () => {
+		// eslint-disable-next-line new-cap
+		const fastify = Fastify();
+		digestAuthRoute(fastify);
+		const response = await fastify.inject({
+			method: 'GET',
+			url: '/digest-auth/auth/user/pass',
+			headers: {authorization: 'Digest ,,,'},
+		});
+		expect(response.statusCode).toBe(401);
+	});
+
 	// Test line 123: Successful authentication with valid digest
 	it.skip('authenticates successfully with valid digest', async () => {
 		// eslint-disable-next-line new-cap

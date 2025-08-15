@@ -21,7 +21,7 @@ const makeNonce = () => crypto.randomBytes(16).toString('hex');
 
 const algorithms = new Set(['MD5', 'md5', 'SHA-256', 'sha-256', 'SHA-512', 'sha-512']);
 
-const hashAlg = (alg: string | undefined) => {
+export const hashAlg = (alg: string | undefined) => {
 	if (!alg) {
 		return 'md5';
 	}

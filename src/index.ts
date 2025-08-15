@@ -19,8 +19,10 @@ export const start = async () => {
 };
 
 // Only start the server if this is the main module (not imported)
+/* c8 ignore start */
 if (import.meta.url === `file://${process.argv[1]}`) {
 	await start();
 }
+/* c8 ignore end */
 
 export {MockHttp as default, MockHttp as mockhttp} from './mock-http.js';

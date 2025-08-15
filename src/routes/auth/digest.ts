@@ -56,7 +56,7 @@ const parseDigest = (header?: string): Record<string, string> | undefined => {
 
 	const out: Record<string, string> = {};
 	// Split on comma not inside quotes
-	const parts = rest.match(/\w+\s*=\s*("[^"]*"|[^,]+)/g);
+	const parts = rest.match(/\w+\s*=\s*(?:"[^"]*"|[^,]+?)/g);
 	if (!parts) {
 		return out;
 	}

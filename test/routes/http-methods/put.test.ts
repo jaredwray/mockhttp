@@ -1,21 +1,21 @@
-import {describe, it, expect} from 'vitest';
-import Fastify from 'fastify';
-import {putRoute} from '../../../src/routes/http-methods/put.js';
+import Fastify from "fastify";
+import { describe, expect, it } from "vitest";
+import { putRoute } from "../../../src/routes/http-methods/put.js";
 
-describe('PUT /put route', () => {
+describe("PUT /put route", () => {
 	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 	putRoute(fastify);
 
-	it('should return request information for a valid PUT request', async () => {
+	it("should return request information for a valid PUT request", async () => {
 		const response = await fastify.inject({
-			method: 'PUT',
-			url: '/put',
+			method: "PUT",
+			url: "/put",
 			headers: {
-				'Content-Type': 'application/json',
+				"Content-Type": "application/json",
 			},
 			payload: {
-				key: 'value',
+				key: "value",
 			},
 		});
 
@@ -23,27 +23,27 @@ describe('PUT /put route', () => {
 
 		const responseBody = response.json();
 		expect(responseBody).toEqual({
-			method: 'PUT',
+			method: "PUT",
 
 			headers: expect.objectContaining({
-				'content-type': 'application/json',
+				"content-type": "application/json",
 			}),
 			body: {
-				key: 'value',
+				key: "value",
 			},
 		});
 	});
 
-	it('should handle PUT request with additional properties in the body', async () => {
+	it("should handle PUT request with additional properties in the body", async () => {
 		const response = await fastify.inject({
-			method: 'PUT',
-			url: '/put',
+			method: "PUT",
+			url: "/put",
 			headers: {
-				'Content-Type': 'application/json',
+				"Content-Type": "application/json",
 			},
 			payload: {
-				key1: 'value1',
-				key2: 'value2',
+				key1: "value1",
+				key2: "value2",
 			},
 		});
 
@@ -51,26 +51,26 @@ describe('PUT /put route', () => {
 
 		const responseBody = response.json();
 		expect(responseBody).toEqual({
-			method: 'PUT',
+			method: "PUT",
 
 			headers: expect.objectContaining({
-				'content-type': 'application/json',
+				"content-type": "application/json",
 			}),
 			body: {
-				key1: 'value1',
-				key2: 'value2',
+				key1: "value1",
+				key2: "value2",
 			},
 		});
 	});
 
-	it('should return 400 for invalid PUT request body', async () => {
+	it("should return 400 for invalid PUT request body", async () => {
 		const response = await fastify.inject({
-			method: 'PUT',
-			url: '/put',
+			method: "PUT",
+			url: "/put",
 			headers: {
-				'Content-Type': 'application/json',
+				"Content-Type": "application/json",
 			},
-			payload: 'invalid body',
+			payload: "invalid body",
 		});
 
 		expect(response.statusCode).toBe(400);

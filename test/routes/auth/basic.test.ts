@@ -1,188 +1,199 @@
-import {Buffer} from 'node:buffer';
-import {
-	describe, it, expect, vi,
-} from 'vitest';
-import Fastify from 'fastify';
-import {basicAuthRoute} from '../../../src/routes/auth/basic.js';
+import { Buffer } from "node:buffer";
+import Fastify from "fastify";
+import { describe, expect, it } from "vitest";
+import { basicAuthRoute } from "../../../src/routes/auth/basic.js";
 
-const makeBasic = (u: string, p: string) => `Basic ${Buffer.from(`${u}:${p}`).toString('base64')}`;
+const makeBasic = (u: string, p: string) =>
+	`Basic ${Buffer.from(`${u}:${p}`).toString("base64")}`;
 
-describe('GET /basic-auth/:user/:passwd', () => {
-	it('401 without auth header', async () => {
-		// eslint-disable-next-line new-cap
-		const fastify = Fastify();
-		basicAuthRoute(fastify);
-		const response = await fastify.inject({method: 'GET', url: '/basic-auth/user/pass'});
-		expect(response.statusCode).toBe(401);
-		expect(response.headers['www-authenticate']).toMatch(/Basic/);
-	});
-
-	it('401 with wrong creds', async () => {
-		// eslint-disable-next-line new-cap
-		const fastify = Fastify();
-		basicAuthRoute(fastify);
-		const response = await fastify.inject({method: 'GET', url: '/basic-auth/user/pass', headers: {authorization: makeBasic('user', 'nope')}});
-		expect(response.statusCode).toBe(401);
-	});
-
-	it('200 with correct creds', async () => {
-		// eslint-disable-next-line new-cap
-		const fastify = Fastify();
-		basicAuthRoute(fastify);
-		const response = await fastify.inject({method: 'GET', url: '/basic-auth/user/pass', headers: {authorization: makeBasic('user', 'pass')}});
-		expect(response.statusCode).toBe(200);
-		expect(response.json()).toEqual({authenticated: true, user: 'user'});
-	});
-
-	it('401 with non-basic scheme', async () => {
+describe("GET /basic-auth/:user/:passwd", () => {
+	it("401 without auth header", async () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		const response = await fastify.inject({
-			method: 'GET',
-			url: '/basic-auth/user/pass',
-			headers: {authorization: 'Bearer sometoken'},
+			method: "GET",
+			url: "/basic-auth/user/pass",
+		});
+		expect(response.statusCode).toBe(401);
+		expect(response.headers["www-authenticate"]).toMatch(/Basic/);
+	});
+
+	it("401 with wrong creds", async () => {
+		// eslint-disable-next-line new-cap
+		const fastify = Fastify();
+		basicAuthRoute(fastify);
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/basic-auth/user/pass",
+			headers: { authorization: makeBasic("user", "nope") },
 		});
 		expect(response.statusCode).toBe(401);
 	});
 
-	it('401 when decoded credentials have no colon', async () => {
+	it("200 with correct creds", async () => {
+		// eslint-disable-next-line new-cap
+		const fastify = Fastify();
+		basicAuthRoute(fastify);
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/basic-auth/user/pass",
+			headers: { authorization: makeBasic("user", "pass") },
+		});
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({ authenticated: true, user: "user" });
+	});
+
+	it("401 with non-basic scheme", async () => {
+		// eslint-disable-next-line new-cap
+		const fastify = Fastify();
+		basicAuthRoute(fastify);
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/basic-auth/user/pass",
+			headers: { authorization: "Bearer sometoken" },
+		});
+		expect(response.statusCode).toBe(401);
+	});
+
+	it("401 when decoded credentials have no colon", async () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		// Base64 of 'nocolonhere'
-		const bad = `Basic ${Buffer.from('nocolonhere').toString('base64')}`;
+		const bad = `Basic ${Buffer.from("nocolonhere").toString("base64")}`;
 		const response = await fastify.inject({
-			method: 'GET',
-			url: '/basic-auth/user/pass',
-			headers: {authorization: bad},
+			method: "GET",
+			url: "/basic-auth/user/pass",
+			headers: { authorization: bad },
 		});
 		expect(response.statusCode).toBe(401);
 	});
 
-	it('401 with empty username', async () => {
+	it("401 with empty username", async () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		// Base64 of ':password'
-		const emptyUser = `Basic ${Buffer.from(':password').toString('base64')}`;
+		const emptyUser = `Basic ${Buffer.from(":password").toString("base64")}`;
 		const response = await fastify.inject({
-			method: 'GET',
-			url: '/basic-auth/user/pass',
-			headers: {authorization: emptyUser},
+			method: "GET",
+			url: "/basic-auth/user/pass",
+			headers: { authorization: emptyUser },
 		});
 		expect(response.statusCode).toBe(401);
 	});
 
-	it('200 with empty password', async () => {
+	it("200 with empty password", async () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		// Base64 of 'user:'
-		const emptyPass = `Basic ${Buffer.from('user:').toString('base64')}`;
+		const emptyPass = `Basic ${Buffer.from("user:").toString("base64")}`;
 		const response = await fastify.inject({
-			method: 'GET',
-			url: '/basic-auth/user/',
-			headers: {authorization: emptyPass},
+			method: "GET",
+			url: "/basic-auth/user/",
+			headers: { authorization: emptyPass },
 		});
 		expect(response.statusCode).toBe(200);
-		expect(response.json()).toEqual({authenticated: true, user: 'user'});
+		expect(response.json()).toEqual({ authenticated: true, user: "user" });
 	});
 
-	it('401 with invalid base64', async () => {
+	it("401 with invalid base64", async () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		const response = await fastify.inject({
-			method: 'GET',
-			url: '/basic-auth/user/pass',
-			headers: {authorization: 'Basic invalid!base64!'},
+			method: "GET",
+			url: "/basic-auth/user/pass",
+			headers: { authorization: "Basic invalid!base64!" },
 		});
 		expect(response.statusCode).toBe(401);
 	});
 
-	it('401 with malformed authorization header (no space)', async () => {
+	it("401 with malformed authorization header (no space)", async () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		const response = await fastify.inject({
-			method: 'GET',
-			url: '/basic-auth/user/pass',
-			headers: {authorization: 'BasicNoSpace'},
+			method: "GET",
+			url: "/basic-auth/user/pass",
+			headers: { authorization: "BasicNoSpace" },
 		});
 		expect(response.statusCode).toBe(401);
 	});
 
-	it('401 with non-string authorization header', async () => {
+	it("401 with non-string authorization header", async () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		const response = await fastify.inject({
-			method: 'GET',
-			url: '/basic-auth/user/pass',
-			headers: {authorization: null as any},
+			method: "GET",
+			url: "/basic-auth/user/pass",
+			// biome-ignore lint/suspicious/noExplicitAny: expected
+			headers: { authorization: null as any },
 		});
 		expect(response.statusCode).toBe(401);
 	});
 
-	it('handles unicode characters in credentials', async () => {
+	it("handles unicode characters in credentials", async () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
-		const unicodeUser = 'üser';
-		const unicodePass = 'pässwörd';
+		const unicodeUser = "üser";
+		const unicodePass = "pässwörd";
 		const response = await fastify.inject({
-			method: 'GET',
+			method: "GET",
 			url: `/basic-auth/${encodeURIComponent(unicodeUser)}/${encodeURIComponent(unicodePass)}`,
-			headers: {authorization: makeBasic(unicodeUser, unicodePass)},
+			headers: { authorization: makeBasic(unicodeUser, unicodePass) },
 		});
 		expect(response.statusCode).toBe(200);
-		expect(response.json()).toEqual({authenticated: true, user: unicodeUser});
+		expect(response.json()).toEqual({ authenticated: true, user: unicodeUser });
 	});
 
 	// Test lines 48-49: catch block in parseBasic for invalid base64
 	// Note: This catch block is extremely difficult to trigger in practice
 	// as Buffer.from() is very tolerant of malformed base64 input
-	it('401 with malformed base64 characters', async () => {
+	it("401 with malformed base64 characters", async () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 
 		// Try with various malformed base64 characters
 		const response = await fastify.inject({
-			method: 'GET',
-			url: '/basic-auth/user/pass',
-			headers: {authorization: 'Basic !!!invalid!!!'},
+			method: "GET",
+			url: "/basic-auth/user/pass",
+			headers: { authorization: "Basic !!!invalid!!!" },
 		});
 		expect(response.statusCode).toBe(401);
 	});
 
 	// Test lines 55-56: early return in safeCompare when lengths differ
-	it('401 when username lengths differ (timing attack protection)', async () => {
+	it("401 when username lengths differ (timing attack protection)", async () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 
 		// Use a short username in URL but longer username in auth header
 		const response = await fastify.inject({
-			method: 'GET',
-			url: '/basic-auth/user/pass',
-			headers: {authorization: makeBasic('verylongusername', 'pass')},
+			method: "GET",
+			url: "/basic-auth/user/pass",
+			headers: { authorization: makeBasic("verylongusername", "pass") },
 		});
 		expect(response.statusCode).toBe(401);
 	});
 
 	// Test lines 55-56: early return in safeCompare when password lengths differ
-	it('401 when password lengths differ (timing attack protection)', async () => {
+	it("401 when password lengths differ (timing attack protection)", async () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 
 		// Use a short password in URL but longer password in auth header
 		const response = await fastify.inject({
-			method: 'GET',
-			url: '/basic-auth/user/pass',
-			headers: {authorization: makeBasic('user', 'verylongpassword')},
+			method: "GET",
+			url: "/basic-auth/user/pass",
+			headers: { authorization: makeBasic("user", "verylongpassword") },
 		});
 		expect(response.statusCode).toBe(401);
 	});
@@ -190,7 +201,7 @@ describe('GET /basic-auth/:user/:passwd', () => {
 	// Test lines 62-63: catch block in safeCompare
 	// Note: This catch block is extremely difficult to trigger in practice
 	// as timingSafeEqual() is very reliable and rarely throws exceptions
-	it('covers safeCompare fallback path conceptually', async () => {
+	it("covers safeCompare fallback path conceptually", async () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
@@ -199,41 +210,41 @@ describe('GET /basic-auth/:user/:passwd', () => {
 		// While difficult to trigger, it ensures the function always returns a boolean
 		// This test verifies the happy path that exercises the safeCompare function
 		const response = await fastify.inject({
-			method: 'GET',
-			url: '/basic-auth/user/pass',
-			headers: {authorization: makeBasic('user', 'pass')},
+			method: "GET",
+			url: "/basic-auth/user/pass",
+			headers: { authorization: makeBasic("user", "pass") },
 		});
 		expect(response.statusCode).toBe(200);
 	});
 
 	// Test lines 104-106: route parameter validation when user is empty string
-	it('401 when user parameter is empty string', async () => {
+	it("401 when user parameter is empty string", async () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 
 		// Test with empty user parameter (this should trigger the validation)
 		const response = await fastify.inject({
-			method: 'GET',
-			url: '/basic-auth//pass', // Empty user parameter
-			headers: {authorization: makeBasic('user', 'pass')},
+			method: "GET",
+			url: "/basic-auth//pass", // Empty user parameter
+			headers: { authorization: makeBasic("user", "pass") },
 		});
 		expect(response.statusCode).toBe(401);
 	});
 
 	// Additional test for lines 104-106: non-string parameters
-	it('401 when parameters are not strings due to URL encoding edge cases', async () => {
+	it("401 when parameters are not strings due to URL encoding edge cases", async () => {
 		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 
 		// Test with URL encoding that might cause parameter parsing issues
 		const response = await fastify.inject({
-			method: 'GET',
-			url: '/basic-auth/%20/pass', // Space as username (should be valid string but empty after trim)
-			headers: {authorization: makeBasic(' ', 'pass')},
+			method: "GET",
+			url: "/basic-auth/%20/pass", // Space as username (should be valid string but empty after trim)
+			headers: { authorization: makeBasic(" ", "pass") },
 		});
 		expect(response.statusCode).toBe(200); // Space is a valid username
-		expect(response.json()).toEqual({authenticated: true, user: ' '});
+		expect(response.json()).toEqual({ authenticated: true, user: " " });
 	});
 });

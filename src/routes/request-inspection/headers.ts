@@ -1,30 +1,34 @@
-import {type FastifyInstance, type FastifyRequest, type FastifySchema} from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifySchema } from "fastify";
 
 const headersSchema: FastifySchema = {
-	description: 'Returns all headers of the client request',
-	tags: ['Request Inspection'],
+	description: "Returns all headers of the client request",
+	tags: ["Request Inspection"],
 	response: {
 		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
-			type: 'object',
+			type: "object",
 			properties: {
 				headers: {
-					type: 'object',
-					additionalProperties: {type: 'string'},
-					description: 'All headers of the client request',
+					type: "object",
+					additionalProperties: { type: "string" },
+					description: "All headers of the client request",
 				},
 			},
-			required: ['headers'],
+			required: ["headers"],
 		},
 	},
 };
 
 export const headersRoute = (fastify: FastifyInstance) => {
-	fastify.get('/headers', {schema: headersSchema}, async (request: FastifyRequest) => {
-		const {headers} = request;
+	fastify.get(
+		"/headers",
+		{ schema: headersSchema },
+		async (request: FastifyRequest) => {
+			const { headers } = request;
 
-		return {
-			headers,
-		};
-	});
+			return {
+				headers,
+			};
+		},
+	);
 };

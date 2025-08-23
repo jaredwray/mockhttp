@@ -1,29 +1,33 @@
-import {type FastifyInstance, type FastifyRequest, type FastifySchema} from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifySchema } from "fastify";
 
 const userAgentSchema: FastifySchema = {
-	description: 'Returns the User-Agent header of the client request',
-	tags: ['Request Inspection'],
+	description: "Returns the User-Agent header of the client request",
+	tags: ["Request Inspection"],
 	response: {
 		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
-			type: 'object',
+			type: "object",
 			properties: {
 				userAgent: {
-					type: 'string',
-					description: 'The User-Agent header of the client request',
+					type: "string",
+					description: "The User-Agent header of the client request",
 				},
 			},
-			required: ['userAgent'],
+			required: ["userAgent"],
 		},
 	},
 };
 
 export const userAgentRoute = (fastify: FastifyInstance) => {
-	fastify.get('/user-agent', {schema: userAgentSchema}, async (request: FastifyRequest) => {
-		const userAgent = request.headers['user-agent'];
+	fastify.get(
+		"/user-agent",
+		{ schema: userAgentSchema },
+		async (request: FastifyRequest) => {
+			const userAgent = request.headers["user-agent"];
 
-		return {
-			userAgent,
-		};
-	});
+			return {
+				userAgent,
+			};
+		},
+	);
 };

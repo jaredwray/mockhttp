@@ -1,27 +1,50 @@
-import path from 'node:path';
-import fastifyStatic from '@fastify/static';
-import fastifyHelmet from '@fastify/helmet';
-import {fastifySwagger} from '@fastify/swagger';
-import fastifyCookie from '@fastify/cookie';
-import Fastify, {type FastifyInstance} from 'fastify';
-import {Hookified, type HookifiedOptions} from 'hookified';
-import {detect} from 'detect-port';
-import {fastifySwaggerConfig, registerSwaggerUi} from './swagger.js';
-import {fastifyConfig} from './fastify-config.js';
-import {indexRoute} from './routes/index.js';
-import {sitemapRoute} from './routes/sitemap.js';
+import path from "node:path";
+import fastifyCookie from "@fastify/cookie";
+import fastifyHelmet from "@fastify/helmet";
+import fastifyStatic from "@fastify/static";
+import { fastifySwagger } from "@fastify/swagger";
+import { detect } from "detect-port";
+import Fastify, { type FastifyInstance } from "fastify";
+import { Hookified, type HookifiedOptions } from "hookified";
+import { fastifyConfig } from "./fastify-config.js";
+import { anythingRoute } from "./routes/anything/index.js";
 import {
-	getRoute, postRoute, deleteRoute, putRoute, patchRoute,
-} from './routes/http-methods/index.js';
-import {statusCodeRoute} from './routes/status-codes/index.js';
-import {ipRoute, headersRoute, userAgentRoute} from './routes/request-inspection/index.js';
-import {cacheRoutes, etagRoutes, responseHeadersRoutes} from './routes/response-inspection/index.js';
-import {absoluteRedirectRoute, relativeRedirectRoute, redirectToRoute} from './routes/redirects/index.js';
-import {getCookiesRoute, postCookieRoute, deleteCookieRoute} from './routes/cookies/index.js';
-import {anythingRoute} from './routes/anything/index.js';
+	basicAuthRoute,
+	bearerAuthRoute,
+	digestAuthRoute,
+	hiddenBasicAuthRoute,
+} from "./routes/auth/index.js";
 import {
-	basicAuthRoute, hiddenBasicAuthRoute, bearerAuthRoute, digestAuthRoute,
-} from './routes/auth/index.js';
+	deleteCookieRoute,
+	getCookiesRoute,
+	postCookieRoute,
+} from "./routes/cookies/index.js";
+import {
+	deleteRoute,
+	getRoute,
+	patchRoute,
+	postRoute,
+	putRoute,
+} from "./routes/http-methods/index.js";
+import { indexRoute } from "./routes/index.js";
+import {
+	absoluteRedirectRoute,
+	redirectToRoute,
+	relativeRedirectRoute,
+} from "./routes/redirects/index.js";
+import {
+	headersRoute,
+	ipRoute,
+	userAgentRoute,
+} from "./routes/request-inspection/index.js";
+import {
+	cacheRoutes,
+	etagRoutes,
+	responseHeadersRoutes,
+} from "./routes/response-inspection/index.js";
+import { sitemapRoute } from "./routes/sitemap.js";
+import { statusCodeRoute } from "./routes/status-codes/index.js";
+import { fastifySwaggerConfig, registerSwaggerUi } from "./swagger.js";
 
 export type HttpBinOptions = {
 	httpMethods?: boolean;
@@ -68,7 +91,7 @@ export type MockHttpOptions = {
 
 export class MockHttp extends Hookified {
 	private _port = 3000;
-	private _host = '0.0.0.0';
+	private _host = "0.0.0.0";
 	private _autoDetectPort = true;
 	private _helmet = true;
 	private _apiDocs = true;
@@ -234,13 +257,13 @@ export class MockHttp extends Hookified {
 
 			// Register Scalar API client
 			await this._server.register(fastifyStatic, {
-				root: path.resolve('./node_modules/@scalar/api-reference/dist'),
-				prefix: '/scalar',
+				root: path.resolve("./node_modules/@scalar/api-reference/dist"),
+				prefix: "/scalar",
 			});
 
 			// Register the Public for favicon
 			await this.server.register(fastifyStatic, {
-				root: path.resolve('./public'),
+				root: path.resolve("./public"),
 				decorateReply: false,
 			});
 
@@ -256,7 +279,16 @@ export class MockHttp extends Hookified {
 				await this.registerApiDocs();
 			}
 
-			const {httpMethods, redirects, requestInspection, responseInspection, statusCodes, cookies, anything, auth} = this._httpBin;
+			const {
+				httpMethods,
+				redirects,
+				requestInspection,
+				responseInspection,
+				statusCodes,
+				cookies,
+				anything,
+				auth,
+			} = this._httpBin;
 
 			if (httpMethods) {
 				await this.registerHttpMethods();
@@ -295,11 +327,13 @@ export class MockHttp extends Hookified {
 				this._port = await this.detectPort();
 
 				if (originalPort !== this._port) {
-					this._server.log.info(`Port ${originalPort} is in use, detected next available port: ${this._port}`);
+					this._server.log.info(
+						`Port ${originalPort} is in use, detected next available port: ${this._port}`,
+					);
 				}
 			}
 
-			await this._server.listen({port: this._port, host: this._host});
+			await this._server.listen({ port: this._port, host: this._host });
 		} catch (error) {
 			/* c8 ignore next 2 */
 			this._server.log.error(error);
@@ -318,7 +352,7 @@ export class MockHttp extends Hookified {
 	 * @returns The port that is available to run on
 	 */
 	public async detectPort(): Promise<number> {
-		const {port} = this;
+		const { port } = this;
 		return detect(port);
 	}
 
@@ -326,7 +360,9 @@ export class MockHttp extends Hookified {
 	 * This will register the API documentation routes including openapi and swagger ui.
 	 * @param fastifyInstance - the server instance to register the routes on.
 	 */
-	public async registerApiDocs(fastifyInstance?: FastifyInstance): Promise<void> {
+	public async registerApiDocs(
+		fastifyInstance?: FastifyInstance,
+	): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 
 		// Set up Swagger for API documentation
@@ -343,7 +379,9 @@ export class MockHttp extends Hookified {
 	 * Register the HTTP methods routes.
 	 * @param fastifyInstance - the server instance to register the routes on.
 	 */
-	public async registerHttpMethods(fastifyInstance?: FastifyInstance): Promise<void> {
+	public async registerHttpMethods(
+		fastifyInstance?: FastifyInstance,
+	): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(getRoute);
 		await fastify.register(postRoute);
@@ -356,7 +394,9 @@ export class MockHttp extends Hookified {
 	 * Register the status code routes.
 	 * @param fastifyInstance - the server instance to register the routes on.
 	 */
-	public async registerStatusCodeRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
+	public async registerStatusCodeRoutes(
+		fastifyInstance?: FastifyInstance,
+	): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(statusCodeRoute);
 	}
@@ -365,7 +405,9 @@ export class MockHttp extends Hookified {
 	 * Register the request inspection routes.
 	 * @param fastifyInstance - the server instance to register the routes on.
 	 */
-	public async registerRequestInspectionRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
+	public async registerRequestInspectionRoutes(
+		fastifyInstance?: FastifyInstance,
+	): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(ipRoute);
 		await fastify.register(headersRoute);
@@ -376,7 +418,9 @@ export class MockHttp extends Hookified {
 	 * Register the response inspection routes.
 	 * @param fastifyInstance - the server instance to register the routes on.
 	 */
-	public async registerResponseInspectionRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
+	public async registerResponseInspectionRoutes(
+		fastifyInstance?: FastifyInstance,
+	): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(cacheRoutes);
 		await fastify.register(etagRoutes);
@@ -387,7 +431,9 @@ export class MockHttp extends Hookified {
 	 * Register the redirect routes.
 	 * @param fastifyInstance - the server instance to register the routes on.
 	 */
-	public async registerRedirectRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
+	public async registerRedirectRoutes(
+		fastifyInstance?: FastifyInstance,
+	): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(absoluteRedirectRoute);
 		await fastify.register(relativeRedirectRoute);
@@ -398,7 +444,9 @@ export class MockHttp extends Hookified {
 	 * Register the cookie routes.
 	 * @param fastifyInstance - the server instance to register the routes on.
 	 */
-	public async registerCookieRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
+	public async registerCookieRoutes(
+		fastifyInstance?: FastifyInstance,
+	): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(fastifyCookie);
 		await fastify.register(getCookiesRoute);
@@ -410,7 +458,9 @@ export class MockHttp extends Hookified {
 	 * Register the anything routes.
 	 * @param fastifyInstance - the server instance to register the routes on.
 	 */
-	public async registerAnythingRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
+	public async registerAnythingRoutes(
+		fastifyInstance?: FastifyInstance,
+	): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(anythingRoute);
 	}
@@ -419,7 +469,9 @@ export class MockHttp extends Hookified {
 	 * Register the auth routes.
 	 * @param fastifyInstance - the server instance to register the routes on.
 	 */
-	public async registerAuthRoutes(fastifyInstance?: FastifyInstance): Promise<void> {
+	public async registerAuthRoutes(
+		fastifyInstance?: FastifyInstance,
+	): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(basicAuthRoute);
 		await fastify.register(hiddenBasicAuthRoute);

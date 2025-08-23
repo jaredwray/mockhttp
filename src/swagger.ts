@@ -1,6 +1,6 @@
-import {type FastifyInstance} from 'fastify';
-import {fastifySwaggerUi} from '@fastify/swagger-ui';
-import pkg from '../package.json' assert { type: 'json' };
+import { fastifySwaggerUi } from "@fastify/swagger-ui";
+import type { FastifyInstance } from "fastify";
+import pkg from "../package.json" with { type: "json" };
 
 const description = `
 A simple HTTP server that can be used to mock HTTP responses for testing purposes. Inspired by [httpbin](https://httpbin.org/) and built using \`nodejs\` and \`fastify\` with the idea of running it via https://mockhttp.org, via docker \`jaredwray/mockhttp\`, or nodejs \`npm install jaredwray/mockhttp\`.
@@ -17,20 +17,20 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 export const fastifySwaggerConfig = {
 	openapi: {
 		info: {
-			title: 'Mock HTTP API',
+			title: "Mock HTTP API",
 			description,
 			version: pkg.version,
 		},
-		consumes: ['application/json'],
-		produces: ['application/json'],
+		consumes: ["application/json"],
+		produces: ["application/json"],
 	},
 };
 
 export const registerSwaggerUi = async (fastify: FastifyInstance) => {
 	await fastify.register(fastifySwaggerUi, {
-		routePrefix: '/docs',
+		routePrefix: "/docs",
 		uiConfig: {
-			docExpansion: 'none',
+			docExpansion: "none",
 			deepLinking: false,
 		},
 		uiHooks: {

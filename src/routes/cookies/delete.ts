@@ -1,33 +1,35 @@
-import {
-	type FastifyInstance, type FastifySchema,
-} from 'fastify';
+import type { FastifyInstance, FastifySchema } from "fastify";
 
 export const cookiesDeleteSchema: FastifySchema = {
-	description: 'Delete a cookie',
-	tags: ['Cookies'],
+	description: "Delete a cookie",
+	tags: ["Cookies"],
 	querystring: {
-		type: 'object',
+		type: "object",
 		properties: {
-			name: {type: 'string'},
+			name: { type: "string" },
 		},
-		required: ['name'],
+		required: ["name"],
 		additionalProperties: false,
 	},
 	response: {
 		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		204: {
-			type: 'null',
+			type: "null",
 		},
 	},
 };
 
 export const deleteCookieRoute = (fastify: FastifyInstance) => {
-	fastify.delete('/cookies', {schema: cookiesDeleteSchema}, async (request, reply) => {
-		const {name} = request.query as {name: string};
-		// eslint-disable-next-line @typescript-eslint/no-floating-promises
-		reply.clearCookie(name, {path: '/'});
+	fastify.delete(
+		"/cookies",
+		{ schema: cookiesDeleteSchema },
+		async (request, reply) => {
+			const { name } = request.query as { name: string };
+			// eslint-disable-next-line @typescript-eslint/no-floating-promises
+			reply.clearCookie(name, { path: "/" });
 
-		// Send back a 204 No Content response
-		return reply.status(204).send();
-	});
+			// Send back a 204 No Content response
+			return reply.status(204).send();
+		},
+	);
 };

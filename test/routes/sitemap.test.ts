@@ -1,22 +1,22 @@
-import {
-	describe, it, expect, vi,
-} from 'vitest';
-import Fastify from 'fastify';
-import {sitemapRoute} from '../../src/routes/sitemap.js';
+import Fastify from "fastify";
+import { describe, expect, it } from "vitest";
+import { sitemapRoute } from "../../src/routes/sitemap.js";
 
-describe('sitemap-route', () => {
-	it('should return the Redoc HTML page on GET /', async () => {
-	// eslint-disable-next-line new-cap
+describe("sitemap-route", () => {
+	it("should return the Redoc HTML page on GET /", async () => {
+		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		sitemapRoute(fastify);
 
 		const response = await fastify.inject({
-			method: 'GET',
-			url: '/sitemap.xml',
+			method: "GET",
+			url: "/sitemap.xml",
 		});
 
 		expect(response.statusCode).toBe(200);
-		expect(response.headers['content-type']).toBe('text/xml');
-		expect(response.payload).toContain('<?xml version="1.0" encoding="UTF-8"?>');
+		expect(response.headers["content-type"]).toBe("text/xml");
+		expect(response.payload).toContain(
+			'<?xml version="1.0" encoding="UTF-8"?>',
+		);
 	});
 });

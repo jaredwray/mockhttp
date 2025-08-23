@@ -1,7 +1,10 @@
-import {Buffer} from 'node:buffer';
-import {
-	type FastifyInstance, type FastifyReply, type FastifyRequest, type FastifySchema,
-} from 'fastify';
+import { Buffer } from "node:buffer";
+import type {
+	FastifyInstance,
+	FastifyReply,
+	FastifyRequest,
+	FastifySchema,
+} from "fastify";
 
 type HiddenBasicParameters = {
 	user: string;
@@ -13,19 +16,22 @@ const parseBasic = (header?: string) => {
 		return undefined;
 	}
 
-	const [scheme, value] = header.split(' ');
-	if (!scheme || scheme.toLowerCase() !== 'basic' || !value) {
+	const [scheme, value] = header.split(" ");
+	if (!scheme || scheme.toLowerCase() !== "basic" || !value) {
 		return undefined;
 	}
 
 	try {
-		const decoded = Buffer.from(value, 'base64').toString('utf8');
-		const idx = decoded.indexOf(':');
+		const decoded = Buffer.from(value, "base64").toString("utf8");
+		const idx = decoded.indexOf(":");
 		if (idx === -1) {
 			return undefined;
 		}
 
-		return {username: decoded.slice(0, idx), password: decoded.slice(idx + 1)};
+		return {
+			username: decoded.slice(0, idx),
+			password: decoded.slice(idx + 1),
+		};
 	} catch {
 		/* c8 ignore next 2 */
 		return undefined;
@@ -33,31 +39,39 @@ const parseBasic = (header?: string) => {
 };
 
 export const hiddenBasicAuthSchema: FastifySchema = {
-	description: 'HTTP Basic authentication with docs hidden. Mirrors /basic-auth but hides from schema.',
-	tags: ['Auth'],
+	description:
+		"HTTP Basic authentication with docs hidden. Mirrors /basic-auth but hides from schema.",
+	tags: ["Auth"],
 	hide: true,
 	params: {
-		type: 'object',
+		type: "object",
 		properties: {
-			user: {type: 'string'},
-			passwd: {type: 'string'},
+			user: { type: "string" },
+			passwd: { type: "string" },
 		},
-		required: ['user', 'passwd'],
+		required: ["user", "passwd"],
 	},
 };
 
 export const hiddenBasicAuthRoute = (fastify: FastifyInstance) => {
-	fastify.get('/hidden-basic-auth/:user/:passwd', {schema: hiddenBasicAuthSchema}, async (request: FastifyRequest<{Params: HiddenBasicParameters}>, reply: FastifyReply) => {
-		const {user, passwd} = request.params;
-		const parsed = parseBasic(request.headers.authorization);
+	fastify.get(
+		"/hidden-basic-auth/:user/:passwd",
+		{ schema: hiddenBasicAuthSchema },
+		async (
+			request: FastifyRequest<{ Params: HiddenBasicParameters }>,
+			reply: FastifyReply,
+		) => {
+			const { user, passwd } = request.params;
+			const parsed = parseBasic(request.headers.authorization);
 
-		if (!parsed || parsed.username !== user || parsed.password !== passwd) {
-			void reply.header('WWW-Authenticate', 'Basic realm="mockhttp"');
-			return reply.status(401).send({message: 'Unauthorized'});
-		}
+			if (!parsed || parsed.username !== user || parsed.password !== passwd) {
+				void reply.header("WWW-Authenticate", 'Basic realm="mockhttp"');
+				return reply.status(401).send({ message: "Unauthorized" });
+			}
 
-		return reply.send({authenticated: true, user});
-	});
+			return reply.send({ authenticated: true, user });
+		},
+	);
 };
 
 export default hiddenBasicAuthRoute;

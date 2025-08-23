@@ -1,5 +1,5 @@
-import process from 'node:process';
-import {MockHttp} from './mock-http.js';
+import process from "node:process";
+import { MockHttp } from "./mock-http.js";
 
 // Start the Fastify server
 export const start = async () => {
@@ -23,6 +23,7 @@ export const start = async () => {
 if (import.meta.url === `file://${process.argv[1]}`) {
 	await start();
 }
+
 /* c8 ignore end */
 
-export {MockHttp as default, MockHttp as mockhttp} from './mock-http.js';
+export { MockHttp as default, MockHttp as mockhttp } from "./mock-http.js";

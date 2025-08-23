@@ -60,7 +60,15 @@ const parseDigest = (header?: string): Record<string, string> | undefined => {
 		return undefined;
 	}
 
-	const [scheme, rest] = header.split(" ", 2);
+	const spaceIndex = header.indexOf(" ");
+	/* c8 ignore next 3 */
+	if (spaceIndex === -1) {
+		return undefined;
+	}
+
+	const scheme = header.slice(0, spaceIndex);
+	const rest = header.slice(spaceIndex + 1);
+
 	if (!scheme || scheme.toLowerCase() !== "digest" || !rest) {
 		return undefined;
 	}
@@ -186,7 +194,6 @@ export const digestAuthRoute = (fastify: FastifyInstance) => {
 				return reply.status(401).send({ message: "Unauthorized" });
 			}
 
-			/* c8 ignore next */
 			return reply.send({ authenticated: true, user });
 		},
 	);
@@ -224,14 +231,12 @@ export const digestAuthRoute = (fastify: FastifyInstance) => {
 				return reply.status(401).send({ message: "Unauthorized" });
 			}
 
-			/* c8 ignore next 2 */
 			const method = "GET";
 			const uri = auth.uri ?? request.url.replace(/^https?:\/\/[^/]+/, "");
 			const algo = hashAlg(auth.algorithm ?? algoHeader);
 			const ha1 = h(algo, `${user}:${realm}:${passwd}`);
 			const ha2 = h(algo, `${method}:${uri}`);
 
-			/* c8 ignore next 3 */
 			const expected = auth.qop
 				? h(
 						algo,
@@ -247,7 +252,6 @@ export const digestAuthRoute = (fastify: FastifyInstance) => {
 				return reply.status(401).send({ message: "Unauthorized" });
 			}
 
-			/* c8 ignore next */
 			return reply.send({ authenticated: true, user });
 		},
 	);

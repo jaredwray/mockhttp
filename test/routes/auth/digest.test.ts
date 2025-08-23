@@ -1,4 +1,3 @@
-import { Buffer } from "node:buffer";
 import crypto from "node:crypto";
 import Fastify from "fastify";
 import { describe, expect, it } from "vitest";
@@ -125,63 +124,81 @@ describe("GET /digest-auth", () => {
 		expect(response.statusCode).toBe(401);
 	});
 
-	// Test line 123: Successful authentication with valid digest
-	it.skip("authenticates successfully with valid digest", async () => {
+	// Test successful authentication without qop
+	it("authenticates successfully without qop", async () => {
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 
-		// Mock the makeNonce function to return a predictable value
-		const originalMakeNonce = crypto.randomBytes;
-		// biome-ignore lint/suspicious/noExplicitAny: expected
-		(crypto as any).randomBytes = () => Buffer.from("predictable", "utf8");
+		const uri = "/digest-auth/auth/testuser/testpass";
+		const realm = "mockhttp";
+		const nonce = "client-chosen-nonce";
 
-		try {
-			// Get challenge first
-			const challenge = await fastify.inject({
-				method: "GET",
-				url: "/digest-auth/auth/testuser/testpass",
-			});
+		// Compute correct response without qop
+		const ha1 = crypto
+			.createHash("md5")
+			.update(`testuser:${realm}:testpass`)
+			.digest("hex");
+		const ha2 = crypto.createHash("md5").update(`GET:${uri}`).digest("hex");
+		const responseHash = crypto
+			.createHash("md5")
+			.update(`${ha1}:${nonce}:${ha2}`)
+			.digest("hex");
 
-			const authHeader = challenge.headers["www-authenticate"] as string;
-			const nonceMatch = /nonce="([^"]+)"/.exec(authHeader);
-			const nonce = nonceMatch?.[1] ?? "";
+		const validAuthHeader = `Digest username="testuser", realm="${realm}", nonce="${nonce}", uri="${uri}", response="${responseHash}"`;
 
-			// Create valid auth response
-			const uri = "/digest-auth/auth/testuser/testpass";
-			const realm = "mockhttp";
-			const nc = "00000001";
-			const cnonce = "testcnonce";
-			const qop = "auth";
+		const response = await fastify.inject({
+			method: "GET",
+			url: uri,
+			headers: { authorization: validAuthHeader },
+		});
 
-			const ha1 = crypto
-				.createHash("md5")
-				.update(`testuser:${realm}:testpass`)
-				.digest("hex");
-			const ha2 = crypto.createHash("md5").update(`GET:${uri}`).digest("hex");
-			const responseHash = crypto
-				.createHash("md5")
-				.update(`${ha1}:${nonce}:${nc}:${cnonce}:${qop}:${ha2}`)
-				.digest("hex");
+		expect(response.statusCode).toBe(200);
+		const body = JSON.parse(String(response.body)) as {
+			authenticated: boolean;
+			user: string;
+		};
+		expect(body.authenticated).toBe(true);
+		expect(body.user).toBe("testuser");
+	});
 
-			const validAuthHeader = `Digest username="testuser", realm="${realm}", nonce="${nonce}", uri="${uri}", qop=${qop}, nc=${nc}, cnonce="${cnonce}", response="${responseHash}"`;
+	// Test successful authentication with qop
+	it("authenticates successfully with qop", async () => {
+		const fastify = Fastify();
+		digestAuthRoute(fastify);
 
-			const response = await fastify.inject({
-				method: "GET",
-				url: uri,
-				headers: { authorization: validAuthHeader },
-			});
+		const uri = "/digest-auth/auth/testuser/testpass";
+		const realm = "mockhttp";
+		const nonce = "client-nonce-123";
+		const nc = "00000001";
+		const cnonce = "client-cnonce-456";
+		const qop = "auth";
 
-			expect(response.statusCode).toBe(200);
-			const body = JSON.parse(String(response.body)) as {
-				authenticated: boolean;
-				user: string;
-			};
-			expect(body.authenticated).toBe(true);
-			expect(body.user).toBe("testuser");
-		} finally {
-			// biome-ignore lint/suspicious/noExplicitAny: expected
-			(crypto as any).randomBytes = originalMakeNonce;
-		}
+		// Compute correct response with qop
+		const ha1 = crypto
+			.createHash("md5")
+			.update(`testuser:${realm}:testpass`)
+			.digest("hex");
+		const ha2 = crypto.createHash("md5").update(`GET:${uri}`).digest("hex");
+		const responseHash = crypto
+			.createHash("md5")
+			.update(`${ha1}:${nonce}:${nc}:${cnonce}:${qop}:${ha2}`)
+			.digest("hex");
+
+		const validAuthHeader = `Digest username="testuser", realm="${realm}", nonce="${nonce}", uri="${uri}", qop=${qop}, nc=${nc}, cnonce="${cnonce}", response="${responseHash}"`;
+
+		const response = await fastify.inject({
+			method: "GET",
+			url: uri,
+			headers: { authorization: validAuthHeader },
+		});
+
+		expect(response.statusCode).toBe(200);
+		const body = JSON.parse(String(response.body)) as {
+			authenticated: boolean;
+			user: string;
+		};
+		expect(body.authenticated).toBe(true);
+		expect(body.user).toBe("testuser");
 	});
 
 	// Test lines 140-143: Username mismatch on algorithm endpoint
@@ -195,6 +212,18 @@ describe("GET /digest-auth", () => {
 			headers: {
 				authorization: 'Digest username="wronguser", response="test"',
 			},
+		});
+		expect(response.statusCode).toBe(401);
+		expect(response.headers["www-authenticate"]).toMatch(/algorithm=MD5/);
+	});
+
+	// Test line 206: Invalid algorithm defaults to MD5
+	it("401 with invalid algorithm defaults to MD5", async () => {
+		const fastify = Fastify();
+		digestAuthRoute(fastify);
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/digest-auth/auth/user/pass/invalidalgo",
 		});
 		expect(response.statusCode).toBe(401);
 		expect(response.headers["www-authenticate"]).toMatch(/algorithm=MD5/);
@@ -248,125 +277,81 @@ describe("GET /digest-auth", () => {
 		expect(response.headers["www-authenticate"]).toMatch(/algorithm=SHA-512/);
 	});
 
-	// Test line 161: Successful authentication on algorithm endpoint
-	it.skip("authenticates successfully on algorithm endpoint", async () => {
+	// Test successful authentication on algorithm endpoint with qop
+	it("authenticates successfully on algorithm endpoint", async () => {
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 
-		// Mock the makeNonce function to return a predictable value
-		const originalMakeNonce = crypto.randomBytes;
-		// biome-ignore lint/suspicious/noExplicitAny: expected
-		(crypto as any).randomBytes = () => Buffer.from("predictable2", "utf8");
+		const uri = "/digest-auth/auth/testuser/testpass/SHA-256";
+		const realm = "mockhttp";
+		const nonce = "test-nonce-789";
+		const nc = "00000001";
+		const cnonce = "test-cnonce-101";
+		const qop = "auth";
 
-		try {
-			// Get challenge first
-			const challenge = await fastify.inject({
-				method: "GET",
-				url: "/digest-auth/auth/testuser/testpass/SHA-256",
-			});
+		// Compute correct response with SHA-256
+		const ha1 = crypto
+			.createHash("sha256")
+			.update(`testuser:${realm}:testpass`)
+			.digest("hex");
+		const ha2 = crypto.createHash("sha256").update(`GET:${uri}`).digest("hex");
+		const responseHash = crypto
+			.createHash("sha256")
+			.update(`${ha1}:${nonce}:${nc}:${cnonce}:${qop}:${ha2}`)
+			.digest("hex");
 
-			const authHeader = challenge.headers["www-authenticate"] as string;
-			const nonceMatch = /nonce="([^"]+)"/.exec(authHeader);
-			const nonce = nonceMatch?.[1] ?? "";
+		const validAuthHeader = `Digest username="testuser", realm="${realm}", nonce="${nonce}", uri="${uri}", qop=${qop}, nc=${nc}, cnonce="${cnonce}", response="${responseHash}", algorithm="SHA-256"`;
 
-			const uri = "/digest-auth/auth/testuser/testpass/SHA-256";
-			const realm = "mockhttp";
-			const nc = "00000001";
-			const cnonce = "testcnonce2";
-			const qop = "auth";
+		const response = await fastify.inject({
+			method: "GET",
+			url: uri,
+			headers: { authorization: validAuthHeader },
+		});
 
-			// Compute correct response with SHA-256
-			const ha1 = crypto
-				.createHash("sha256")
-				.update(`testuser:${realm}:testpass`)
-				.digest("hex");
-			const ha2 = crypto
-				.createHash("sha256")
-				.update(`GET:${uri}`)
-				.digest("hex");
-			const responseHash = crypto
-				.createHash("sha256")
-				.update(`${ha1}:${nonce}:${nc}:${cnonce}:${qop}:${ha2}`)
-				.digest("hex");
-
-			const validAuthHeader =
-				`Digest username="testuser", realm="${realm}", nonce="${nonce}", uri="${uri}", ` +
-				`qop=${qop}, nc=${nc}, cnonce="${cnonce}", response="${responseHash}", algorithm="SHA-256"`;
-
-			const response = await fastify.inject({
-				method: "GET",
-				url: uri,
-				headers: { authorization: validAuthHeader },
-			});
-
-			expect(response.statusCode).toBe(200);
-			const body = JSON.parse(String(response.body)) as {
-				authenticated: boolean;
-				user: string;
-			};
-			expect(body.authenticated).toBe(true);
-			expect(body.user).toBe("testuser");
-		} finally {
-			// biome-ignore lint/suspicious/noExplicitAny: expected
-			(crypto as any).randomBytes = originalMakeNonce;
-		}
+		expect(response.statusCode).toBe(200);
+		const body = JSON.parse(String(response.body)) as {
+			authenticated: boolean;
+			user: string;
+		};
+		expect(body.authenticated).toBe(true);
+		expect(body.user).toBe("testuser");
 	});
 
-	// Additional test for successful auth without qop on algorithm endpoint (line 154)
-	it.skip("authenticates successfully without qop on algorithm endpoint", async () => {
+	// Test successful authentication on algorithm endpoint without qop
+	it("authenticates successfully on algorithm endpoint without qop", async () => {
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 
-		// Mock the makeNonce function to return a predictable value
-		const originalMakeNonce = crypto.randomBytes;
-		// biome-ignore lint/suspicious/noExplicitAny: expected
-		(crypto as any).randomBytes = () => Buffer.from("predictable3", "utf8");
+		const uri = "/digest-auth/auth/testuser/testpass/MD5";
+		const realm = "mockhttp";
+		const nonce = "simple-nonce";
 
-		try {
-			// Get challenge first
-			const challenge = await fastify.inject({
-				method: "GET",
-				url: "/digest-auth/auth/testuser/testpass/MD5",
-			});
+		// Compute correct response without qop
+		const ha1 = crypto
+			.createHash("md5")
+			.update(`testuser:${realm}:testpass`)
+			.digest("hex");
+		const ha2 = crypto.createHash("md5").update(`GET:${uri}`).digest("hex");
+		const responseHash = crypto
+			.createHash("md5")
+			.update(`${ha1}:${nonce}:${ha2}`)
+			.digest("hex");
 
-			const authHeader = challenge.headers["www-authenticate"] as string;
-			const nonceMatch = /nonce="([^"]+)"/.exec(authHeader);
-			const nonce = nonceMatch?.[1] ?? "";
+		const validAuthHeader = `Digest username="testuser", realm="${realm}", nonce="${nonce}", uri="${uri}", response="${responseHash}", algorithm="MD5"`;
 
-			const uri = "/digest-auth/auth/testuser/testpass/MD5";
-			const realm = "mockhttp";
+		const response = await fastify.inject({
+			method: "GET",
+			url: uri,
+			headers: { authorization: validAuthHeader },
+		});
 
-			// Compute correct response without qop
-			const ha1 = crypto
-				.createHash("md5")
-				.update(`testuser:${realm}:testpass`)
-				.digest("hex");
-			const ha2 = crypto.createHash("md5").update(`GET:${uri}`).digest("hex");
-			const responseHash = crypto
-				.createHash("md5")
-				.update(`${ha1}:${nonce}:${ha2}`)
-				.digest("hex");
-
-			const validAuthHeader = `Digest username="testuser", realm="${realm}", nonce="${nonce}", uri="${uri}", response="${responseHash}", algorithm="MD5"`;
-
-			const response = await fastify.inject({
-				method: "GET",
-				url: uri,
-				headers: { authorization: validAuthHeader },
-			});
-
-			expect(response.statusCode).toBe(200);
-			const body = JSON.parse(String(response.body)) as {
-				authenticated: boolean;
-				user: string;
-			};
-			expect(body.authenticated).toBe(true);
-			expect(body.user).toBe("testuser");
-		} finally {
-			// Restore original function
-			// biome-ignore lint/suspicious/noExplicitAny: expected
-			(crypto as any).randomBytes = originalMakeNonce;
-		}
+		expect(response.statusCode).toBe(200);
+		const body = JSON.parse(String(response.body)) as {
+			authenticated: boolean;
+			user: string;
+		};
+		expect(body.authenticated).toBe(true);
+		expect(body.user).toBe("testuser");
 	});
 });
 

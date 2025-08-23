@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifySchema } from "fastify";
-import { escape } from "html-escaper";
+import { escape as escapeHtml } from "html-escaper";
 
 const responseHeadersSchema: FastifySchema = {
 	description: "Returns a set of response headers based on the query string.",
@@ -29,13 +29,13 @@ export const responseHeadersRoutes = (fastify: FastifyInstance) => {
 
 			for (const [key, value] of Object.entries(queryParameters)) {
 				// eslint-disable-next-line @typescript-eslint/no-floating-promises
-				reply.header(key, escape(value));
+				reply.header(key, escapeHtml(value));
 			}
 
 			const cleanedResponse = Object.fromEntries(
 				Object.entries(queryParameters).map(([key, value]) => [
 					key,
-					escape(value),
+					escapeHtml(value),
 				]),
 			);
 
@@ -52,18 +52,18 @@ export const responseHeadersRoutes = (fastify: FastifyInstance) => {
 
 			for (const [key, value] of Object.entries(queryParameters)) {
 				// eslint-disable-next-line @typescript-eslint/no-floating-promises
-				reply.header(key, escape(value));
+				reply.header(key, escapeHtml(value));
 			}
 
 			for (const [key, value] of Object.entries(body)) {
 				// eslint-disable-next-line @typescript-eslint/no-floating-promises
-				reply.header(key, escape(value));
+				reply.header(key, escapeHtml(value));
 			}
 
 			const cleanedResponse = Object.fromEntries(
 				Object.entries({ ...queryParameters, ...body }).map(([key, value]) => [
 					key,
-					escape(value),
+					escapeHtml(value),
 				]),
 			);
 

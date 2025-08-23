@@ -1,5 +1,5 @@
 import Fastify from "fastify";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { indexRoute } from "../../src/routes/index.js"; // Adjust the path as necessary
 
 describe("index-route", () => {

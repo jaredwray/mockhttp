@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 import Fastify from "fastify";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { hiddenBasicAuthRoute } from "../../../src/routes/auth/hidden-basic.js";
 
 const makeBasic = (u: string, p: string) =>

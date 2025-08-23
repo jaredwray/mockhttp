@@ -1,4 +1,3 @@
-import { mock } from "node:test";
 import Fastify from "fastify";
 import { describe, expect, test } from "vitest";
 import { MockHttp, type MockHttpOptions, mockhttp } from "../src/mock-http.js";

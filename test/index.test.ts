@@ -1,5 +1,4 @@
 import process from "node:process";
-import { mock } from "node:test";
 import { describe, expect, it } from "vitest";
 import { start } from "../src/index.js";
 

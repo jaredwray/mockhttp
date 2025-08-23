@@ -127,13 +127,12 @@ describe("GET /digest-auth", () => {
 
 	// Test line 123: Successful authentication with valid digest
 	it.skip("authenticates successfully with valid digest", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 
 		// Mock the makeNonce function to return a predictable value
 		const originalMakeNonce = crypto.randomBytes;
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+		// biome-ignore lint/suspicious/noExplicitAny: expected
 		(crypto as any).randomBytes = () => Buffer.from("predictable", "utf8");
 
 		try {
@@ -180,7 +179,7 @@ describe("GET /digest-auth", () => {
 			expect(body.authenticated).toBe(true);
 			expect(body.user).toBe("testuser");
 		} finally {
-			// Restore original function
+			// biome-ignore lint/suspicious/noExplicitAny: expected
 			(crypto as any).randomBytes = originalMakeNonce;
 		}
 	});
@@ -251,13 +250,12 @@ describe("GET /digest-auth", () => {
 
 	// Test line 161: Successful authentication on algorithm endpoint
 	it.skip("authenticates successfully on algorithm endpoint", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 
 		// Mock the makeNonce function to return a predictable value
 		const originalMakeNonce = crypto.randomBytes;
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+		// biome-ignore lint/suspicious/noExplicitAny: expected
 		(crypto as any).randomBytes = () => Buffer.from("predictable2", "utf8");
 
 		try {
@@ -309,20 +307,19 @@ describe("GET /digest-auth", () => {
 			expect(body.authenticated).toBe(true);
 			expect(body.user).toBe("testuser");
 		} finally {
-			// Restore original function
+			// biome-ignore lint/suspicious/noExplicitAny: expected
 			(crypto as any).randomBytes = originalMakeNonce;
 		}
 	});
 
 	// Additional test for successful auth without qop on algorithm endpoint (line 154)
 	it.skip("authenticates successfully without qop on algorithm endpoint", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 
 		// Mock the makeNonce function to return a predictable value
 		const originalMakeNonce = crypto.randomBytes;
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+		// biome-ignore lint/suspicious/noExplicitAny: expected
 		(crypto as any).randomBytes = () => Buffer.from("predictable3", "utf8");
 
 		try {
@@ -367,6 +364,7 @@ describe("GET /digest-auth", () => {
 			expect(body.user).toBe("testuser");
 		} finally {
 			// Restore original function
+			// biome-ignore lint/suspicious/noExplicitAny: expected
 			(crypto as any).randomBytes = originalMakeNonce;
 		}
 	});

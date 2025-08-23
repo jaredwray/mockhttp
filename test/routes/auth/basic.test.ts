@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 import Fastify from "fastify";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { basicAuthRoute } from "../../../src/routes/auth/basic.js";
 
 const makeBasic = (u: string, p: string) =>
@@ -130,6 +130,7 @@ describe("GET /basic-auth/:user/:passwd", () => {
 		const response = await fastify.inject({
 			method: "GET",
 			url: "/basic-auth/user/pass",
+			// biome-ignore lint/suspicious/noExplicitAny: expected
 			headers: { authorization: null as any },
 		});
 		expect(response.statusCode).toBe(401);

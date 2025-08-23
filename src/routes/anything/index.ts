@@ -84,6 +84,7 @@ export const anythingRoute = (fastify: FastifyInstance) => {
 		const response: AnythingResponse = {
 			args: request.query as Record<string, unknown>,
 			data: (request.body as Record<string, unknown>) ?? {},
+			// biome-ignore lint/suspicious/noExplicitAny: expected
 			files: (request.raw as any)?.files ?? {},
 			form: (request.body as Record<string, unknown>) ?? {},
 			headers: request.headers,

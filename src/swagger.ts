@@ -1,5 +1,5 @@
-import {type FastifyInstance} from 'fastify';
 import {fastifySwaggerUi} from '@fastify/swagger-ui';
+import type {FastifyInstance} from 'fastify';
 import pkg from '../package.json' assert { type: 'json' };
 
 const description = `

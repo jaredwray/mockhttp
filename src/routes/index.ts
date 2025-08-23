@@ -1,9 +1,12 @@
 /* eslint-disable @stylistic/max-len */
-import {type FastifyInstance, type FastifyRequest, type FastifyReply} from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 export const indexRoute = (fastify: FastifyInstance) => {
-	fastify.get('/', {schema: {hide: true}}, async (_request: FastifyRequest, reply: FastifyReply) => {
-		const redocHtml = `
+	fastify.get(
+		"/",
+		{ schema: { hide: true } },
+		async (_request: FastifyRequest, reply: FastifyReply) => {
+			const redocHtml = `
 	<!doctype html>
 <html>
   <head>
@@ -68,6 +71,7 @@ export const indexRoute = (fastify: FastifyInstance) => {
   </body>
 </html>
 `;
-		await reply.type('text/html').send(redocHtml);
-	});
+			await reply.type("text/html").send(redocHtml);
+		},
+	);
 };

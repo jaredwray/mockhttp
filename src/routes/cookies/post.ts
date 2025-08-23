@@ -1,48 +1,50 @@
-import {
-	type FastifyInstance, type FastifySchema,
-} from 'fastify';
+import type { FastifyInstance, FastifySchema } from "fastify";
 
 const postCookieRouteSchema: FastifySchema = {
-	description: 'Set a cookie',
-	tags: ['Cookies'],
+	description: "Set a cookie",
+	tags: ["Cookies"],
 	body: {
-		type: 'object',
+		type: "object",
 		properties: {
-			name: {type: 'string'},
-			value: {type: 'string'},
-			expires: {type: 'string', format: 'date-time'},
+			name: { type: "string" },
+			value: { type: "string" },
+			expires: { type: "string", format: "date-time" },
 		},
-		required: ['name', 'value'],
+		required: ["name", "value"],
 		additionalProperties: false,
 	},
 	response: {
 		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
-			type: 'object',
+			type: "object",
 			properties: {
 				cookies: {
-					type: 'object',
-					additionalProperties: {type: 'string'},
+					type: "object",
+					additionalProperties: { type: "string" },
 				},
 			},
-			required: ['cookies'],
+			required: ["cookies"],
 		},
 	},
 };
 
 export const postCookieRoute = (fastify: FastifyInstance) => {
-	fastify.post<{Body: {name: string; value: string; expires?: string}}>('/cookies', {schema: postCookieRouteSchema}, async (request, reply) => {
-		const {name, value, expires} = request.body;
-		if (expires) {
-			const date = new Date(expires);
-			// eslint-disable-next-line @typescript-eslint/no-floating-promises
-			reply.setCookie(name, value, {path: '/', expires: date});
-		} else {
-			// eslint-disable-next-line @typescript-eslint/no-floating-promises
-			reply.setCookie(name, value, {path: '/'});
-		}
+	fastify.post<{ Body: { name: string; value: string; expires?: string } }>(
+		"/cookies",
+		{ schema: postCookieRouteSchema },
+		async (request, reply) => {
+			const { name, value, expires } = request.body;
+			if (expires) {
+				const date = new Date(expires);
+				// eslint-disable-next-line @typescript-eslint/no-floating-promises
+				reply.setCookie(name, value, { path: "/", expires: date });
+			} else {
+				// eslint-disable-next-line @typescript-eslint/no-floating-promises
+				reply.setCookie(name, value, { path: "/" });
+			}
 
-		// Send back the current cookies
-		return reply.status(200).send();
-	});
+			// Send back the current cookies
+			return reply.status(200).send();
+		},
+	);
 };

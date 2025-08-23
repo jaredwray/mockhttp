@@ -1,45 +1,45 @@
-import {type FastifyInstance, type FastifySchema} from 'fastify';
+import type { FastifyInstance, FastifySchema } from "fastify";
 
 const etagSchema: FastifySchema = {
-	description: 'Handles ETag-based conditional requests.',
-	tags: ['Response Inspection'],
+	description: "Handles ETag-based conditional requests.",
+	tags: ["Response Inspection"],
 	params: {
-		type: 'object',
+		type: "object",
 		properties: {
 			etag: {
-				type: 'string',
-				description: 'The ETag value for the resource.',
+				type: "string",
+				description: "The ETag value for the resource.",
 			},
 		},
-		required: ['etag'],
+		required: ["etag"],
 	},
 	response: {
 		// eslint-disable-next-line @typescript-eslint/naming-convention
 		200: {
-			type: 'string',
-			description: 'Resource content for matching ETag.',
+			type: "string",
+			description: "Resource content for matching ETag.",
 		},
 		// eslint-disable-next-line @typescript-eslint/naming-convention
 		304: {
-			type: 'null',
-			description: 'Indicates the resource has not been modified.',
+			type: "null",
+			description: "Indicates the resource has not been modified.",
 		},
 		// eslint-disable-next-line @typescript-eslint/naming-convention
 		412: {
-			type: 'null',
-			description: 'Indicates a precondition failed due to mismatched ETag.',
+			type: "null",
+			description: "Indicates a precondition failed due to mismatched ETag.",
 		},
 	},
 };
 
 export const etagRoutes = (fastify: FastifyInstance) => {
-	fastify.get<{Params: {etag: string}}>(
-		'/etag/:etag',
-		{schema: etagSchema},
+	fastify.get<{ Params: { etag: string } }>(
+		"/etag/:etag",
+		{ schema: etagSchema },
 		async (request, reply) => {
-			const {etag} = request.params;
-			const ifNoneMatch = request.headers['if-none-match'];
-			const ifMatch = request.headers['if-match'];
+			const { etag } = request.params;
+			const ifNoneMatch = request.headers["if-none-match"];
+			const ifMatch = request.headers["if-match"];
 
 			if (ifNoneMatch === etag) {
 				await reply.status(304).send();
@@ -51,7 +51,9 @@ export const etagRoutes = (fastify: FastifyInstance) => {
 				return;
 			}
 
-			await reply.header('ETag', etag).send('Resource content for matching ETag.');
+			await reply
+				.header("ETag", etag)
+				.send("Resource content for matching ETag.");
 		},
 	);
 };

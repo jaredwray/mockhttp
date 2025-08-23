@@ -1,22 +1,22 @@
 {
-    "compilerOptions": {
-      "target": "ESNext",
-      "module": "nodenext",
-      "moduleResolution": "nodenext",
-      "strict": true,
-      "esModuleInterop": true,
-      "forceConsistentCasingInFileNames": true,
-      "skipLibCheck": true,
-      "outDir": "./dist",
-      "rootDir": "./src",
-      "resolveJsonModule": true,
-      "allowSyntheticDefaultImports": true,
-      "noImplicitAny": true,
-      "noUnusedLocals": true,
-      "noUnusedParameters": true,
-      "experimentalDecorators": true,
-      "emitDecoratorMetadata": true
-    },
-    "include": ["src/**/*"],
-    "exclude": ["node_modules", "dist"]
-  }
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"strict": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"skipLibCheck": true,
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"resolveJsonModule": true,
+		"allowSyntheticDefaultImports": true,
+		"noImplicitAny": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "dist"]
+}

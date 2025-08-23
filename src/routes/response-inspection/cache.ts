@@ -1,63 +1,69 @@
-import {type FastifyInstance, type FastifyRequest, type FastifySchema} from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifySchema } from "fastify";
 
 const cacheGetSchema: FastifySchema = {
-	description: 'Handles cache validation and retrieval.',
-	tags: ['Response Inspection'],
+	description: "Handles cache validation and retrieval.",
+	tags: ["Response Inspection"],
 	response: {
 		// eslint-disable-next-line @typescript-eslint/naming-convention
 		200: {
-			type: 'string',
-			description: 'The cached content or resource.',
+			type: "string",
+			description: "The cached content or resource.",
 		},
 		// eslint-disable-next-line @typescript-eslint/naming-convention
 		304: {
-			type: 'null',
-			description: 'Indicates the resource has not been modified.',
+			type: "null",
+			description: "Indicates the resource has not been modified.",
 		},
 	},
 };
 
 const cacheSetSchema: FastifySchema = {
-	description: 'Sets a Cache-Control header for n seconds.',
-	tags: ['Response Inspection'],
+	description: "Sets a Cache-Control header for n seconds.",
+	tags: ["Response Inspection"],
 	params: {
-		type: 'object',
+		type: "object",
 		properties: {
 			value: {
-				type: 'integer',
-				description: 'Number of seconds to cache the resource.',
+				type: "integer",
+				description: "Number of seconds to cache the resource.",
 			},
 		},
-		required: ['value'],
+		required: ["value"],
 	},
 	response: {
 		// eslint-disable-next-line @typescript-eslint/naming-convention
 		200: {
-			type: 'string',
-			description: 'Confirmation message for setting cache.',
+			type: "string",
+			description: "Confirmation message for setting cache.",
 		},
 	},
 };
 
 export const cacheRoutes = (fastify: FastifyInstance) => {
-	fastify.get('/cache', {schema: cacheGetSchema}, async (request: FastifyRequest, reply) => {
-		const ifModifiedSince = request.headers['if-modified-since'];
-		const ifNoneMatch = request.headers['if-none-match'];
+	fastify.get(
+		"/cache",
+		{ schema: cacheGetSchema },
+		async (request: FastifyRequest, reply) => {
+			const ifModifiedSince = request.headers["if-modified-since"];
+			const ifNoneMatch = request.headers["if-none-match"];
 
-		if (ifModifiedSince ?? ifNoneMatch) {
-			await reply.status(304).send();
-			return;
-		}
+			if (ifModifiedSince ?? ifNoneMatch) {
+				await reply.status(304).send();
+				return;
+			}
 
-		await reply.send('Cache content or resource response here.');
-	});
+			await reply.send("Cache content or resource response here.");
+		},
+	);
 
-	fastify.get<{Params: {value: number}}>(
-		'/cache/:value',
-		{schema: cacheSetSchema},
+	fastify.get<{ Params: { value: number } }>(
+		"/cache/:value",
+		{ schema: cacheSetSchema },
 		async (request, reply) => {
-			const {value} = request.params;
-			await reply.header('Cache-Control', `max-age=${value}`).send(`Cache-Control set for ${value} seconds.`);
+			const { value } = request.params;
+			await reply
+				.header("Cache-Control", `max-age=${value}`)
+				.send(`Cache-Control set for ${value} seconds.`);
 		},
 	);
 };

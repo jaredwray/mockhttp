@@ -6,7 +6,8 @@
 		"useIgnoreFile": false
 	},
 	"files": {
-		"ignoreUnknown": false
+		"ignoreUnknown": false,
+		"includes": ["src/**/*.ts", "test/**/*.ts"]
 	},
 	"formatter": {
 		"enabled": true,
@@ -16,8 +17,7 @@
 		"enabled": true,
 		"rules": {
 			"recommended": true
-		},
-		"includes": ["src/**/*.ts", "test/**/*.ts"]
+		}
 	},
 	"javascript": {
 		"formatter": {

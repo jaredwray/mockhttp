@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { plainRoute } from "../../../src/routes/response-inspection/index.js";
 
-describe("Plain and Text Routes", () => {
+describe("Plain, Text, and HTML Routes", () => {
 	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 
@@ -183,6 +183,103 @@ describe("Plain and Text Routes", () => {
 			expect(response.body).not.toContain("{");
 			expect(response.body).not.toContain("}");
 			expect(response.body).not.toContain('"text"');
+		});
+	});
+
+	// Tests for /html endpoint
+	describe("/html endpoint", () => {
+		it("should return HTML with correct content type", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/html",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-type"]).toContain("text/html");
+			expect(typeof response.body).toBe("string");
+			expect(response.body.length).toBeGreaterThan(0);
+		});
+
+		it("should return valid HTML document", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/html",
+			});
+
+			// Check for HTML document structure
+			expect(response.body).toContain("<!DOCTYPE html");
+			expect(response.body).toContain("<html");
+			expect(response.body).toContain("</html>");
+			expect(response.body).toContain("<head");
+			expect(response.body).toContain("</head>");
+			expect(response.body).toContain("<body");
+			expect(response.body).toContain("</body>");
+		});
+
+		it("should return one of the predefined HTML templates", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/html",
+			});
+
+			// Check that response contains at least one of the expected titles
+			const expectedTitles = [
+				"<title>Sample Page</title>",
+				"<title>Test Document</title>",
+				"<title>Article Page</title>",
+				"<title>Form Example</title>",
+				"<title>Responsive Page</title>",
+			];
+
+			const containsExpectedTitle = expectedTitles.some((title) =>
+				response.body.includes(title),
+			);
+			expect(containsExpectedTitle).toBe(true);
+		});
+
+		it("should return different HTML on multiple requests", async () => {
+			const responses = new Set();
+			const numberOfRequests = 20;
+
+			for (let i = 0; i < numberOfRequests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/html",
+				});
+				responses.add(response.body);
+			}
+
+			// With 5 HTML templates and 20 requests, we should get at least 2 different templates
+			expect(responses.size).toBeGreaterThanOrEqual(2);
+		});
+
+		it("should handle the random index calculation correctly for HTML", async () => {
+			const requests = 100;
+
+			for (let i = 0; i < requests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/html",
+				});
+
+				expect(response.statusCode).toBe(200);
+				expect(response.body).toBeTruthy();
+				expect(response.headers["content-type"]).toContain("text/html");
+				expect(response.body).toContain("<!DOCTYPE html");
+			}
+		});
+
+		it("should return HTML without being wrapped in JSON", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/html",
+			});
+
+			// Should not be valid JSON
+			expect(() => JSON.parse(response.body)).toThrow();
+
+			// Should be raw HTML
+			expect(response.body.startsWith("<!DOCTYPE html")).toBe(true);
 		});
 	});
 });

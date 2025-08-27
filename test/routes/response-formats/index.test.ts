@@ -1,4 +1,4 @@
-import { gunzipSync, inflateSync } from "node:zlib";
+import { brotliDecompressSync, gunzipSync, inflateSync } from "node:zlib";
 import Fastify from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { responseFormatRoutes } from "../../../src/routes/response-formats/index.js";
@@ -1093,6 +1093,251 @@ describe("Plain, Text, and HTML Routes", () => {
 			// The raw payloads should be different (different compression algorithms)
 			expect(Buffer.isBuffer(gzipResponse.rawPayload)).toBe(true);
 			expect(Buffer.isBuffer(deflateResponse.rawPayload)).toBe(true);
+		});
+	});
+
+	// Tests for /brotli endpoint
+	describe("/brotli endpoint", () => {
+		it("should return brotli-encoded data with correct headers", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/brotli",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("br");
+			expect(response.headers["content-type"]).toContain(
+				"application/octet-stream",
+			);
+
+			// Response should be a Buffer
+			expect(Buffer.isBuffer(response.rawPayload)).toBe(true);
+		});
+
+		it("should return valid brotli-compressed JSON data", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/brotli",
+			});
+
+			// Decompress the brotli data
+			const decompressed = brotliDecompressSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+
+			expect(typeof json).toBe("object");
+			expect(json).not.toBeNull();
+		});
+
+		it("should compress data effectively with brotli", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/brotli",
+			});
+
+			// Decompress to get original size
+			const decompressed = brotliDecompressSync(response.rawPayload);
+			const originalSize = decompressed.length;
+			const compressedSize = response.rawPayload.length;
+
+			// Brotli should compress effectively
+			// (though for very small data it might be slightly larger due to headers)
+			expect(compressedSize).toBeLessThanOrEqual(originalSize + 50); // Allow some overhead
+		});
+
+		it("should return one of the predefined brotli data structures", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/brotli",
+			});
+
+			const decompressed = brotliDecompressSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+
+			// Check for expected structure patterns
+			const hasExpectedStructure =
+				(json.message && json.compression === "br") || // First template
+				(json.title && json.content && json.metadata) || // Second template
+				json.benchmark?.results; // Third template
+
+			expect(hasExpectedStructure).toBeTruthy();
+		});
+
+		it("should return different brotli compressed data on multiple requests", async () => {
+			const responses = new Set();
+			const numberOfRequests = 20;
+
+			for (let i = 0; i < numberOfRequests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/brotli",
+				});
+
+				const decompressed = brotliDecompressSync(response.rawPayload);
+				responses.add(decompressed.toString());
+			}
+
+			// With 3 data templates and 20 requests, we should get at least 2 different responses
+			expect(responses.size).toBeGreaterThanOrEqual(2);
+		});
+
+		it("should handle POST requests with brotli", async () => {
+			const response = await fastify.inject({
+				method: "POST",
+				url: "/brotli",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("br");
+
+			const decompressed = brotliDecompressSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+			expect(typeof json).toBe("object");
+		});
+
+		it("should handle PUT requests with brotli", async () => {
+			const response = await fastify.inject({
+				method: "PUT",
+				url: "/brotli",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("br");
+
+			const decompressed = brotliDecompressSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+			expect(typeof json).toBe("object");
+		});
+
+		it("should handle PATCH requests with brotli", async () => {
+			const response = await fastify.inject({
+				method: "PATCH",
+				url: "/brotli",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("br");
+
+			const decompressed = brotliDecompressSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+			expect(typeof json).toBe("object");
+		});
+
+		it("should handle DELETE requests with brotli", async () => {
+			const response = await fastify.inject({
+				method: "DELETE",
+				url: "/brotli",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("br");
+
+			const decompressed = brotliDecompressSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+			expect(typeof json).toBe("object");
+		});
+
+		it("should consistently compress with brotli across multiple requests", async () => {
+			const requests = 50;
+
+			for (let i = 0; i < requests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/brotli",
+				});
+
+				expect(response.statusCode).toBe(200);
+				expect(response.headers["content-encoding"]).toBe("br");
+				expect(Buffer.isBuffer(response.rawPayload)).toBe(true);
+
+				// Verify it can be decompressed
+				const decompressed = brotliDecompressSync(response.rawPayload);
+				const json = JSON.parse(decompressed.toString());
+				expect(typeof json).toBe("object");
+			}
+		});
+
+		it("should include brotli size information when applicable", async () => {
+			// Try multiple times to get the first template with size info
+			let foundSizeInfo = false;
+
+			for (let i = 0; i < 30 && !foundSizeInfo; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/brotli",
+				});
+
+				const decompressed = brotliDecompressSync(response.rawPayload);
+				const json = JSON.parse(decompressed.toString());
+
+				if (
+					json.originalSize !== undefined &&
+					json.compressedSize !== undefined
+				) {
+					foundSizeInfo = true;
+					expect(json.originalSize).toBeGreaterThan(0);
+					expect(json.compressedSize).toBeGreaterThan(0);
+					expect(json.compression).toBe("br");
+				}
+			}
+
+			// At least one response should have had size information
+			expect(foundSizeInfo).toBe(true);
+		});
+
+		it("should produce different compression than gzip and deflate", async () => {
+			// Get gzip response
+			const gzipResponse = await fastify.inject({
+				method: "GET",
+				url: "/gzip",
+			});
+
+			// Get deflate response
+			const deflateResponse = await fastify.inject({
+				method: "GET",
+				url: "/deflate",
+			});
+
+			// Get brotli response
+			const brotliResponse = await fastify.inject({
+				method: "GET",
+				url: "/brotli",
+			});
+
+			// All should have different encodings
+			expect(gzipResponse.headers["content-encoding"]).toBe("gzip");
+			expect(deflateResponse.headers["content-encoding"]).toBe("deflate");
+			expect(brotliResponse.headers["content-encoding"]).toBe("br");
+
+			// All should be valid buffers
+			expect(Buffer.isBuffer(gzipResponse.rawPayload)).toBe(true);
+			expect(Buffer.isBuffer(deflateResponse.rawPayload)).toBe(true);
+			expect(Buffer.isBuffer(brotliResponse.rawPayload)).toBe(true);
+		});
+
+		it("should have brotli-specific metadata in appropriate templates", async () => {
+			// Try to get templates with brotli-specific info
+			let foundBrotliMetadata = false;
+
+			for (let i = 0; i < 30 && !foundBrotliMetadata; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/brotli",
+				});
+
+				const decompressed = brotliDecompressSync(response.rawPayload);
+				const json = JSON.parse(decompressed.toString());
+
+				// Check for brotli-specific fields
+				if (
+					json.algorithm === "Brotli" ||
+					json.metadata?.encoding === "br" ||
+					json.benchmark?.summary?.encoding === "br"
+				) {
+					foundBrotliMetadata = true;
+				}
+			}
+
+			expect(foundBrotliMetadata).toBe(true);
 		});
 	});
 });

@@ -1,4 +1,4 @@
-import { deflateSync, gzipSync } from "node:zlib";
+import { brotliCompressSync, deflateSync, gzipSync } from "node:zlib";
 import type {
 	FastifyInstance,
 	FastifyReply,
@@ -91,6 +91,17 @@ const deflateSchema: FastifySchema = {
 		200: {
 			type: "string",
 			description: "Deflate-encoded content",
+		},
+	},
+};
+
+const brotliSchema: FastifySchema = {
+	description: "Returns Brotli-encoded data",
+	tags: ["Response Formats"],
+	response: {
+		200: {
+			type: "string",
+			description: "Brotli-encoded content",
 		},
 	},
 };
@@ -578,4 +589,85 @@ export const responseFormatRoutes = (fastify: FastifyInstance) => {
 	fastify.put("/deflate", { schema: deflateSchema }, deflateHandler);
 	fastify.patch("/deflate", { schema: deflateSchema }, deflateHandler);
 	fastify.delete("/deflate", { schema: deflateSchema }, deflateHandler);
+
+	const brotliHandler = async (
+		_request: FastifyRequest,
+		reply: FastifyReply,
+	) => {
+		const sampleData = [
+			{
+				message: "This is Brotli compressed data from MockHTTP",
+				timestamp: new Date().toISOString(),
+				compression: "br",
+				algorithm: "Brotli",
+				originalSize: 0,
+				compressedSize: 0,
+			},
+			{
+				title: "Brotli Compression Example",
+				description:
+					"Brotli is a generic-purpose lossless compression algorithm that compresses data using a combination of a modern variant of the LZ77 algorithm, Huffman coding and 2nd order context modeling.",
+				content:
+					"Brotli compression typically achieves 20-26% better compression ratios than gzip. ".repeat(
+						10,
+					),
+				metadata: {
+					encoding: "br",
+					quality: 11,
+					server: "MockHTTP",
+				},
+			},
+			{
+				benchmark: {
+					title: "Compression Benchmark Data",
+					results: Array.from({ length: 75 }, (_, i) => ({
+						id: `test-${i}`,
+						name: `Benchmark Test ${i}`,
+						value: Math.random() * 1000,
+						unit: "ms",
+						timestamp: new Date(Date.now() - i * 60000).toISOString(),
+					})),
+					summary: {
+						compression: "brotli",
+						totalTests: 75,
+						encoding: "br",
+					},
+				},
+			},
+		];
+
+		const randomIndex = Math.floor(Math.random() * sampleData.length);
+		const data = sampleData[randomIndex];
+		const jsonString = JSON.stringify(data);
+
+		// Update size information if present
+		if (data.originalSize !== undefined) {
+			data.originalSize = Buffer.byteLength(jsonString);
+		}
+
+		// Compress the data using brotli
+		const compressed = brotliCompressSync(jsonString);
+
+		// Update compressed size if present
+		if (data.compressedSize !== undefined) {
+			const updatedData = { ...data, compressedSize: compressed.length };
+			const updatedJsonString = JSON.stringify(updatedData);
+			const updatedCompressed = brotliCompressSync(updatedJsonString);
+			reply.header("Content-Encoding", "br");
+			reply.header("Content-Type", "application/json");
+			reply.type("application/octet-stream");
+			return updatedCompressed;
+		}
+
+		reply.header("Content-Encoding", "br");
+		reply.header("Content-Type", "application/json");
+		reply.type("application/octet-stream");
+		return compressed;
+	};
+
+	fastify.get("/brotli", { schema: brotliSchema }, brotliHandler);
+	fastify.post("/brotli", { schema: brotliSchema }, brotliHandler);
+	fastify.put("/brotli", { schema: brotliSchema }, brotliHandler);
+	fastify.patch("/brotli", { schema: brotliSchema }, brotliHandler);
+	fastify.delete("/brotli", { schema: brotliSchema }, brotliHandler);
 };

@@ -1,3 +1,4 @@
+import { gzipSync } from "node:zlib";
 import type {
 	FastifyInstance,
 	FastifyReply,
@@ -68,6 +69,17 @@ const denySchema: FastifySchema = {
 		403: {
 			type: "string",
 			description: "Page denied by robots.txt rules",
+		},
+	},
+};
+
+const gzipSchema: FastifySchema = {
+	description: "Returns GZip-encoded data",
+	tags: ["Response Formats"],
+	response: {
+		200: {
+			type: "string",
+			description: "GZip-encoded content",
 		},
 	},
 };
@@ -419,4 +431,70 @@ export const plainRoute = (fastify: FastifyInstance) => {
 	fastify.put("/deny", { schema: denySchema }, denyHandler);
 	fastify.patch("/deny", { schema: denySchema }, denyHandler);
 	fastify.delete("/deny", { schema: denySchema }, denyHandler);
+
+	const gzipHandler = async (_request: FastifyRequest, reply: FastifyReply) => {
+		const sampleData = [
+			{
+				message: "This is GZip compressed data from MockHTTP",
+				timestamp: new Date().toISOString(),
+				compression: "gzip",
+				originalSize: 0,
+				compressedSize: 0,
+			},
+			{
+				title: "Sample Document",
+				content:
+					"Lorem ipsum dolor sit amet, consectetur adipiscing elit. ".repeat(
+						50,
+					),
+				metadata: {
+					author: "MockHTTP Server",
+					format: "gzip",
+					version: "1.0",
+				},
+			},
+			{
+				data: Array.from({ length: 100 }, (_, i) => ({
+					id: i + 1,
+					value: `Item ${i + 1}`,
+					description: `This is item number ${i + 1} in the dataset`,
+				})),
+				info: "Large dataset compressed with GZip",
+			},
+		];
+
+		const randomIndex = Math.floor(Math.random() * sampleData.length);
+		const data = sampleData[randomIndex];
+		const jsonString = JSON.stringify(data);
+
+		// Update size information if present
+		if (data.originalSize !== undefined) {
+			data.originalSize = Buffer.byteLength(jsonString);
+		}
+
+		// Compress the data using gzip
+		const compressed = gzipSync(jsonString);
+
+		// Update compressed size if present
+		if (data.compressedSize !== undefined) {
+			const updatedData = { ...data, compressedSize: compressed.length };
+			const updatedJsonString = JSON.stringify(updatedData);
+			const updatedCompressed = gzipSync(updatedJsonString);
+			reply.header("Content-Encoding", "gzip");
+			reply.header("Content-Type", "application/json");
+			reply.type("application/octet-stream");
+			return updatedCompressed;
+		}
+
+		reply.header("Content-Encoding", "gzip");
+		reply.header("Content-Type", "application/json");
+		reply.type("application/octet-stream");
+		return compressed;
+	};
+
+	fastify.get("/gzip", { schema: gzipSchema }, gzipHandler);
+	fastify.post("/gzip", { schema: gzipSchema }, gzipHandler);
+	fastify.put("/gzip", { schema: gzipSchema }, gzipHandler);
+	fastify.patch("/gzip", { schema: gzipSchema }, gzipHandler);
+	fastify.delete("/gzip", { schema: gzipSchema }, gzipHandler);
 };

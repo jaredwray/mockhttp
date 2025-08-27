@@ -1,3 +1,4 @@
+import { gunzipSync } from "node:zlib";
 import Fastify from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { plainRoute } from "../../../src/routes/response-formats/index.js";
@@ -692,6 +693,195 @@ describe("Plain, Text, and HTML Routes", () => {
 
 			// Should be raw HTML
 			expect(response.body).toMatch(/^<!DOCTYPE/i);
+		});
+	});
+
+	// Tests for /gzip endpoint
+	describe("/gzip endpoint", () => {
+		it("should return gzip-encoded data with correct headers", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/gzip",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("gzip");
+			expect(response.headers["content-type"]).toContain(
+				"application/octet-stream",
+			);
+
+			// Response should be a Buffer
+			expect(Buffer.isBuffer(response.rawPayload)).toBe(true);
+		});
+
+		it("should return valid gzip-compressed JSON data", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/gzip",
+			});
+
+			// Decompress the gzip data
+			const decompressed = gunzipSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+
+			expect(typeof json).toBe("object");
+			expect(json).not.toBeNull();
+		});
+
+		it("should compress data effectively", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/gzip",
+			});
+
+			// Decompress to get original size
+			const decompressed = gunzipSync(response.rawPayload);
+			const originalSize = decompressed.length;
+			const compressedSize = response.rawPayload.length;
+
+			// Compressed should generally be smaller than original
+			// (though for very small data it might be slightly larger due to gzip headers)
+			expect(compressedSize).toBeLessThanOrEqual(originalSize + 50); // Allow some overhead for headers
+		});
+
+		it("should return one of the predefined data structures", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/gzip",
+			});
+
+			const decompressed = gunzipSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+
+			// Check for expected structure patterns
+			const hasExpectedStructure =
+				(json.message && json.compression === "gzip") || // First template
+				(json.title && json.content && json.metadata) || // Second template
+				(json.data && Array.isArray(json.data) && json.info); // Third template
+
+			expect(hasExpectedStructure).toBeTruthy();
+		});
+
+		it("should return different compressed data on multiple requests", async () => {
+			const responses = new Set();
+			const numberOfRequests = 20;
+
+			for (let i = 0; i < numberOfRequests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/gzip",
+				});
+
+				const decompressed = gunzipSync(response.rawPayload);
+				responses.add(decompressed.toString());
+			}
+
+			// With 3 data templates and 20 requests, we should get at least 2 different responses
+			expect(responses.size).toBeGreaterThanOrEqual(2);
+		});
+
+		it("should handle POST requests", async () => {
+			const response = await fastify.inject({
+				method: "POST",
+				url: "/gzip",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("gzip");
+
+			const decompressed = gunzipSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+			expect(typeof json).toBe("object");
+		});
+
+		it("should handle PUT requests", async () => {
+			const response = await fastify.inject({
+				method: "PUT",
+				url: "/gzip",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("gzip");
+
+			const decompressed = gunzipSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+			expect(typeof json).toBe("object");
+		});
+
+		it("should handle PATCH requests", async () => {
+			const response = await fastify.inject({
+				method: "PATCH",
+				url: "/gzip",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("gzip");
+
+			const decompressed = gunzipSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+			expect(typeof json).toBe("object");
+		});
+
+		it("should handle DELETE requests", async () => {
+			const response = await fastify.inject({
+				method: "DELETE",
+				url: "/gzip",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("gzip");
+
+			const decompressed = gunzipSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+			expect(typeof json).toBe("object");
+		});
+
+		it("should consistently compress data across multiple requests", async () => {
+			const requests = 50;
+
+			for (let i = 0; i < requests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/gzip",
+				});
+
+				expect(response.statusCode).toBe(200);
+				expect(response.headers["content-encoding"]).toBe("gzip");
+				expect(Buffer.isBuffer(response.rawPayload)).toBe(true);
+
+				// Verify it can be decompressed
+				const decompressed = gunzipSync(response.rawPayload);
+				const json = JSON.parse(decompressed.toString());
+				expect(typeof json).toBe("object");
+			}
+		});
+
+		it("should include size information when applicable", async () => {
+			// Try multiple times to get the first template with size info
+			let foundSizeInfo = false;
+
+			for (let i = 0; i < 30 && !foundSizeInfo; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/gzip",
+				});
+
+				const decompressed = gunzipSync(response.rawPayload);
+				const json = JSON.parse(decompressed.toString());
+
+				if (
+					json.originalSize !== undefined &&
+					json.compressedSize !== undefined
+				) {
+					foundSizeInfo = true;
+					expect(json.originalSize).toBeGreaterThan(0);
+					expect(json.compressedSize).toBeGreaterThan(0);
+					expect(json.compression).toBe("gzip");
+				}
+			}
+
+			// At least one response should have had size information
+			expect(foundSizeInfo).toBe(true);
 		});
 	});
 });

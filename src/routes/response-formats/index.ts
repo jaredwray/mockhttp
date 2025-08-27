@@ -1,4 +1,4 @@
-import { gzipSync } from "node:zlib";
+import { deflateSync, gzipSync } from "node:zlib";
 import type {
 	FastifyInstance,
 	FastifyReply,
@@ -80,6 +80,17 @@ const gzipSchema: FastifySchema = {
 		200: {
 			type: "string",
 			description: "GZip-encoded content",
+		},
+	},
+};
+
+const deflateSchema: FastifySchema = {
+	description: "Returns Deflate-encoded data",
+	tags: ["Response Formats"],
+	response: {
+		200: {
+			type: "string",
+			description: "Deflate-encoded content",
 		},
 	},
 };
@@ -306,7 +317,7 @@ const randomJsonContent = [
 	}),
 ];
 
-export const plainRoute = (fastify: FastifyInstance) => {
+export const responseFormatRoutes = (fastify: FastifyInstance) => {
 	const plainHandler = async (
 		_request: FastifyRequest,
 		reply: FastifyReply,
@@ -497,4 +508,74 @@ export const plainRoute = (fastify: FastifyInstance) => {
 	fastify.put("/gzip", { schema: gzipSchema }, gzipHandler);
 	fastify.patch("/gzip", { schema: gzipSchema }, gzipHandler);
 	fastify.delete("/gzip", { schema: gzipSchema }, gzipHandler);
+
+	const deflateHandler = async (
+		_request: FastifyRequest,
+		reply: FastifyReply,
+	) => {
+		const sampleData = [
+			{
+				message: "This is Deflate compressed data from MockHTTP",
+				timestamp: new Date().toISOString(),
+				compression: "deflate",
+				originalSize: 0,
+				compressedSize: 0,
+			},
+			{
+				title: "Deflate Compressed Document",
+				content: "The deflate algorithm is used for compression. ".repeat(40),
+				details: {
+					algorithm: "DEFLATE",
+					method: "zlib deflate",
+					server: "MockHTTP",
+				},
+			},
+			{
+				items: Array.from({ length: 50 }, (_, i) => ({
+					index: i,
+					name: `Entry ${i}`,
+					data: `This is test data for entry number ${i}`,
+					timestamp: new Date(Date.now() - i * 1000000).toISOString(),
+				})),
+				metadata: {
+					compression: "deflate",
+					count: 50,
+				},
+			},
+		];
+
+		const randomIndex = Math.floor(Math.random() * sampleData.length);
+		const data = sampleData[randomIndex];
+		const jsonString = JSON.stringify(data);
+
+		// Update size information if present
+		if (data.originalSize !== undefined) {
+			data.originalSize = Buffer.byteLength(jsonString);
+		}
+
+		// Compress the data using deflate
+		const compressed = deflateSync(jsonString);
+
+		// Update compressed size if present
+		if (data.compressedSize !== undefined) {
+			const updatedData = { ...data, compressedSize: compressed.length };
+			const updatedJsonString = JSON.stringify(updatedData);
+			const updatedCompressed = deflateSync(updatedJsonString);
+			reply.header("Content-Encoding", "deflate");
+			reply.header("Content-Type", "application/json");
+			reply.type("application/octet-stream");
+			return updatedCompressed;
+		}
+
+		reply.header("Content-Encoding", "deflate");
+		reply.header("Content-Type", "application/json");
+		reply.type("application/octet-stream");
+		return compressed;
+	};
+
+	fastify.get("/deflate", { schema: deflateSchema }, deflateHandler);
+	fastify.post("/deflate", { schema: deflateSchema }, deflateHandler);
+	fastify.put("/deflate", { schema: deflateSchema }, deflateHandler);
+	fastify.patch("/deflate", { schema: deflateSchema }, deflateHandler);
+	fastify.delete("/deflate", { schema: deflateSchema }, deflateHandler);
 };

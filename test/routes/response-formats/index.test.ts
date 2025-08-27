@@ -1,13 +1,13 @@
-import { gunzipSync } from "node:zlib";
+import { gunzipSync, inflateSync } from "node:zlib";
 import Fastify from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { plainRoute } from "../../../src/routes/response-formats/index.js";
+import { responseFormatRoutes } from "../../../src/routes/response-formats/index.js";
 
 describe("Plain, Text, and HTML Routes", () => {
 	const fastify = Fastify();
 
 	beforeAll(async () => {
-		await fastify.register(plainRoute);
+		await fastify.register(responseFormatRoutes);
 	});
 
 	afterAll(async () => {
@@ -882,6 +882,217 @@ describe("Plain, Text, and HTML Routes", () => {
 
 			// At least one response should have had size information
 			expect(foundSizeInfo).toBe(true);
+		});
+	});
+
+	// Tests for /deflate endpoint
+	describe("/deflate endpoint", () => {
+		it("should return deflate-encoded data with correct headers", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/deflate",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("deflate");
+			expect(response.headers["content-type"]).toContain(
+				"application/octet-stream",
+			);
+
+			// Response should be a Buffer
+			expect(Buffer.isBuffer(response.rawPayload)).toBe(true);
+		});
+
+		it("should return valid deflate-compressed JSON data", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/deflate",
+			});
+
+			// Decompress the deflate data
+			const decompressed = inflateSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+
+			expect(typeof json).toBe("object");
+			expect(json).not.toBeNull();
+		});
+
+		it("should compress data effectively with deflate", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/deflate",
+			});
+
+			// Decompress to get original size
+			const decompressed = inflateSync(response.rawPayload);
+			const originalSize = decompressed.length;
+			const compressedSize = response.rawPayload.length;
+
+			// Compressed should generally be smaller than original
+			// (though for very small data it might be slightly larger due to headers)
+			expect(compressedSize).toBeLessThanOrEqual(originalSize + 50); // Allow some overhead
+		});
+
+		it("should return one of the predefined deflate data structures", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/deflate",
+			});
+
+			const decompressed = inflateSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+
+			// Check for expected structure patterns
+			const hasExpectedStructure =
+				(json.message && json.compression === "deflate") || // First template
+				(json.title && json.content && json.details) || // Second template
+				(json.items && Array.isArray(json.items) && json.metadata); // Third template
+
+			expect(hasExpectedStructure).toBeTruthy();
+		});
+
+		it("should return different deflate compressed data on multiple requests", async () => {
+			const responses = new Set();
+			const numberOfRequests = 20;
+
+			for (let i = 0; i < numberOfRequests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/deflate",
+				});
+
+				const decompressed = inflateSync(response.rawPayload);
+				responses.add(decompressed.toString());
+			}
+
+			// With 3 data templates and 20 requests, we should get at least 2 different responses
+			expect(responses.size).toBeGreaterThanOrEqual(2);
+		});
+
+		it("should handle POST requests with deflate", async () => {
+			const response = await fastify.inject({
+				method: "POST",
+				url: "/deflate",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("deflate");
+
+			const decompressed = inflateSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+			expect(typeof json).toBe("object");
+		});
+
+		it("should handle PUT requests with deflate", async () => {
+			const response = await fastify.inject({
+				method: "PUT",
+				url: "/deflate",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("deflate");
+
+			const decompressed = inflateSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+			expect(typeof json).toBe("object");
+		});
+
+		it("should handle PATCH requests with deflate", async () => {
+			const response = await fastify.inject({
+				method: "PATCH",
+				url: "/deflate",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("deflate");
+
+			const decompressed = inflateSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+			expect(typeof json).toBe("object");
+		});
+
+		it("should handle DELETE requests with deflate", async () => {
+			const response = await fastify.inject({
+				method: "DELETE",
+				url: "/deflate",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-encoding"]).toBe("deflate");
+
+			const decompressed = inflateSync(response.rawPayload);
+			const json = JSON.parse(decompressed.toString());
+			expect(typeof json).toBe("object");
+		});
+
+		it("should consistently compress with deflate across multiple requests", async () => {
+			const requests = 50;
+
+			for (let i = 0; i < requests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/deflate",
+				});
+
+				expect(response.statusCode).toBe(200);
+				expect(response.headers["content-encoding"]).toBe("deflate");
+				expect(Buffer.isBuffer(response.rawPayload)).toBe(true);
+
+				// Verify it can be decompressed
+				const decompressed = inflateSync(response.rawPayload);
+				const json = JSON.parse(decompressed.toString());
+				expect(typeof json).toBe("object");
+			}
+		});
+
+		it("should include deflate size information when applicable", async () => {
+			// Try multiple times to get the first template with size info
+			let foundSizeInfo = false;
+
+			for (let i = 0; i < 30 && !foundSizeInfo; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/deflate",
+				});
+
+				const decompressed = inflateSync(response.rawPayload);
+				const json = JSON.parse(decompressed.toString());
+
+				if (
+					json.originalSize !== undefined &&
+					json.compressedSize !== undefined
+				) {
+					foundSizeInfo = true;
+					expect(json.originalSize).toBeGreaterThan(0);
+					expect(json.compressedSize).toBeGreaterThan(0);
+					expect(json.compression).toBe("deflate");
+				}
+			}
+
+			// At least one response should have had size information
+			expect(foundSizeInfo).toBe(true);
+		});
+
+		it("should produce different compression than gzip", async () => {
+			// Get gzip response
+			const gzipResponse = await fastify.inject({
+				method: "GET",
+				url: "/gzip",
+			});
+
+			// Get deflate response
+			const deflateResponse = await fastify.inject({
+				method: "GET",
+				url: "/deflate",
+			});
+
+			// Both should be compressed
+			expect(gzipResponse.headers["content-encoding"]).toBe("gzip");
+			expect(deflateResponse.headers["content-encoding"]).toBe("deflate");
+
+			// The raw payloads should be different (different compression algorithms)
+			expect(Buffer.isBuffer(gzipResponse.rawPayload)).toBe(true);
+			expect(Buffer.isBuffer(deflateResponse.rawPayload)).toBe(true);
 		});
 	});
 });

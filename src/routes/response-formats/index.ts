@@ -49,6 +49,18 @@ const xmlSchema: FastifySchema = {
 	},
 };
 
+const jsonSchema: FastifySchema = {
+	description: "Returns random JSON content",
+	tags: ["Response Formats"],
+	response: {
+		200: {
+			type: "object",
+			description: "Random JSON content",
+			additionalProperties: true,
+		},
+	},
+};
+
 const randomTexts = [
 	"The quick brown fox jumps over the lazy dog.",
 	"Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
@@ -202,6 +214,75 @@ const randomXmlContent = [
 </rss>`,
 ];
 
+const randomJsonContent = [
+	() => ({
+		message: "Hello from MockHTTP",
+		timestamp: new Date().toISOString(),
+		status: "success",
+		code: 200,
+	}),
+	() => ({
+		user: {
+			id: 1,
+			name: "John Doe",
+			email: "john@example.com",
+			role: "admin",
+			createdAt: "2024-01-15T10:30:00Z",
+		},
+		permissions: ["read", "write", "delete"],
+	}),
+	() => ({
+		products: [
+			{
+				id: 101,
+				name: "Laptop",
+				price: 999.99,
+				stock: 50,
+			},
+			{
+				id: 102,
+				name: "Mouse",
+				price: 29.99,
+				stock: 200,
+			},
+		],
+		total: 2,
+		page: 1,
+	}),
+	() => ({
+		config: {
+			theme: "dark",
+			language: "en",
+			notifications: {
+				email: true,
+				push: false,
+				sms: false,
+			},
+			privacy: {
+				profile: "public",
+				activity: "friends",
+			},
+		},
+	}),
+	() => ({
+		metrics: {
+			cpu: 45.2,
+			memory: 78.5,
+			disk: 62.3,
+			network: {
+				inbound: "1.2MB/s",
+				outbound: "0.8MB/s",
+			},
+			uptime: "15 days",
+			services: [
+				{ name: "api", status: "healthy" },
+				{ name: "database", status: "healthy" },
+				{ name: "cache", status: "warning" },
+			],
+		},
+	}),
+];
+
 export const plainRoute = (fastify: FastifyInstance) => {
 	const plainHandler = async (
 		_request: FastifyRequest,
@@ -261,4 +342,19 @@ export const plainRoute = (fastify: FastifyInstance) => {
 	fastify.put("/xml", { schema: xmlSchema }, xmlHandler);
 	fastify.patch("/xml", { schema: xmlSchema }, xmlHandler);
 	fastify.delete("/xml", { schema: xmlSchema }, xmlHandler);
+
+	const jsonHandler = async (_request: FastifyRequest, reply: FastifyReply) => {
+		const randomIndex = Math.floor(Math.random() * randomJsonContent.length);
+		const jsonGenerator = randomJsonContent[randomIndex];
+		const json = jsonGenerator();
+
+		reply.type("application/json");
+		return json;
+	};
+
+	fastify.get("/json", { schema: jsonSchema }, jsonHandler);
+	fastify.post("/json", { schema: jsonSchema }, jsonHandler);
+	fastify.put("/json", { schema: jsonSchema }, jsonHandler);
+	fastify.patch("/json", { schema: jsonSchema }, jsonHandler);
+	fastify.delete("/json", { schema: jsonSchema }, jsonHandler);
 };

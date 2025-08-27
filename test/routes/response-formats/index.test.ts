@@ -418,4 +418,145 @@ describe("Plain, Text, and HTML Routes", () => {
 			expect(response.body.startsWith('<?xml version="1.0"')).toBe(true);
 		});
 	});
+
+	// Tests for /json endpoint
+	describe("/json endpoint", () => {
+		it("should return JSON with correct content type", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/json",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-type"]).toContain("application/json");
+			expect(typeof response.body).toBe("string");
+			expect(response.body.length).toBeGreaterThan(0);
+		});
+
+		it("should return valid JSON", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/json",
+			});
+
+			// Should be parseable JSON
+			expect(() => JSON.parse(response.body)).not.toThrow();
+
+			const json = JSON.parse(response.body);
+			expect(typeof json).toBe("object");
+			expect(json).not.toBeNull();
+		});
+
+		it("should return one of the predefined JSON objects", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/json",
+			});
+
+			const json = JSON.parse(response.body);
+
+			// Check that response contains expected structure patterns
+			const hasExpectedStructure =
+				(json.message && json.status) || // First template
+				(json.user && json.permissions) || // Second template
+				(json.products && json.total) || // Third template
+				json.config?.theme || // Fourth template
+				json.metrics?.cpu; // Fifth template
+
+			expect(hasExpectedStructure).toBeTruthy();
+		});
+
+		it("should return different JSON on multiple requests", async () => {
+			const responses = new Set();
+			const numberOfRequests = 20;
+
+			for (let i = 0; i < numberOfRequests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/json",
+				});
+				responses.add(response.body);
+			}
+
+			// With 5 JSON templates and 20 requests, we should get at least 2 different templates
+			expect(responses.size).toBeGreaterThanOrEqual(2);
+		});
+
+		it("should handle POST requests", async () => {
+			const response = await fastify.inject({
+				method: "POST",
+				url: "/json",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-type"]).toContain("application/json");
+			const json = JSON.parse(response.body);
+			expect(typeof json).toBe("object");
+		});
+
+		it("should handle PUT requests", async () => {
+			const response = await fastify.inject({
+				method: "PUT",
+				url: "/json",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-type"]).toContain("application/json");
+			const json = JSON.parse(response.body);
+			expect(typeof json).toBe("object");
+		});
+
+		it("should handle PATCH requests", async () => {
+			const response = await fastify.inject({
+				method: "PATCH",
+				url: "/json",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-type"]).toContain("application/json");
+			const json = JSON.parse(response.body);
+			expect(typeof json).toBe("object");
+		});
+
+		it("should handle DELETE requests", async () => {
+			const response = await fastify.inject({
+				method: "DELETE",
+				url: "/json",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-type"]).toContain("application/json");
+			const json = JSON.parse(response.body);
+			expect(typeof json).toBe("object");
+		});
+
+		it("should handle the random index calculation correctly for JSON", async () => {
+			const requests = 100;
+
+			for (let i = 0; i < requests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/json",
+				});
+
+				expect(response.statusCode).toBe(200);
+				expect(response.body).toBeTruthy();
+				expect(response.headers["content-type"]).toContain("application/json");
+				expect(() => JSON.parse(response.body)).not.toThrow();
+			}
+		});
+
+		it("should return properly formatted JSON objects", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/json",
+			});
+
+			const json = JSON.parse(response.body);
+
+			// Check that the JSON has proper structure (not a string or primitive)
+			expect(typeof json).toBe("object");
+			expect(Array.isArray(json) || Object.keys(json).length > 0).toBe(true);
+		});
+	});
 });

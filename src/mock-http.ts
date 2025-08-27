@@ -37,10 +37,10 @@ import {
 	ipRoute,
 	userAgentRoute,
 } from "./routes/request-inspection/index.js";
+import { responseFormatRoutes } from "./routes/response-formats/index.js";
 import {
 	cacheRoutes,
 	etagRoutes,
-	plainRoute,
 	responseHeadersRoutes,
 } from "./routes/response-inspection/index.js";
 import { sitemapRoute } from "./routes/sitemap.js";
@@ -53,6 +53,7 @@ export type HttpBinOptions = {
 	requestInspection?: boolean;
 	responseInspection?: boolean;
 	statusCodes?: boolean;
+	responseFormats?: boolean;
 	cookies?: boolean;
 	anything?: boolean;
 	auth?: boolean;
@@ -101,6 +102,7 @@ export class MockHttp extends Hookified {
 		redirects: true,
 		requestInspection: true,
 		responseInspection: true,
+		responseFormats: true,
 		statusCodes: true,
 		cookies: true,
 		anything: true,
@@ -283,6 +285,7 @@ export class MockHttp extends Hookified {
 				redirects,
 				requestInspection,
 				responseInspection,
+				responseFormats,
 				statusCodes,
 				cookies,
 				anything,
@@ -303,6 +306,10 @@ export class MockHttp extends Hookified {
 
 			if (responseInspection) {
 				await this.registerResponseInspectionRoutes();
+			}
+
+			if (responseFormats) {
+				await this.registerResponseFormatRoutes();
 			}
 
 			if (redirects) {
@@ -423,8 +430,14 @@ export class MockHttp extends Hookified {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(cacheRoutes);
 		await fastify.register(etagRoutes);
-		await fastify.register(plainRoute);
 		await fastify.register(responseHeadersRoutes);
+	}
+
+	public async registerResponseFormatRoutes(
+		fastifyInstance?: FastifyInstance,
+	): Promise<void> {
+		const fastify = fastifyInstance ?? this._server;
+		await fastify.register(responseFormatRoutes);
 	}
 
 	/**

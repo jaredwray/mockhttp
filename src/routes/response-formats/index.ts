@@ -61,6 +61,17 @@ const jsonSchema: FastifySchema = {
 	},
 };
 
+const denySchema: FastifySchema = {
+	description: "Returns page denied by robots.txt rules",
+	tags: ["Response Formats"],
+	response: {
+		403: {
+			type: "string",
+			description: "Page denied by robots.txt rules",
+		},
+	},
+};
+
 const randomTexts = [
 	"The quick brown fox jumps over the lazy dog.",
 	"Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
@@ -357,4 +368,55 @@ export const plainRoute = (fastify: FastifyInstance) => {
 	fastify.put("/json", { schema: jsonSchema }, jsonHandler);
 	fastify.patch("/json", { schema: jsonSchema }, jsonHandler);
 	fastify.delete("/json", { schema: jsonSchema }, jsonHandler);
+
+	const denyHandler = async (_request: FastifyRequest, reply: FastifyReply) => {
+		const denyMessages = [
+			`<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head>
+<title>403 Forbidden</title>
+</head><body>
+<h1>Forbidden</h1>
+<p>Access denied by robots.txt rules.</p>
+<p>The requested resource is disallowed by robots.txt.</p>
+</body></html>`,
+			`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>403 - Access Denied</title>
+</head>
+<body>
+<h1>403 Forbidden</h1>
+<p>This page is blocked by robots.txt rules.</p>
+<p>User-agent: *<br>Disallow: ${_request.url}</p>
+</body>
+</html>`,
+			`<!DOCTYPE html>
+<html>
+<head>
+<title>403 - Access Denied</title>
+<style>body { font-family: Arial, sans-serif; margin: 40px; }</style>
+</head>
+<body>
+<h2>403 - Access Denied by robots.txt</h2>
+<p>The robots.txt file prevents access to this resource.</p>
+<hr>
+<small>MockHTTP Server</small>
+</body>
+</html>`,
+		];
+
+		const randomIndex = Math.floor(Math.random() * denyMessages.length);
+		const html = denyMessages[randomIndex];
+
+		reply.code(403);
+		reply.type("text/html");
+		return html;
+	};
+
+	fastify.get("/deny", { schema: denySchema }, denyHandler);
+	fastify.post("/deny", { schema: denySchema }, denyHandler);
+	fastify.put("/deny", { schema: denySchema }, denyHandler);
+	fastify.patch("/deny", { schema: denySchema }, denyHandler);
+	fastify.delete("/deny", { schema: denySchema }, denyHandler);
 };

@@ -559,4 +559,139 @@ describe("Plain, Text, and HTML Routes", () => {
 			expect(Array.isArray(json) || Object.keys(json).length > 0).toBe(true);
 		});
 	});
+
+	// Tests for /deny endpoint
+	describe("/deny endpoint", () => {
+		it("should return 403 Forbidden status", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/deny",
+			});
+
+			expect(response.statusCode).toBe(403);
+			expect(response.headers["content-type"]).toContain("text/html");
+			expect(typeof response.body).toBe("string");
+			expect(response.body.length).toBeGreaterThan(0);
+		});
+
+		it("should return HTML content with robots.txt denial message", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/deny",
+			});
+
+			// Check for HTML structure
+			expect(response.body).toContain("<!DOCTYPE");
+			expect(response.body).toContain("<html");
+			expect(response.body).toContain("</html>");
+
+			// Check for forbidden/denied content
+			expect(response.body.toLowerCase()).toMatch(/forbidden|denied/);
+			expect(response.body.toLowerCase()).toContain("robots.txt");
+		});
+
+		it("should return 403 status with HTML content", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/deny",
+			});
+
+			// Check status code
+			expect(response.statusCode).toBe(403);
+
+			// Check content type
+			expect(response.headers["content-type"]).toContain("text/html");
+
+			// Check that it contains 403 in the body
+			expect(response.body).toContain("403");
+		});
+
+		it("should return different denial messages on multiple requests", async () => {
+			const responses = new Set();
+			const numberOfRequests = 20;
+
+			for (let i = 0; i < numberOfRequests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/deny",
+				});
+				responses.add(response.body);
+			}
+
+			// With 3 denial templates and 20 requests, we should get at least 2 different templates
+			expect(responses.size).toBeGreaterThanOrEqual(2);
+		});
+
+		it("should handle POST requests with 403 status", async () => {
+			const response = await fastify.inject({
+				method: "POST",
+				url: "/deny",
+			});
+
+			expect(response.statusCode).toBe(403);
+			expect(response.headers["content-type"]).toContain("text/html");
+			expect(response.body.toLowerCase()).toContain("robots.txt");
+		});
+
+		it("should handle PUT requests with 403 status", async () => {
+			const response = await fastify.inject({
+				method: "PUT",
+				url: "/deny",
+			});
+
+			expect(response.statusCode).toBe(403);
+			expect(response.headers["content-type"]).toContain("text/html");
+			expect(response.body.toLowerCase()).toContain("robots.txt");
+		});
+
+		it("should handle PATCH requests with 403 status", async () => {
+			const response = await fastify.inject({
+				method: "PATCH",
+				url: "/deny",
+			});
+
+			expect(response.statusCode).toBe(403);
+			expect(response.headers["content-type"]).toContain("text/html");
+			expect(response.body.toLowerCase()).toContain("robots.txt");
+		});
+
+		it("should handle DELETE requests with 403 status", async () => {
+			const response = await fastify.inject({
+				method: "DELETE",
+				url: "/deny",
+			});
+
+			expect(response.statusCode).toBe(403);
+			expect(response.headers["content-type"]).toContain("text/html");
+			expect(response.body.toLowerCase()).toContain("robots.txt");
+		});
+
+		it("should consistently return 403 status across multiple requests", async () => {
+			const requests = 50;
+
+			for (let i = 0; i < requests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/deny",
+				});
+
+				expect(response.statusCode).toBe(403);
+				expect(response.body).toBeTruthy();
+				expect(response.headers["content-type"]).toContain("text/html");
+			}
+		});
+
+		it("should return HTML without being wrapped in JSON", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/deny",
+			});
+
+			// Should not be valid JSON
+			expect(() => JSON.parse(response.body)).toThrow();
+
+			// Should be raw HTML
+			expect(response.body).toMatch(/^<!DOCTYPE/i);
+		});
+	});
 });

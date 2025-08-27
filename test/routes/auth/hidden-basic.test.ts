@@ -8,7 +8,6 @@ const makeBasic = (u: string, p: string) =>
 
 describe("GET /hidden-basic-auth/:user/:passwd", () => {
 	it("mirrors /basic-auth behavior", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		hiddenBasicAuthRoute(fastify);
 		const response401 = await fastify.inject({
@@ -27,7 +26,6 @@ describe("GET /hidden-basic-auth/:user/:passwd", () => {
 	});
 
 	it("401 non-basic scheme", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		hiddenBasicAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -39,7 +37,6 @@ describe("GET /hidden-basic-auth/:user/:passwd", () => {
 	});
 
 	it("401 when decoded credentials have no colon", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		hiddenBasicAuthRoute(fastify);
 		const bad = `Basic ${Buffer.from("nocolonhere").toString("base64")}`;

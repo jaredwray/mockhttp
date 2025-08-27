@@ -29,7 +29,6 @@ export const bearerAuthSchema: FastifySchema = {
 		},
 	},
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
 			type: "object",
 			properties: {
@@ -38,7 +37,6 @@ export const bearerAuthSchema: FastifySchema = {
 			},
 			required: ["authenticated", "token"],
 		},
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		401: {
 			type: "object",
 			properties: { message: { type: "string" } },

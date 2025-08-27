@@ -21,7 +21,6 @@ export const getSchema: FastifySchema = {
 		description: "Headers sent in the request",
 	},
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
 			type: "object",
 			properties: {

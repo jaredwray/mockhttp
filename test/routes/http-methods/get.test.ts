@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { getRoute } from "../../../src/routes/http-methods/get.js";
 
 describe("GET /get route", () => {
-	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 	getRoute(fastify);
 

@@ -3,7 +3,6 @@ import { describe, expect, test } from "vitest";
 import { redirectToRoute } from "../../../src/routes/redirects/redirect-to.js";
 
 describe("Redirect To Route", async () => {
-	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 	await fastify.register(redirectToRoute);
 
@@ -13,7 +12,6 @@ describe("Redirect To Route", async () => {
 			url: "/redirect-to",
 			query: {
 				url: "https://mockhttp.org",
-				// eslint-disable-next-line  @typescript-eslint/naming-convention
 				status_code: "301",
 			},
 		});

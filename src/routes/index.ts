@@ -1,4 +1,3 @@
-/* eslint-disable @stylistic/max-len */
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 export const indexRoute = (fastify: FastifyInstance) => {

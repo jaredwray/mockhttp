@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { relativeRedirectRoute } from "../../../src/routes/redirects/relative-redirect.js";
 
 describe("Relative Redirect Route", async () => {
-	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 	await fastify.register(relativeRedirectRoute);
 

@@ -4,7 +4,6 @@ import { bearerAuthRoute } from "../../../src/routes/auth/bearer.js";
 
 describe("GET /bearer", () => {
 	it("401 when required and missing", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		bearerAuthRoute(fastify);
 		const response = await fastify.inject({ method: "GET", url: "/bearer" });
@@ -12,7 +11,6 @@ describe("GET /bearer", () => {
 	});
 
 	it("200 when token provided", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		bearerAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -25,7 +23,6 @@ describe("GET /bearer", () => {
 	});
 
 	it("200 when not required and missing", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		bearerAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -37,7 +34,6 @@ describe("GET /bearer", () => {
 	});
 
 	it("401 with wrong scheme in Authorization", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		bearerAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -49,7 +45,6 @@ describe("GET /bearer", () => {
 	});
 
 	it("200 when mixed-case bearer scheme with token", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		bearerAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -62,7 +57,6 @@ describe("GET /bearer", () => {
 	});
 
 	it("401 when required=true explicitly and missing", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		bearerAuthRoute(fastify);
 		const response = await fastify.inject({

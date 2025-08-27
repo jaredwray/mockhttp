@@ -14,17 +14,14 @@ const etagSchema: FastifySchema = {
 		required: ["etag"],
 	},
 	response: {
-		// eslint-disable-next-line @typescript-eslint/naming-convention
 		200: {
 			type: "string",
 			description: "Resource content for matching ETag.",
 		},
-		// eslint-disable-next-line @typescript-eslint/naming-convention
 		304: {
 			type: "null",
 			description: "Indicates the resource has not been modified.",
 		},
-		// eslint-disable-next-line @typescript-eslint/naming-convention
 		412: {
 			type: "null",
 			description: "Indicates a precondition failed due to mismatched ETag.",

@@ -4,7 +4,6 @@ import { userAgentRoute } from "../../../src/routes/request-inspection/user-agen
 
 describe("GET /user-agent", () => {
 	it("should return the User-Agent header", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		userAgentRoute(fastify);
 
@@ -23,7 +22,6 @@ describe("GET /user-agent", () => {
 	});
 
 	it("should return empty string if User-Agent header is not present", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		userAgentRoute(fastify);
 

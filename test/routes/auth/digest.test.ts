@@ -5,7 +5,6 @@ import { digestAuthRoute, hashAlg } from "../../../src/routes/auth/digest.js";
 
 describe("GET /digest-auth", () => {
 	it("401 challenge on first request", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -17,7 +16,6 @@ describe("GET /digest-auth", () => {
 	});
 
 	it("401 when response invalid", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -29,7 +27,6 @@ describe("GET /digest-auth", () => {
 	});
 
 	it("401 when username mismatch", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -41,7 +38,6 @@ describe("GET /digest-auth", () => {
 	});
 
 	it("401 challenge with algorithm variant", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -53,7 +49,6 @@ describe("GET /digest-auth", () => {
 	});
 
 	it("401 when no qop and mismatched response", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 
@@ -86,7 +81,6 @@ describe("GET /digest-auth", () => {
 
 	// Test lines 54-55: Non-digest auth scheme
 	it("401 when authorization header is not Digest scheme", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -100,7 +94,6 @@ describe("GET /digest-auth", () => {
 
 	// Test lines 61-62: Malformed digest auth header
 	it("401 when digest auth header is malformed", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -113,7 +106,6 @@ describe("GET /digest-auth", () => {
 
 	// Test lines 82-84: Empty parts array (no valid key=value pairs)
 	it("401 when digest auth header has no valid key=value pairs", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -203,7 +195,6 @@ describe("GET /digest-auth", () => {
 
 	// Test lines 140-143: Username mismatch on algorithm endpoint
 	it("401 when username mismatch on algorithm endpoint", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -231,7 +222,6 @@ describe("GET /digest-auth", () => {
 
 	// Test lines 153-154: Without qop on algorithm endpoint
 	it("401 when no qop on algorithm endpoint with wrong response", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 
@@ -262,7 +252,6 @@ describe("GET /digest-auth", () => {
 
 	// Test lines 157-159: Wrong response on algorithm endpoint
 	it("401 when response is wrong on algorithm endpoint", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		digestAuthRoute(fastify);
 

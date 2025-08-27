@@ -4,7 +4,6 @@ import { headersRoute } from "../../../src/routes/request-inspection/headers.js"
 
 describe("GET /headers", () => {
 	it("should return all headers of the client request", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		headersRoute(fastify);
 
@@ -27,7 +26,6 @@ describe("GET /headers", () => {
 	});
 
 	it("should return an empty object if no headers are present", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		headersRoute(fastify);
 

@@ -8,7 +8,6 @@ const makeBasic = (u: string, p: string) =>
 
 describe("GET /basic-auth/:user/:passwd", () => {
 	it("401 without auth header", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -20,7 +19,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 	});
 
 	it("401 with wrong creds", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -32,7 +30,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 	});
 
 	it("200 with correct creds", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -45,7 +42,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 	});
 
 	it("401 with non-basic scheme", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -57,7 +53,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 	});
 
 	it("401 when decoded credentials have no colon", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		// Base64 of 'nocolonhere'
@@ -71,7 +66,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 	});
 
 	it("401 with empty username", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		// Base64 of ':password'
@@ -85,7 +79,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 	});
 
 	it("200 with empty password", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		// Base64 of 'user:'
@@ -100,7 +93,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 	});
 
 	it("401 with invalid base64", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -112,7 +104,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 	});
 
 	it("401 with malformed authorization header (no space)", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -124,7 +115,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 	});
 
 	it("401 with non-string authorization header", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		const response = await fastify.inject({
@@ -137,7 +127,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 	});
 
 	it("handles unicode characters in credentials", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 		const unicodeUser = "üser";
@@ -155,7 +144,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 	// Note: This catch block is extremely difficult to trigger in practice
 	// as Buffer.from() is very tolerant of malformed base64 input
 	it("401 with malformed base64 characters", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 
@@ -170,7 +158,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 
 	// Test lines 55-56: early return in safeCompare when lengths differ
 	it("401 when username lengths differ (timing attack protection)", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 
@@ -185,7 +172,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 
 	// Test lines 55-56: early return in safeCompare when password lengths differ
 	it("401 when password lengths differ (timing attack protection)", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 
@@ -202,7 +188,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 	// Note: This catch block is extremely difficult to trigger in practice
 	// as timingSafeEqual() is very reliable and rarely throws exceptions
 	it("covers safeCompare fallback path conceptually", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 
@@ -219,7 +204,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 
 	// Test lines 104-106: route parameter validation when user is empty string
 	it("401 when user parameter is empty string", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 
@@ -234,7 +218,6 @@ describe("GET /basic-auth/:user/:passwd", () => {
 
 	// Additional test for lines 104-106: non-string parameters
 	it("401 when parameters are not strings due to URL encoding edge cases", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		basicAuthRoute(fastify);
 

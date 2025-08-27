@@ -3,7 +3,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { etagRoutes } from "../../../src/routes/response-inspection/index.js";
 
 describe("ETag Routes", () => {
-	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 
 	beforeAll(async () => {

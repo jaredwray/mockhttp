@@ -3,7 +3,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { cacheRoutes } from "../../../src/routes/response-inspection/index.js";
 
 describe("Cache Routes", () => {
-	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 
 	beforeAll(async () => {

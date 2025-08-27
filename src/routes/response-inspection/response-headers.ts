@@ -11,7 +11,6 @@ const responseHeadersSchema: FastifySchema = {
 			"Freeform query string parameters to be added as response headers.",
 	},
 	response: {
-		// eslint-disable-next-line @typescript-eslint/naming-convention
 		200: {
 			type: "object",
 			additionalProperties: true,
@@ -28,7 +27,6 @@ export const responseHeadersRoutes = (fastify: FastifyInstance) => {
 			const queryParameters = request.query as Record<string, string>;
 
 			for (const [key, value] of Object.entries(queryParameters)) {
-				// eslint-disable-next-line @typescript-eslint/no-floating-promises
 				reply.header(key, escapeHtml(value));
 			}
 
@@ -51,12 +49,10 @@ export const responseHeadersRoutes = (fastify: FastifyInstance) => {
 			const body = (request.body ?? {}) as Record<string, string>;
 
 			for (const [key, value] of Object.entries(queryParameters)) {
-				// eslint-disable-next-line @typescript-eslint/no-floating-promises
 				reply.header(key, escapeHtml(value));
 			}
 
 			for (const [key, value] of Object.entries(body)) {
-				// eslint-disable-next-line @typescript-eslint/no-floating-promises
 				reply.header(key, escapeHtml(value));
 			}
 

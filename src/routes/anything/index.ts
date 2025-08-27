@@ -9,7 +9,6 @@ const anythingSchema: FastifySchema = {
 	description: "Will return anything that you send it",
 	tags: ["Anything"],
 	response: {
-		// eslint-disable-next-line @typescript-eslint/naming-convention
 		200: {
 			type: "object",
 			properties: {

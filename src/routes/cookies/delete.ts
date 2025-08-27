@@ -12,7 +12,6 @@ export const cookiesDeleteSchema: FastifySchema = {
 		additionalProperties: false,
 	},
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		204: {
 			type: "null",
 		},
@@ -25,7 +24,6 @@ export const deleteCookieRoute = (fastify: FastifyInstance) => {
 		{ schema: cookiesDeleteSchema },
 		async (request, reply) => {
 			const { name } = request.query as { name: string };
-			// eslint-disable-next-line @typescript-eslint/no-floating-promises
 			reply.clearCookie(name, { path: "/" });
 
 			// Send back a 204 No Content response

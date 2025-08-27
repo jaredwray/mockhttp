@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { putRoute } from "../../../src/routes/http-methods/put.js";
 
 describe("PUT /put route", () => {
-	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 	putRoute(fastify);
 

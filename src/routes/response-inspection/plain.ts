@@ -13,6 +13,19 @@ const plainSchema: FastifySchema = {
 	},
 };
 
+const textSchema: FastifySchema = {
+	description: "Returns random text content",
+	tags: ["Response Inspection"],
+	// @ts-expect-error
+	response: {
+		// eslint-disable-next-line  @typescript-eslint/naming-convention
+		200: {
+			type: "string",
+			description: "Random text content",
+		},
+	},
+};
+
 const randomTexts = [
 	"The quick brown fox jumps over the lazy dog.",
 	"Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
@@ -31,6 +44,20 @@ export const plainRoute = (fastify: FastifyInstance) => {
 	fastify.get(
 		"/plain",
 		{ schema: plainSchema },
+		// biome-ignore lint/suspicious/noExplicitAny: reply
+		async (_request: FastifyRequest, reply: any) => {
+			const randomIndex = Math.floor(Math.random() * randomTexts.length);
+			const text = randomTexts[randomIndex];
+
+			reply.type("text/plain");
+			return text;
+		},
+	);
+
+	// @ts-expect-error
+	fastify.get(
+		"/text",
+		{ schema: textSchema },
 		// biome-ignore lint/suspicious/noExplicitAny: reply
 		async (_request: FastifyRequest, reply: any) => {
 			const randomIndex = Math.floor(Math.random() * randomTexts.length);

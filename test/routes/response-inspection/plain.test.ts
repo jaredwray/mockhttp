@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { plainRoute } from "../../../src/routes/response-inspection/index.js";
 
-describe("Plain Text Route", () => {
+describe("Plain and Text Routes", () => {
 	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 
@@ -105,5 +105,84 @@ describe("Plain Text Route", () => {
 		expect(response.body).not.toContain("{");
 		expect(response.body).not.toContain("}");
 		expect(response.body).not.toContain('"text"');
+	});
+
+	// Tests for /text endpoint
+	describe("/text endpoint", () => {
+		it("should return text with correct content type", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/text",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-type"]).toContain("text/plain");
+			expect(typeof response.body).toBe("string");
+			expect(response.body.length).toBeGreaterThan(0);
+		});
+
+		it("should return one of the predefined random texts", async () => {
+			const expectedTexts = [
+				"The quick brown fox jumps over the lazy dog.",
+				"Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+				"To be or not to be, that is the question.",
+				"All work and no play makes Jack a dull boy.",
+				"The only way to do great work is to love what you do.",
+				"In the beginning was the Word, and the Word was with God.",
+				"Once upon a time in a galaxy far, far away...",
+				"It was the best of times, it was the worst of times.",
+				"The journey of a thousand miles begins with a single step.",
+				"Knowledge is power. France is bacon.",
+			];
+
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/text",
+			});
+
+			expect(expectedTexts).toContain(response.body);
+		});
+
+		it("should return different texts on multiple requests", async () => {
+			const responses = new Set();
+			const numberOfRequests = 20;
+
+			for (let i = 0; i < numberOfRequests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/text",
+				});
+				responses.add(response.body);
+			}
+
+			expect(responses.size).toBeGreaterThanOrEqual(2);
+		});
+
+		it("should handle the random index calculation correctly", async () => {
+			const requests = 100;
+
+			for (let i = 0; i < requests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/text",
+				});
+
+				expect(response.statusCode).toBe(200);
+				expect(response.body).toBeTruthy();
+				expect(response.headers["content-type"]).toContain("text/plain");
+			}
+		});
+
+		it("should return plain text without JSON wrapping", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/text",
+			});
+
+			expect(() => JSON.parse(response.body)).toThrow();
+			expect(response.body).not.toContain("{");
+			expect(response.body).not.toContain("}");
+			expect(response.body).not.toContain('"text"');
+		});
 	});
 });

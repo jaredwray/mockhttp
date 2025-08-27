@@ -281,4 +281,141 @@ describe("Plain, Text, and HTML Routes", () => {
 			expect(response.body.startsWith("<!DOCTYPE html")).toBe(true);
 		});
 	});
+
+	// Tests for /xml endpoint
+	describe("/xml endpoint", () => {
+		it("should return XML with correct content type", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/xml",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-type"]).toContain("application/xml");
+			expect(typeof response.body).toBe("string");
+			expect(response.body.length).toBeGreaterThan(0);
+		});
+
+		it("should return valid XML document", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/xml",
+			});
+
+			// Check for XML declaration and structure
+			expect(response.body).toContain('<?xml version="1.0" encoding="UTF-8"?>');
+			expect(response.body).toMatch(/<\w+>/); // Opening tag
+			expect(response.body).toMatch(/<\/\w+>/); // Closing tag
+		});
+
+		it("should return one of the predefined XML templates", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/xml",
+			});
+
+			// Check that response contains at least one of the expected root elements
+			const expectedRootElements = [
+				"<root>",
+				"<book>",
+				"<users>",
+				"<product>",
+				'<rss version="2.0">',
+			];
+
+			const containsExpectedRoot = expectedRootElements.some((element) =>
+				response.body.includes(element),
+			);
+			expect(containsExpectedRoot).toBe(true);
+		});
+
+		it("should return different XML on multiple requests", async () => {
+			const responses = new Set();
+			const numberOfRequests = 20;
+
+			for (let i = 0; i < numberOfRequests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/xml",
+				});
+				responses.add(response.body);
+			}
+
+			// With 5 XML templates and 20 requests, we should get at least 2 different templates
+			expect(responses.size).toBeGreaterThanOrEqual(2);
+		});
+
+		it("should handle POST requests", async () => {
+			const response = await fastify.inject({
+				method: "POST",
+				url: "/xml",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-type"]).toContain("application/xml");
+			expect(response.body).toContain('<?xml version="1.0" encoding="UTF-8"?>');
+		});
+
+		it("should handle PUT requests", async () => {
+			const response = await fastify.inject({
+				method: "PUT",
+				url: "/xml",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-type"]).toContain("application/xml");
+			expect(response.body).toContain('<?xml version="1.0" encoding="UTF-8"?>');
+		});
+
+		it("should handle PATCH requests", async () => {
+			const response = await fastify.inject({
+				method: "PATCH",
+				url: "/xml",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-type"]).toContain("application/xml");
+			expect(response.body).toContain('<?xml version="1.0" encoding="UTF-8"?>');
+		});
+
+		it("should handle DELETE requests", async () => {
+			const response = await fastify.inject({
+				method: "DELETE",
+				url: "/xml",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-type"]).toContain("application/xml");
+			expect(response.body).toContain('<?xml version="1.0" encoding="UTF-8"?>');
+		});
+
+		it("should handle the random index calculation correctly for XML", async () => {
+			const requests = 100;
+
+			for (let i = 0; i < requests; i++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: "/xml",
+				});
+
+				expect(response.statusCode).toBe(200);
+				expect(response.body).toBeTruthy();
+				expect(response.headers["content-type"]).toContain("application/xml");
+				expect(response.body).toContain('<?xml version="1.0"');
+			}
+		});
+
+		it("should return XML without being wrapped in JSON", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/xml",
+			});
+
+			// Should not be valid JSON
+			expect(() => JSON.parse(response.body)).toThrow();
+
+			// Should be raw XML
+			expect(response.body.startsWith('<?xml version="1.0"')).toBe(true);
+		});
+	});
 });

@@ -1,4 +1,9 @@
-import type { FastifyInstance, FastifyRequest, FastifySchema } from "fastify";
+import type {
+	FastifyInstance,
+	FastifyReply,
+	FastifyRequest,
+	FastifySchema,
+} from "fastify";
 
 const plainSchema: FastifySchema = {
 	description: "Returns random plain text content",
@@ -29,6 +34,17 @@ const htmlSchema: FastifySchema = {
 		200: {
 			type: "string",
 			description: "Random HTML content",
+		},
+	},
+};
+
+const xmlSchema: FastifySchema = {
+	description: "Returns random XML content",
+	tags: ["Response Formats"],
+	response: {
+		200: {
+			type: "string",
+			description: "Random XML content",
 		},
 	},
 };
@@ -133,8 +149,64 @@ const randomHtmlContent = [
 </html>`,
 ];
 
+const randomXmlContent = [
+	`<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <message>Hello from MockHTTP</message>
+    <timestamp>${new Date().toISOString()}</timestamp>
+    <status>success</status>
+</root>`,
+	`<?xml version="1.0" encoding="UTF-8"?>
+<book>
+    <title>The Great Gatsby</title>
+    <author>F. Scott Fitzgerald</author>
+    <year>1925</year>
+    <publisher>Charles Scribner's Sons</publisher>
+    <isbn>978-0-7432-7356-5</isbn>
+</book>`,
+	`<?xml version="1.0" encoding="UTF-8"?>
+<users>
+    <user id="1">
+        <name>John Doe</name>
+        <email>john@example.com</email>
+        <role>admin</role>
+    </user>
+    <user id="2">
+        <name>Jane Smith</name>
+        <email>jane@example.com</email>
+        <role>user</role>
+    </user>
+</users>`,
+	`<?xml version="1.0" encoding="UTF-8"?>
+<product>
+    <id>12345</id>
+    <name>Wireless Mouse</name>
+    <description>Ergonomic wireless mouse with 3-year battery life</description>
+    <price currency="USD">29.99</price>
+    <stock>150</stock>
+    <category>Electronics</category>
+</product>`,
+	`<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+    <channel>
+        <title>Mock RSS Feed</title>
+        <link>http://example.com/rss</link>
+        <description>Sample RSS feed from MockHTTP</description>
+        <item>
+            <title>First Article</title>
+            <link>http://example.com/article1</link>
+            <description>This is the first article in our feed</description>
+            <pubDate>${new Date().toUTCString()}</pubDate>
+        </item>
+    </channel>
+</rss>`,
+];
+
 export const plainRoute = (fastify: FastifyInstance) => {
-	const plainHandler = async (_request: FastifyRequest, reply: any) => {
+	const plainHandler = async (
+		_request: FastifyRequest,
+		reply: FastifyReply,
+	) => {
 		const randomIndex = Math.floor(Math.random() * randomTexts.length);
 		const text = randomTexts[randomIndex];
 
@@ -148,7 +220,7 @@ export const plainRoute = (fastify: FastifyInstance) => {
 	fastify.patch("/plain", { schema: plainSchema }, plainHandler);
 	fastify.delete("/plain", { schema: plainSchema }, plainHandler);
 
-	const textHandler = async (_request: FastifyRequest, reply: any) => {
+	const textHandler = async (_request: FastifyRequest, reply: FastifyReply) => {
 		const randomIndex = Math.floor(Math.random() * randomTexts.length);
 		const text = randomTexts[randomIndex];
 
@@ -162,7 +234,7 @@ export const plainRoute = (fastify: FastifyInstance) => {
 	fastify.patch("/text", { schema: textSchema }, textHandler);
 	fastify.delete("/text", { schema: textSchema }, textHandler);
 
-	const htmlHandler = async (_request: FastifyRequest, reply: any) => {
+	const htmlHandler = async (_request: FastifyRequest, reply: FastifyReply) => {
 		const randomIndex = Math.floor(Math.random() * randomHtmlContent.length);
 		const html = randomHtmlContent[randomIndex];
 
@@ -175,4 +247,18 @@ export const plainRoute = (fastify: FastifyInstance) => {
 	fastify.put("/html", { schema: htmlSchema }, htmlHandler);
 	fastify.patch("/html", { schema: htmlSchema }, htmlHandler);
 	fastify.delete("/html", { schema: htmlSchema }, htmlHandler);
+
+	const xmlHandler = async (_request: FastifyRequest, reply: FastifyReply) => {
+		const randomIndex = Math.floor(Math.random() * randomXmlContent.length);
+		const xml = randomXmlContent[randomIndex];
+
+		reply.type("application/xml");
+		return xml;
+	};
+
+	fastify.get("/xml", { schema: xmlSchema }, xmlHandler);
+	fastify.post("/xml", { schema: xmlSchema }, xmlHandler);
+	fastify.put("/xml", { schema: xmlSchema }, xmlHandler);
+	fastify.patch("/xml", { schema: xmlSchema }, xmlHandler);
+	fastify.delete("/xml", { schema: xmlSchema }, xmlHandler);
 };

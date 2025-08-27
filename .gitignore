@@ -11,3 +11,6 @@ yarn.lock
 pnpm-lock.yaml
 package-lock.json
 DOCKER.md
+
+# AI
+.claude

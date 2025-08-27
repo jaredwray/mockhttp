@@ -19,7 +19,6 @@ const relativeRedirectSchema: FastifySchema = {
 		required: ["host"],
 	},
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		302: {
 			type: "string", // The response is an HTML string
 		},

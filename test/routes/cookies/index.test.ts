@@ -8,7 +8,6 @@ import {
 } from "../../../src/routes/cookies/index.js";
 
 describe("Cookies route", async () => {
-	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 	await fastify.register(fastifyCookie);
 	await fastify.register(getCookiesRoute);

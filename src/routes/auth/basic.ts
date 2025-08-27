@@ -81,7 +81,6 @@ export const basicAuthSchema: FastifySchema = {
 		required: ["user", "passwd"],
 	},
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
 			type: "object",
 			properties: {
@@ -90,7 +89,6 @@ export const basicAuthSchema: FastifySchema = {
 			},
 			required: ["authenticated", "user"],
 		},
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		401: {
 			type: "object",
 			properties: {

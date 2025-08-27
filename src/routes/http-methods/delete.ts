@@ -9,7 +9,6 @@ const deleteSchema: FastifySchema = {
 		description: "The body of the DELETE request",
 	},
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
 			type: "object",
 			properties: {

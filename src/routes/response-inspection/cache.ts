@@ -4,12 +4,10 @@ const cacheGetSchema: FastifySchema = {
 	description: "Handles cache validation and retrieval.",
 	tags: ["Response Inspection"],
 	response: {
-		// eslint-disable-next-line @typescript-eslint/naming-convention
 		200: {
 			type: "string",
 			description: "The cached content or resource.",
 		},
-		// eslint-disable-next-line @typescript-eslint/naming-convention
 		304: {
 			type: "null",
 			description: "Indicates the resource has not been modified.",
@@ -31,7 +29,6 @@ const cacheSetSchema: FastifySchema = {
 		required: ["value"],
 	},
 	response: {
-		// eslint-disable-next-line @typescript-eslint/naming-convention
 		200: {
 			type: "string",
 			description: "Confirmation message for setting cache.",

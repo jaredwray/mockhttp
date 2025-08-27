@@ -20,7 +20,6 @@ export const redirectToSchema: FastifySchema = {
 				format: "uri",
 				description: "The URL to redirect to",
 			},
-			// eslint-disable-next-line  @typescript-eslint/naming-convention
 			status_code: {
 				type: "string",
 				pattern: "^[1-5][0-9][0-9]$", // Matches a 3-digit HTTP status code
@@ -34,7 +33,6 @@ export const redirectToSchema: FastifySchema = {
 
 export const redirectToRoute = (fastify: FastifyInstance) => {
 	const handler = async (request: RedirectToRequest, reply: FastifyReply) => {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		const { url, status_code } = request.query;
 		const statusCode = status_code ? Number(status_code) : 302;
 

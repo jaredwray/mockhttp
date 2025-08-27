@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { anythingRoute } from "../../../src/routes/anything/index.js";
 
 describe("Status Codes Route", () => {
-	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 	anythingRoute(fastify);
 

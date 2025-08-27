@@ -107,7 +107,6 @@ export class MockHttp extends Hookified {
 		auth: true,
 	};
 
-	// eslint-disable-next-line new-cap
 	private _server: FastifyInstance = Fastify();
 
 	constructor(options?: MockHttpOptions) {
@@ -253,7 +252,6 @@ export class MockHttp extends Hookified {
 				await this._server.close();
 			}
 
-			// eslint-disable-next-line new-cap
 			this._server = Fastify(fastifyConfig);
 
 			// Register Scalar API client

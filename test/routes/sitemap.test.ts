@@ -4,7 +4,6 @@ import { sitemapRoute } from "../../src/routes/sitemap.js";
 
 describe("sitemap-route", () => {
 	it("should return the Redoc HTML page on GET /", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		sitemapRoute(fastify);
 

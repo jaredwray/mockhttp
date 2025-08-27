@@ -5,7 +5,6 @@ const plainSchema: FastifySchema = {
 	tags: ["Response Inspection"],
 	// @ts-expect-error
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
 			type: "string",
 			description: "Random plain text content",
@@ -18,7 +17,6 @@ const textSchema: FastifySchema = {
 	tags: ["Response Inspection"],
 	// @ts-expect-error
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
 			type: "string",
 			description: "Random text content",
@@ -31,7 +29,6 @@ const htmlSchema: FastifySchema = {
 	tags: ["Response Inspection"],
 	// @ts-expect-error
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
 			type: "string",
 			description: "Random HTML content",

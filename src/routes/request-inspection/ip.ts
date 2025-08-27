@@ -4,7 +4,6 @@ const ipSchema: FastifySchema = {
 	description: "Returns the IP address of the client",
 	tags: ["Request Inspection"],
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
 			type: "object",
 			properties: {

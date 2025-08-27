@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { postRoute } from "../../../src/routes/http-methods/post.js";
 
 describe("POST /post route", async () => {
-	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 	await fastify.register(postRoute);
 

@@ -9,7 +9,6 @@ const postSchema: FastifySchema = {
 		description: "The body of the POST request",
 	},
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
 			type: "object",
 			properties: {

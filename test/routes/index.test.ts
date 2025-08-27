@@ -4,7 +4,6 @@ import { indexRoute } from "../../src/routes/index.js"; // Adjust the path as ne
 
 describe("index-route", () => {
 	it("should return the Redoc HTML page on GET /", async () => {
-		// eslint-disable-next-line new-cap
 		const fastify = Fastify();
 		indexRoute(fastify);
 

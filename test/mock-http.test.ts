@@ -8,13 +8,11 @@ describe("MockHttp", () => {
 	});
 
 	test("mockhttp should be an instance of MockHttp", () => {
-		// eslint-disable-next-line new-cap
 		expect(new mockhttp()).toBeInstanceOf(MockHttp);
 	});
 
 	test("should be able to set the server", () => {
 		const mock = new MockHttp();
-		// eslint-disable-next-line new-cap
 		const app = Fastify();
 		mock.server = app;
 

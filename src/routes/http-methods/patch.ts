@@ -9,7 +9,6 @@ const patchSchema: FastifySchema = {
 		description: "The body of the PATCH request",
 	},
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
 			type: "object",
 			properties: {

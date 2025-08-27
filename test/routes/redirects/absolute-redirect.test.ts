@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { absoluteRedirectRoute } from "../../../src/routes/redirects/absolute-redirect.js";
 
 describe("Absolute Redirect Route", async () => {
-	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 	await fastify.register(absoluteRedirectRoute);
 

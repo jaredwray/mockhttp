@@ -85,7 +85,6 @@ const statusSchema: FastifySchema = {
 		},
 	},
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
 			type: "object",
 			properties: {

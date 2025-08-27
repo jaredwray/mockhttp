@@ -133,7 +133,6 @@ export const digestAuthSchema: FastifySchema = {
 			user: { type: "string" },
 			passwd: { type: "string" },
 			algorithm: { type: "string" },
-			// eslint-disable-next-line @typescript-eslint/naming-convention
 			stale_after: { type: "string" },
 		},
 		required: ["qop", "user", "passwd"],

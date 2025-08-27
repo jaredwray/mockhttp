@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { patchRoute } from "../../../src/routes/http-methods/patch.js";
 
 describe("PATCH /patch route", () => {
-	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 	patchRoute(fastify);
 

@@ -14,7 +14,6 @@ const postCookieRouteSchema: FastifySchema = {
 		additionalProperties: false,
 	},
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
 			type: "object",
 			properties: {
@@ -36,10 +35,8 @@ export const postCookieRoute = (fastify: FastifyInstance) => {
 			const { name, value, expires } = request.body;
 			if (expires) {
 				const date = new Date(expires);
-				// eslint-disable-next-line @typescript-eslint/no-floating-promises
 				reply.setCookie(name, value, { path: "/", expires: date });
 			} else {
-				// eslint-disable-next-line @typescript-eslint/no-floating-promises
 				reply.setCookie(name, value, { path: "/" });
 			}
 

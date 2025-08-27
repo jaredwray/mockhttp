@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { ipRoute } from "../../../src/routes/request-inspection/ip.js";
 
 describe("IP Route", async () => {
-	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 	await fastify.register(ipRoute);
 

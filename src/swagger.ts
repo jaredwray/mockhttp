@@ -42,7 +42,7 @@ export const registerSwaggerUi = async (fastify: FastifyInstance) => {
 				next();
 			},
 		},
-		// eslint-disable-next-line @typescript-eslint/naming-convention
+
 		staticCSP: true,
 		transformSpecification: (swaggerObject, _request, _reply) => swaggerObject,
 		transformSpecificationClone: true,

@@ -4,7 +4,6 @@ const headersSchema: FastifySchema = {
 	description: "Returns all headers of the client request",
 	tags: ["Request Inspection"],
 	response: {
-		// eslint-disable-next-line  @typescript-eslint/naming-convention
 		200: {
 			type: "object",
 			properties: {

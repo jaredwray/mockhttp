@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { deleteRoute } from "../../../src/routes/http-methods/delete.js";
 
 describe("DELETE /delete", () => {
-	// eslint-disable-next-line new-cap
 	const fastify = Fastify();
 	deleteRoute(fastify);
 

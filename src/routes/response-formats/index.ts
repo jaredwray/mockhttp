@@ -2,8 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifySchema } from "fastify";
 
 const plainSchema: FastifySchema = {
 	description: "Returns random plain text content",
-	tags: ["Response Inspection"],
-	// @ts-expect-error
+	tags: ["Response Formats"],
 	response: {
 		200: {
 			type: "string",
@@ -14,8 +13,7 @@ const plainSchema: FastifySchema = {
 
 const textSchema: FastifySchema = {
 	description: "Returns random text content",
-	tags: ["Response Inspection"],
-	// @ts-expect-error
+	tags: ["Response Formats"],
 	response: {
 		200: {
 			type: "string",
@@ -26,8 +24,7 @@ const textSchema: FastifySchema = {
 
 const htmlSchema: FastifySchema = {
 	description: "Returns random HTML content",
-	tags: ["Response Inspection"],
-	// @ts-expect-error
+	tags: ["Response Formats"],
 	response: {
 		200: {
 			type: "string",
@@ -137,45 +134,45 @@ const randomHtmlContent = [
 ];
 
 export const plainRoute = (fastify: FastifyInstance) => {
-	// @ts-expect-error
-	fastify.get(
-		"/plain",
-		{ schema: plainSchema },
-		// biome-ignore lint/suspicious/noExplicitAny: reply
-		async (_request: FastifyRequest, reply: any) => {
-			const randomIndex = Math.floor(Math.random() * randomTexts.length);
-			const text = randomTexts[randomIndex];
+	const plainHandler = async (_request: FastifyRequest, reply: any) => {
+		const randomIndex = Math.floor(Math.random() * randomTexts.length);
+		const text = randomTexts[randomIndex];
 
-			reply.type("text/plain");
-			return text;
-		},
-	);
+		reply.type("text/plain");
+		return text;
+	};
 
-	// @ts-expect-error
-	fastify.get(
-		"/text",
-		{ schema: textSchema },
-		// biome-ignore lint/suspicious/noExplicitAny: reply
-		async (_request: FastifyRequest, reply: any) => {
-			const randomIndex = Math.floor(Math.random() * randomTexts.length);
-			const text = randomTexts[randomIndex];
+	fastify.get("/plain", { schema: plainSchema }, plainHandler);
+	fastify.post("/plain", { schema: plainSchema }, plainHandler);
+	fastify.put("/plain", { schema: plainSchema }, plainHandler);
+	fastify.patch("/plain", { schema: plainSchema }, plainHandler);
+	fastify.delete("/plain", { schema: plainSchema }, plainHandler);
 
-			reply.type("text/plain");
-			return text;
-		},
-	);
+	const textHandler = async (_request: FastifyRequest, reply: any) => {
+		const randomIndex = Math.floor(Math.random() * randomTexts.length);
+		const text = randomTexts[randomIndex];
 
-	// @ts-expect-error
-	fastify.get(
-		"/html",
-		{ schema: htmlSchema },
-		// biome-ignore lint/suspicious/noExplicitAny: reply
-		async (_request: FastifyRequest, reply: any) => {
-			const randomIndex = Math.floor(Math.random() * randomHtmlContent.length);
-			const html = randomHtmlContent[randomIndex];
+		reply.type("text/plain");
+		return text;
+	};
 
-			reply.type("text/html");
-			return html;
-		},
-	);
+	fastify.get("/text", { schema: textSchema }, textHandler);
+	fastify.post("/text", { schema: textSchema }, textHandler);
+	fastify.put("/text", { schema: textSchema }, textHandler);
+	fastify.patch("/text", { schema: textSchema }, textHandler);
+	fastify.delete("/text", { schema: textSchema }, textHandler);
+
+	const htmlHandler = async (_request: FastifyRequest, reply: any) => {
+		const randomIndex = Math.floor(Math.random() * randomHtmlContent.length);
+		const html = randomHtmlContent[randomIndex];
+
+		reply.type("text/html");
+		return html;
+	};
+
+	fastify.get("/html", { schema: htmlSchema }, htmlHandler);
+	fastify.post("/html", { schema: htmlSchema }, htmlHandler);
+	fastify.put("/html", { schema: htmlSchema }, htmlHandler);
+	fastify.patch("/html", { schema: htmlSchema }, htmlHandler);
+	fastify.delete("/html", { schema: htmlSchema }, htmlHandler);
 };

@@ -1,6 +1,6 @@
 import Fastify from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { plainRoute } from "../../../src/routes/response-inspection/index.js";
+import { plainRoute } from "../../../src/routes/response-formats/index.js";
 
 describe("Plain, Text, and HTML Routes", () => {
 	const fastify = Fastify();

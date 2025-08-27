@@ -37,10 +37,10 @@ import {
 	ipRoute,
 	userAgentRoute,
 } from "./routes/request-inspection/index.js";
+import { plainRoute } from "./routes/response-formats/index.js";
 import {
 	cacheRoutes,
 	etagRoutes,
-	plainRoute,
 	responseHeadersRoutes,
 } from "./routes/response-inspection/index.js";
 import { sitemapRoute } from "./routes/sitemap.js";

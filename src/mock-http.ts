@@ -40,6 +40,7 @@ import {
 import {
 	cacheRoutes,
 	etagRoutes,
+	plainRoute,
 	responseHeadersRoutes,
 } from "./routes/response-inspection/index.js";
 import { sitemapRoute } from "./routes/sitemap.js";
@@ -424,6 +425,7 @@ export class MockHttp extends Hookified {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(cacheRoutes);
 		await fastify.register(etagRoutes);
+		await fastify.register(plainRoute);
 		await fastify.register(responseHeadersRoutes);
 	}
 

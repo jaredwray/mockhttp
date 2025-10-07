@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import { describe, expect, test } from "vitest";
 import { MockHttp, type MockHttpOptions, mockhttp } from "../src/mock-http.js";
+import { TapManager } from "../src/tap-manager.js";
 
 describe("MockHttp", () => {
 	test("should be a class", () => {
@@ -86,6 +87,17 @@ describe("MockHttp", () => {
 	});
 
 	describe("injection/tap feature", () => {
+		test("should be able to set taps property", () => {
+			const mock = new MockHttp();
+			const newTapManager = new TapManager();
+			newTapManager.inject({ response: "custom tap manager" });
+
+			mock.taps = newTapManager;
+
+			expect(mock.taps).toBe(newTapManager);
+			expect(mock.taps.injections.size).toBe(1);
+		});
+
 		test("should start with no injections", () => {
 			const mock = new MockHttp();
 			expect(mock.taps.injections.size).toBe(0);

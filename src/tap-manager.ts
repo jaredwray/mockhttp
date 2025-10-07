@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { FastifyRequest } from "fastify";
 
 /**
@@ -70,11 +71,9 @@ export type InjectionTap = {
  */
 export class TapManager {
 	private _injections: Map<string, InjectionTap>;
-	private _idCounter: number;
 
 	constructor() {
 		this._injections = new Map();
-		this._idCounter = 0;
 	}
 
 	/**
@@ -101,8 +100,7 @@ export class TapManager {
 		response: InjectionResponse,
 		matcher?: InjectionMatcher,
 	): InjectionTap {
-		this._idCounter++;
-		const id = `tap-${this._idCounter}`;
+		const id = randomUUID();
 
 		const tap: InjectionTap = {
 			id,

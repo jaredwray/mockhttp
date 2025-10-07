@@ -190,7 +190,96 @@ const tap = mock.taps.inject({
 
 # API Reference
 
-## `taps.inject(response, matcher?)`
+## MockHttp Class
+
+### Constructor
+
+```javascript
+new MockHttp(options?)
+```
+
+**Parameters:**
+- `options?` (MockHttpOptions):
+  - `port?`: number - The port to listen on (default: 3000)
+  - `host?`: string - The host to listen on (default: '0.0.0.0')
+  - `autoDetectPort?`: boolean - Auto-detect next available port if in use (default: true)
+  - `helmet?`: boolean - Use Helmet for security headers (default: true)
+  - `apiDocs?`: boolean - Enable Swagger API documentation (default: true)
+  - `httpBin?`: HttpBinOptions - Configure which httpbin routes to enable
+  - `hookOptions?`: HookifiedOptions - Hookified options
+
+### Properties
+
+- `port`: number - Get/set the server port
+- `host`: string - Get/set the server host
+- `autoDetectPort`: boolean - Get/set auto-detect port behavior
+- `helmet`: boolean - Get/set Helmet security headers
+- `apiDocs`: boolean - Get/set API documentation
+- `httpBin`: HttpBinOptions - Get/set httpbin route options
+- `server`: FastifyInstance - Get/set the Fastify server instance
+- `taps`: TapManager - Get/set the TapManager instance
+
+### Methods
+
+#### `async start()`
+
+Start the Fastify server. If already running, it will be closed and restarted.
+
+#### `async close()`
+
+Stop the Fastify server.
+
+#### `async detectPort()`
+
+Detect the next available port.
+
+**Returns:** number - The available port
+
+#### `async registerApiDocs(fastifyInstance?)`
+
+Register Swagger API documentation routes.
+
+#### `async registerHttpMethods(fastifyInstance?)`
+
+Register HTTP method routes (GET, POST, PUT, PATCH, DELETE).
+
+#### `async registerStatusCodeRoutes(fastifyInstance?)`
+
+Register status code routes.
+
+#### `async registerRequestInspectionRoutes(fastifyInstance?)`
+
+Register request inspection routes (headers, ip, user-agent).
+
+#### `async registerResponseInspectionRoutes(fastifyInstance?)`
+
+Register response inspection routes (cache, etag, response-headers).
+
+#### `async registerResponseFormatRoutes(fastifyInstance?)`
+
+Register response format routes (json, xml, html, etc.).
+
+#### `async registerRedirectRoutes(fastifyInstance?)`
+
+Register redirect routes (absolute, relative, redirect-to).
+
+#### `async registerCookieRoutes(fastifyInstance?)`
+
+Register cookie routes (get, set, delete).
+
+#### `async registerAnythingRoutes(fastifyInstance?)`
+
+Register "anything" catch-all routes.
+
+#### `async registerAuthRoutes(fastifyInstance?)`
+
+Register authentication routes (basic, bearer, digest, hidden-basic).
+
+## Taps (Response Injection)
+
+Access the TapManager via `mockHttp.taps` to inject custom responses.
+
+### `taps.inject(response, matcher?)`
 
 Injects a custom response for requests matching the criteria.
 

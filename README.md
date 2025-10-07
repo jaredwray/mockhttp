@@ -188,6 +188,65 @@ const tap = mock.taps.inject({
 });
 ```
 
+### Dynamic Function Response
+
+You can provide a function that dynamically generates the response based on the incoming request:
+
+```javascript
+// Function response with access to the request object
+const tap = mock.taps.inject(
+  (request) => {
+    return {
+      response: {
+        message: `You requested ${request.url}`,
+        method: request.method,
+        timestamp: new Date().toISOString()
+      },
+      statusCode: 200,
+      headers: {
+        "X-Request-Path": request.url
+      }
+    };
+  },
+  { url: "/api/*" }
+);
+```
+
+```javascript
+// Conditional responses based on request
+const tap = mock.taps.inject((request) => {
+  // Return error for URLs containing 'error'
+  if (request.url.includes('error')) {
+    return {
+      response: { error: "Something went wrong" },
+      statusCode: 500
+    };
+  }
+
+  // Return success for everything else
+  return {
+    response: { status: "success" },
+    statusCode: 200
+  };
+});
+```
+
+```javascript
+// Dynamic headers based on request
+const tap = mock.taps.inject(
+  (request) => ({
+    response: "OK",
+    statusCode: 200,
+    headers: {
+      "X-Original-Method": request.method,
+      "X-Original-URL": request.url,
+      "X-Original-Host": request.hostname
+    }
+  }),
+  { url: "/api/mirror" }
+);
+```
+
 # API Reference
 
 ## MockHttp Class
@@ -284,10 +343,15 @@ Access the TapManager via `mockHttp.taps` to inject custom responses.
 Injects a custom response for requests matching the criteria.
 
 **Parameters:**
-- `response` (InjectionResponse):
-  - `response`: string | object | Buffer - The response body
-  - `statusCode?`: number - HTTP status code (default: 200)
-  - `headers?`: object - Response headers
+- `response` (InjectionResponse | InjectionResponseFunction):
+  - **Static Response** (InjectionResponse):
+    - `response`: string | object | Buffer - The response body
+    - `statusCode?`: number - HTTP status code (default: 200)
+    - `headers?`: object - Response headers
+  - **Function Response** (InjectionResponseFunction):
+    - A function that receives the Fastify request object and returns an InjectionResponse
+    - `(request: FastifyRequest) => InjectionResponse`
+    - Allows dynamic response generation based on request properties (url, method, headers, etc.)
 
 - `matcher?` (InjectionMatcher) - Optional matching criteria:
   - `url?`: string - URL path (supports wildcards with `*`)

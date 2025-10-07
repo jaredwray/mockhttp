@@ -83,4 +83,17 @@ describe("DELETE /delete", () => {
 		expect(responseBody.headers["content-type"]).toBe("text/plain");
 		expect(responseBody.body).toBe("This is a plain text body");
 	});
+
+	it("should handle no body", async () => {
+		const response = await fastify.inject({
+			method: "DELETE",
+			url: "/delete",
+		});
+
+		expect(response.statusCode).toBe(200);
+
+		const responseBody = response.json();
+		expect(responseBody.method).toBe("DELETE");
+		expect(responseBody.body).toBeUndefined();
+	});
 });

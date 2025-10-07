@@ -3,19 +3,6 @@ import type { FastifyInstance, FastifyRequest, FastifySchema } from "fastify";
 const deleteSchema: FastifySchema = {
 	description: "Handles a DELETE request and returns request information",
 	tags: ["HTTP Methods"],
-	body: {
-		oneOf: [
-			{
-				type: "object",
-				additionalProperties: true,
-				description: "JSON body of the DELETE request",
-			},
-			{
-				type: "string",
-				description: "String body of the DELETE request",
-			},
-		],
-	},
 	response: {
 		200: {
 			type: "object",
@@ -26,10 +13,11 @@ const deleteSchema: FastifySchema = {
 					oneOf: [
 						{ type: "object", additionalProperties: true },
 						{ type: "string" },
+						{ type: "null" },
 					],
 				},
 			},
-			required: ["method", "headers", "body"],
+			required: ["method", "headers"],
 		},
 	},
 };

@@ -46,6 +46,12 @@ import {
 import { sitemapRoute } from "./routes/sitemap.js";
 import { statusCodeRoute } from "./routes/status-codes/index.js";
 import { fastifySwaggerConfig, registerSwaggerUi } from "./swagger.js";
+import {
+	type InjectionMatcher,
+	type InjectionResponse,
+	type InjectionTap,
+	TapManager,
+} from "./tap.js";
 
 export type HttpBinOptions = {
 	httpMethods?: boolean;
@@ -110,6 +116,7 @@ export class MockHttp extends Hookified {
 	};
 
 	private _server: FastifyInstance = Fastify();
+	private _tapManager: TapManager = new TapManager();
 
 	constructor(options?: MockHttpOptions) {
 		super(options?.hookOptions);
@@ -246,6 +253,43 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
+	 * Get all active injection taps
+	 */
+	public get injections(): InjectionTap[] {
+		return this._tapManager.injections;
+	}
+
+	/**
+	 * Inject a custom response for requests matching the given criteria.
+	 * This allows you to "tap into" the request flow and return mock responses.
+	 * @param response - The response configuration
+	 * @param matcher - Optional criteria to match requests
+	 * @returns A tap object that can be used to remove the injection
+	 * @example
+	 * const tap = mockhttp.inject(
+	 *   { response: "Hello", statusCode: 200 },
+	 *   { url: "/api/test", method: "GET" }
+	 * );
+	 * // ... make requests
+	 * mockhttp.removeInjection(tap);
+	 */
+	public inject(
+		response: InjectionResponse,
+		matcher?: InjectionMatcher,
+	): InjectionTap {
+		return this._tapManager.inject(response, matcher);
+	}
+
+	/**
+	 * Remove an injection by its tap object or ID
+	 * @param tapOrId - The tap object or tap ID to remove
+	 * @returns true if the injection was removed, false if it wasn't found
+	 */
+	public removeInjection(tapOrId: InjectionTap | string): boolean {
+		return this._tapManager.removeInjection(tapOrId);
+	}
+
+	/**
 	 * Start the Fastify server. If the server is already running, it will be closed and restarted.
 	 */
 	public async start(): Promise<void> {
@@ -255,6 +299,27 @@ export class MockHttp extends Hookified {
 			}
 
 			this._server = Fastify(fastifyConfig);
+
+			// Register injection hook to intercept requests
+			this._server.addHook("onRequest", async (request, reply) => {
+				const matchedTap = this._tapManager.matchRequest(request);
+				if (matchedTap) {
+					const { response, statusCode = 200, headers } = matchedTap.response;
+
+					// Set status code
+					reply.code(statusCode);
+
+					// Set headers if provided
+					if (headers) {
+						for (const [key, value] of Object.entries(headers)) {
+							reply.header(key, value);
+						}
+					}
+
+					// Send the response and prevent further processing
+					return reply.send(response);
+				}
+			});
 
 			// Register Scalar API client
 			await this._server.register(fastifyStatic, {

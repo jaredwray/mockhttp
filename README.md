@@ -12,6 +12,7 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 
 # Features
 * All the features of [httpbin](https://httpbin.org/)
+* **Response Injection/Tap** - Inject custom responses for testing and offline development
 * `@fastify/helmet` built in by default
 * Built with `nodejs`, `typescript`, and `fastify`
 * Deploy via `docker` or `nodejs`
@@ -62,6 +63,165 @@ const response = await fetch('http://localhost:3000/get');
 console.log(reaponse);
 await mockhttp.stop(); // stop the server
 ```
+
+# Response Injection (Tap Feature)
+
+The injection/tap feature allows you to "tap into" the request flow and inject custom responses for specific requests. This is particularly useful for:
+- **Offline testing** - Mock external API responses without network access
+- **Testing edge cases** - Simulate errors, timeouts, or specific response scenarios
+- **Development** - Work on your application without depending on external services
+
+## What is a "Tap"?
+
+A "tap" is a reference to an injected response, similar to "wiretapping" - you're intercepting requests and returning predefined responses. Each tap can be removed when you're done with it, restoring normal server behavior.
+
+## Basic Usage
+
+```javascript
+import { mockhttp } from '@jaredwray/mockhttp';
+
+const mock = new mockhttp();
+await mock.start();
+
+// Inject a simple response
+const tap = mock.inject(
+  {
+    response: "Hello, World!",
+    statusCode: 200,
+    headers: { "Content-Type": "text/plain" }
+  },
+  {
+    url: "/api/greeting",
+    method: "GET"
+  }
+);
+
+// Make requests - they will get the injected response
+const response = await fetch('http://localhost:3000/api/greeting');
+console.log(await response.text()); // "Hello, World!"
+
+// Remove the injection when done
+mock.removeInjection(tap);
+
+await mock.close();
+```
+
+## Advanced Examples
+
+### Inject JSON Response
+
+```javascript
+const tap = mock.inject(
+  {
+    response: { message: "Success", data: { id: 123 } },
+    statusCode: 200
+  },
+  { url: "/api/users/123" }
+);
+```
+
+### Wildcard URL Matching
+
+```javascript
+// Match all requests under /api/
+const tap = mock.inject(
+  {
+    response: "API is mocked",
+    statusCode: 503
+  },
+  { url: "/api/*" }
+);
+```
+
+### Multiple Injections
+
+```javascript
+const tap1 = mock.inject(
+  { response: "Users data" },
+  { url: "/api/users" }
+);
+
+const tap2 = mock.inject(
+  { response: "Posts data" },
+  { url: "/api/posts" }
+);
+
+// View all active injections
+console.log(mock.injections); // Array of all active taps
+
+// Remove specific injections
+mock.removeInjection(tap1);
+mock.removeInjection(tap2);
+```
+
+### Match by HTTP Method
+
+```javascript
+// Only intercept POST requests
+const tap = mock.inject(
+  { response: "Created", statusCode: 201 },
+  { url: "/api/users", method: "POST" }
+);
+```
+
+### Match by Headers
+
+```javascript
+const tap = mock.inject(
+  { response: "Authenticated response" },
+  {
+    url: "/api/secure",
+    headers: {
+      "authorization": "Bearer token123"
+    }
+  }
+);
+```
+
+### Catch-All Injection
+
+```javascript
+// Match ALL requests (no matcher specified)
+const tap = mock.inject({
+  response: "Server is in maintenance mode",
+  statusCode: 503
+});
+```
+
+## API Reference
+
+### `inject(response, matcher?)`
+
+Injects a custom response for requests matching the criteria.
+
+**Parameters:**
+- `response` (InjectionResponse):
+  - `response`: string | object | Buffer - The response body
+  - `statusCode?`: number - HTTP status code (default: 200)
+  - `headers?`: object - Response headers
+
+- `matcher?` (InjectionMatcher) - Optional matching criteria:
+  - `url?`: string - URL path (supports wildcards with `*`)
+  - `method?`: string - HTTP method (GET, POST, etc.)
+  - `hostname?`: string - Hostname to match
+  - `headers?`: object - Headers that must be present
+
+**Returns:** `InjectionTap` - A tap object with a unique `id` that can be used to remove the injection
+
+### `removeInjection(tapOrId)`
+
+Removes an injection.
+
+**Parameters:**
+- `tapOrId`: InjectionTap | string - The tap object or tap ID to remove
+
+**Returns:** boolean - `true` if removed, `false` if not found
+
+### `injections`
+
+A getter that returns an array of all active injection taps.
+
+**Returns:** `InjectionTap[]` - Array of all active injections
 
 # About mockhttp.org 
 

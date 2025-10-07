@@ -80,8 +80,8 @@ export class TapManager {
 	/**
 	 * Get all active injection taps
 	 */
-	public get injections(): InjectionTap[] {
-		return Array.from(this._injections.values());
+	public get injections(): Map<string, InjectionTap> {
+		return this._injections;
 	}
 
 	/**

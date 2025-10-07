@@ -46,12 +46,7 @@ import {
 import { sitemapRoute } from "./routes/sitemap.js";
 import { statusCodeRoute } from "./routes/status-codes/index.js";
 import { fastifySwaggerConfig, registerSwaggerUi } from "./swagger.js";
-import {
-	type InjectionMatcher,
-	type InjectionResponse,
-	type InjectionTap,
-	TapManager,
-} from "./tap.js";
+import { TapManager } from "./tap-manager.js";
 
 export type HttpBinOptions = {
 	httpMethods?: boolean;
@@ -116,7 +111,7 @@ export class MockHttp extends Hookified {
 	};
 
 	private _server: FastifyInstance = Fastify();
-	private _tapManager: TapManager = new TapManager();
+	private _taps: TapManager = new TapManager();
 
 	constructor(options?: MockHttpOptions) {
 		super(options?.hookOptions);
@@ -253,40 +248,17 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
-	 * Get all active injection taps
+	 * The TapManager instance for managing injection taps.
 	 */
-	public get injections(): InjectionTap[] {
-		return this._tapManager.injections;
+	public get taps(): TapManager {
+		return this._taps;
 	}
 
 	/**
-	 * Inject a custom response for requests matching the given criteria.
-	 * This allows you to "tap into" the request flow and return mock responses.
-	 * @param response - The response configuration
-	 * @param matcher - Optional criteria to match requests
-	 * @returns A tap object that can be used to remove the injection
-	 * @example
-	 * const tap = mockhttp.inject(
-	 *   { response: "Hello", statusCode: 200 },
-	 *   { url: "/api/test", method: "GET" }
-	 * );
-	 * // ... make requests
-	 * mockhttp.removeInjection(tap);
+	 * The TapManager instance for managing injection taps.
 	 */
-	public inject(
-		response: InjectionResponse,
-		matcher?: InjectionMatcher,
-	): InjectionTap {
-		return this._tapManager.inject(response, matcher);
-	}
-
-	/**
-	 * Remove an injection by its tap object or ID
-	 * @param tapOrId - The tap object or tap ID to remove
-	 * @returns true if the injection was removed, false if it wasn't found
-	 */
-	public removeInjection(tapOrId: InjectionTap | string): boolean {
-		return this._tapManager.removeInjection(tapOrId);
+	public set taps(taps: TapManager) {
+		this._taps = taps;
 	}
 
 	/**
@@ -302,7 +274,7 @@ export class MockHttp extends Hookified {
 
 			// Register injection hook to intercept requests
 			this._server.addHook("onRequest", async (request, reply) => {
-				const matchedTap = this._tapManager.matchRequest(request);
+				const matchedTap = this._taps.matchRequest(request);
 				if (matchedTap) {
 					const { response, statusCode = 200, headers } = matchedTap.response;
 

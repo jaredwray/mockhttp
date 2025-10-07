@@ -88,7 +88,7 @@ describe("MockHttp", () => {
 	describe("injection/tap feature", () => {
 		test("should start with no injections", () => {
 			const mock = new MockHttp();
-			expect(mock.injections).toEqual([]);
+			expect(mock.injections.size).toBe(0);
 		});
 
 		test("should be able to inject a response", () => {
@@ -97,19 +97,19 @@ describe("MockHttp", () => {
 
 			expect(tap).toBeDefined();
 			expect(tap.id).toBeDefined();
-			expect(mock.injections).toHaveLength(1);
+			expect(mock.injections.size).toBe(1);
 		});
 
 		test("should be able to remove an injection", () => {
 			const mock = new MockHttp();
 			const tap = mock.inject({ response: "test" });
 
-			expect(mock.injections).toHaveLength(1);
+			expect(mock.injections.size).toBe(1);
 
 			const removed = mock.removeInjection(tap);
 
 			expect(removed).toBe(true);
-			expect(mock.injections).toHaveLength(0);
+			expect(mock.injections.size).toBe(0);
 		});
 
 		test("should inject response for matching request", async () => {
@@ -302,18 +302,6 @@ describe("MockHttp", () => {
 			expect(response2.body).toBe("catch all");
 
 			await mock.close();
-		});
-
-		test("should handle injection removal by ID", async () => {
-			const mock = new MockHttp();
-			const tap = mock.inject({ response: "test" });
-
-			expect(mock.injections).toHaveLength(1);
-
-			const removed = mock.removeInjection(tap.id);
-
-			expect(removed).toBe(true);
-			expect(mock.injections).toHaveLength(0);
 		});
 	});
 });

@@ -4,9 +4,9 @@ import {
 	type InjectionMatcher,
 	type InjectionResponse,
 	TapManager,
-} from "../src/tap.js";
+} from "../src/tap-manager.js";
 
-describe("TapManager", () => {
+describe("Tap", () => {
 	let tapManager: TapManager;
 
 	beforeEach(() => {
@@ -53,8 +53,8 @@ describe("TapManager", () => {
 	});
 
 	describe("injections getter", () => {
-		it("should return empty array when no injections exist", () => {
-			expect(tapManager.injections).toEqual([]);
+		it("should return empty map when no injections exist", () => {
+			expect(tapManager.injections.size).toBe(0);
 		});
 
 		it("should return all active injections", () => {
@@ -63,9 +63,9 @@ describe("TapManager", () => {
 
 			const injections = tapManager.injections;
 
-			expect(injections).toHaveLength(2);
-			expect(injections).toContainEqual(tap1);
-			expect(injections).toContainEqual(tap2);
+			expect(injections.size).toBe(2);
+			expect(injections.get(tap1.id)).toEqual(tap1);
+			expect(injections.get(tap2.id)).toEqual(tap2);
 		});
 	});
 
@@ -113,8 +113,8 @@ describe("TapManager", () => {
 
 			tapManager.removeInjection(tap1);
 
-			expect(tapManager.injections).toHaveLength(1);
-			expect(tapManager.injections[0]).toEqual(tap2);
+			expect(tapManager.injections.size).toBe(1);
+			expect(tapManager.injections.get(tap2.id)).toEqual(tap2);
 		});
 	});
 
@@ -124,11 +124,11 @@ describe("TapManager", () => {
 			tapManager.inject({ response: "test2" });
 			tapManager.inject({ response: "test3" });
 
-			expect(tapManager.injections).toHaveLength(3);
+			expect(tapManager.injections.size).toBe(3);
 
 			tapManager.clear();
 
-			expect(tapManager.injections).toHaveLength(0);
+			expect(tapManager.injections.size).toBe(0);
 			expect(tapManager.hasInjections).toBe(false);
 		});
 	});

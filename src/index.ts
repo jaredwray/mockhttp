@@ -31,4 +31,4 @@ export type {
 	InjectionMatcher,
 	InjectionResponse,
 	InjectionTap,
-} from "./tap.js";
+} from "./tap-manager.js";

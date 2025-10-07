@@ -371,7 +371,7 @@ describe("Tap", () => {
 			};
 			const tap = tapManager.inject(response);
 
-			expect(tap.response.response).toBe("Hello World");
+			expect(tap.response).toEqual(response);
 		});
 
 		it("should support object response", () => {
@@ -380,7 +380,7 @@ describe("Tap", () => {
 			};
 			const tap = tapManager.inject(response);
 
-			expect(tap.response.response).toEqual({ message: "Hello", code: 200 });
+			expect(tap.response).toEqual(response);
 		});
 
 		it("should support custom status code", () => {
@@ -390,7 +390,7 @@ describe("Tap", () => {
 			};
 			const tap = tapManager.inject(response);
 
-			expect(tap.response.statusCode).toBe(404);
+			expect(tap.response).toEqual(response);
 		});
 
 		it("should support custom headers", () => {
@@ -403,10 +403,93 @@ describe("Tap", () => {
 			};
 			const tap = tapManager.inject(response);
 
-			expect(tap.response.headers).toEqual({
-				"Content-Type": "application/json",
-				"X-Custom-Header": "value",
-			});
+			expect(tap.response).toEqual(response);
+		});
+
+		it("should support function response", () => {
+			const responseFunction = (request: FastifyRequest): InjectionResponse => {
+				return {
+					response: `Hello from ${request.url}`,
+					statusCode: 200,
+				};
+			};
+
+			const tap = tapManager.inject(responseFunction);
+
+			expect(tap.response).toBe(responseFunction);
+			expect(typeof tap.response).toBe("function");
+		});
+
+		it("should call function response with request object", () => {
+			const responseFunction = (request: FastifyRequest): InjectionResponse => {
+				return {
+					response: `Method: ${request.method}, URL: ${request.url}`,
+					statusCode: 200,
+				};
+			};
+
+			const tap = tapManager.inject(responseFunction, { url: "/api/test" });
+			const mockRequest = createMockRequest("/api/test", "GET");
+
+			// Verify the tap was created with the function
+			expect(typeof tap.response).toBe("function");
+
+			// Call the function to verify it works correctly
+			if (typeof tap.response === "function") {
+				const result = tap.response(mockRequest);
+				expect(result.response).toBe("Method: GET, URL: /api/test");
+				expect(result.statusCode).toBe(200);
+			}
+		});
+
+		it("should support function response with dynamic status codes", () => {
+			const responseFunction = (request: FastifyRequest): InjectionResponse => {
+				const statusCode = request.url.includes("error") ? 500 : 200;
+				return {
+					response: { status: statusCode === 500 ? "error" : "success" },
+					statusCode,
+				};
+			};
+
+			const tap = tapManager.inject(responseFunction);
+
+			// Test success case
+			if (typeof tap.response === "function") {
+				const successRequest = createMockRequest("/api/success", "GET");
+				const successResult = tap.response(successRequest);
+				expect(successResult.statusCode).toBe(200);
+				expect(successResult.response).toEqual({ status: "success" });
+
+				// Test error case
+				const errorRequest = createMockRequest("/api/error", "GET");
+				const errorResult = tap.response(errorRequest);
+				expect(errorResult.statusCode).toBe(500);
+				expect(errorResult.response).toEqual({ status: "error" });
+			}
+		});
+
+		it("should support function response with dynamic headers", () => {
+			const responseFunction = (request: FastifyRequest): InjectionResponse => {
+				return {
+					response: "OK",
+					statusCode: 200,
+					headers: {
+						"X-Request-Method": request.method,
+						"X-Request-URL": request.url,
+					},
+				};
+			};
+
+			const tap = tapManager.inject(responseFunction);
+			const mockRequest = createMockRequest("/api/test", "POST");
+
+			if (typeof tap.response === "function") {
+				const result = tap.response(mockRequest);
+				expect(result.headers).toEqual({
+					"X-Request-Method": "POST",
+					"X-Request-URL": "/api/test",
+				});
+			}
 		});
 	});
 });

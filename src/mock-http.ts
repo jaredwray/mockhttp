@@ -276,7 +276,13 @@ export class MockHttp extends Hookified {
 			this._server.addHook("onRequest", async (request, reply) => {
 				const matchedTap = this._taps.matchRequest(request);
 				if (matchedTap) {
-					const { response, statusCode = 200, headers } = matchedTap.response;
+					// Handle both static response objects and response functions
+					const injectionResponse =
+						typeof matchedTap.response === "function"
+							? matchedTap.response(request)
+							: matchedTap.response;
+
+					const { response, statusCode = 200, headers } = injectionResponse;
 
 					// Set status code
 					reply.code(statusCode);

@@ -49,6 +49,13 @@ export type InjectionMatcher = {
 };
 
 /**
+ * Function that returns an injection response
+ */
+export type InjectionResponseFunction = (
+	request: FastifyRequest,
+) => InjectionResponse;
+
+/**
  * A tap represents an active injection that can be removed later
  */
 export type InjectionTap = {
@@ -57,9 +64,9 @@ export type InjectionTap = {
 	 */
 	id: string;
 	/**
-	 * The response configuration
+	 * The response configuration or a function that returns it
 	 */
-	response: InjectionResponse;
+	response: InjectionResponse | InjectionResponseFunction;
 	/**
 	 * The request matcher configuration
 	 */
@@ -92,12 +99,12 @@ export class TapManager {
 
 	/**
 	 * Inject a custom response for requests matching the given criteria
-	 * @param response - The response configuration
+	 * @param response - The response configuration or a function that returns it
 	 * @param matcher - Optional criteria to match requests
 	 * @returns A tap object that can be used to remove the injection
 	 */
 	public inject(
-		response: InjectionResponse,
+		response: InjectionResponse | InjectionResponseFunction,
 		matcher?: InjectionMatcher,
 	): InjectionTap {
 		const id = randomUUID();

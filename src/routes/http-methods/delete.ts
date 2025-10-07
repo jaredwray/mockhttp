@@ -4,9 +4,17 @@ const deleteSchema: FastifySchema = {
 	description: "Handles a DELETE request and returns request information",
 	tags: ["HTTP Methods"],
 	body: {
-		type: "object",
-		additionalProperties: true,
-		description: "The body of the DELETE request",
+		oneOf: [
+			{
+				type: "object",
+				additionalProperties: true,
+				description: "JSON body of the DELETE request",
+			},
+			{
+				type: "string",
+				description: "String body of the DELETE request",
+			},
+		],
 	},
 	response: {
 		200: {
@@ -14,7 +22,12 @@ const deleteSchema: FastifySchema = {
 			properties: {
 				method: { type: "string" },
 				headers: { type: "object", additionalProperties: { type: "string" } },
-				body: { type: "object", additionalProperties: true },
+				body: {
+					oneOf: [
+						{ type: "object", additionalProperties: true },
+						{ type: "string" },
+					],
+				},
 			},
 			required: ["method", "headers", "body"],
 		},

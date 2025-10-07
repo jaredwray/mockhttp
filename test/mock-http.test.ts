@@ -88,35 +88,35 @@ describe("MockHttp", () => {
 	describe("injection/tap feature", () => {
 		test("should start with no injections", () => {
 			const mock = new MockHttp();
-			expect(mock.injections.size).toBe(0);
+			expect(mock.taps.injections.size).toBe(0);
 		});
 
 		test("should be able to inject a response", () => {
 			const mock = new MockHttp();
-			const tap = mock.inject({ response: "test" });
+			const tap = mock.taps.inject({ response: "test" });
 
 			expect(tap).toBeDefined();
 			expect(tap.id).toBeDefined();
-			expect(mock.injections.size).toBe(1);
+			expect(mock.taps.injections.size).toBe(1);
 		});
 
 		test("should be able to remove an injection", () => {
 			const mock = new MockHttp();
-			const tap = mock.inject({ response: "test" });
+			const tap = mock.taps.inject({ response: "test" });
 
-			expect(mock.injections.size).toBe(1);
+			expect(mock.taps.injections.size).toBe(1);
 
-			const removed = mock.removeInjection(tap);
+			const removed = mock.taps.removeInjection(tap);
 
 			expect(removed).toBe(true);
-			expect(mock.injections.size).toBe(0);
+			expect(mock.taps.injections.size).toBe(0);
 		});
 
 		test("should inject response for matching request", async () => {
 			const mock = new MockHttp();
 			await mock.start();
 
-			const tap = mock.inject(
+			const tap = mock.taps.inject(
 				{
 					response: "injected response",
 					statusCode: 201,
@@ -134,7 +134,7 @@ describe("MockHttp", () => {
 			expect(response.body).toBe("injected response");
 			expect(response.headers["x-custom"]).toBe("test");
 
-			mock.removeInjection(tap);
+			mock.taps.removeInjection(tap);
 			await mock.close();
 		});
 
@@ -143,7 +143,7 @@ describe("MockHttp", () => {
 			await mock.start();
 
 			const responseData = { message: "Hello", code: 200 };
-			mock.inject(
+			mock.taps.inject(
 				{
 					response: responseData,
 					statusCode: 200,
@@ -166,7 +166,7 @@ describe("MockHttp", () => {
 			const mock = new MockHttp();
 			await mock.start();
 
-			mock.inject(
+			mock.taps.inject(
 				{
 					response: "wildcard match",
 				},
@@ -193,7 +193,7 @@ describe("MockHttp", () => {
 			const mock = new MockHttp();
 			await mock.start();
 
-			mock.inject(
+			mock.taps.inject(
 				{
 					response: "POST response",
 				},
@@ -221,10 +221,16 @@ describe("MockHttp", () => {
 			const mock = new MockHttp();
 			await mock.start();
 
-			const tap1 = mock.inject({ response: "response1" }, { url: "/path1" });
-			const tap2 = mock.inject({ response: "response2" }, { url: "/path2" });
+			const tap1 = mock.taps.inject(
+				{ response: "response1" },
+				{ url: "/path1" },
+			);
+			const tap2 = mock.taps.inject(
+				{ response: "response2" },
+				{ url: "/path2" },
+			);
 
-			expect(mock.injections).toHaveLength(2);
+			expect(mock.taps.injections.size).toBe(2);
 
 			const response1 = await mock.server.inject({
 				method: "GET",
@@ -239,11 +245,11 @@ describe("MockHttp", () => {
 			expect(response1.body).toBe("response1");
 			expect(response2.body).toBe("response2");
 
-			mock.removeInjection(tap1);
-			expect(mock.injections).toHaveLength(1);
+			mock.taps.removeInjection(tap1);
+			expect(mock.taps.injections.size).toBe(1);
 
-			mock.removeInjection(tap2);
-			expect(mock.injections).toHaveLength(0);
+			mock.taps.removeInjection(tap2);
+			expect(mock.taps.injections.size).toBe(0);
 
 			await mock.close();
 		});
@@ -252,7 +258,7 @@ describe("MockHttp", () => {
 			const mock = new MockHttp();
 			await mock.start();
 
-			const tap = mock.inject(
+			const tap = mock.taps.inject(
 				{
 					response: "injected",
 				},
@@ -266,7 +272,7 @@ describe("MockHttp", () => {
 
 			expect(injectedResponse.body).toBe("injected");
 
-			mock.removeInjection(tap);
+			mock.taps.removeInjection(tap);
 
 			const normalResponse = await mock.server.inject({
 				method: "GET",
@@ -284,7 +290,7 @@ describe("MockHttp", () => {
 			const mock = new MockHttp();
 			await mock.start();
 
-			mock.inject({
+			mock.taps.inject({
 				response: "catch all",
 			});
 

@@ -12,6 +12,7 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 
 # Features
 * All the features of [httpbin](https://httpbin.org/)
+* Taps - Inject custom responses for testing and develepment
 * `@fastify/helmet` built in by default
 * Built with `nodejs`, `typescript`, and `fastify`
 * Deploy via `docker` or `nodejs`
@@ -62,6 +63,264 @@ const response = await fetch('http://localhost:3000/get');
 console.log(reaponse);
 await mockhttp.stop(); // stop the server
 ```
+
+# Response Injection (Tap Feature)
+
+The injection/tap feature allows you to "tap into" the request flow and inject custom responses for specific requests. This is particularly useful for:
+- **Offline testing** - Mock external API responses without network access
+- **Testing edge cases** - Simulate errors, timeouts, or specific response scenarios
+- **Development** - Work on your application without depending on external services
+
+## What is a "Tap"?
+
+A "tap" is a reference to an injected response, similar to "wiretapping" - you're intercepting requests and returning predefined responses. Each tap can be removed when you're done with it, restoring normal server behavior.
+
+## Basic Usage
+
+```javascript
+import { mockhttp } from '@jaredwray/mockhttp';
+
+const mock = new mockhttp();
+await mock.start();
+
+// Inject a simple response
+const tap = mock.taps.inject(
+  {
+    response: "Hello, World!",
+    statusCode: 200,
+    headers: { "Content-Type": "text/plain" }
+  },
+  {
+    url: "/api/greeting",
+    method: "GET"
+  }
+);
+
+// Make requests - they will get the injected response
+const response = await fetch('http://localhost:3000/api/greeting');
+console.log(await response.text()); // "Hello, World!"
+
+// Remove the injection when done
+mock.taps.removeInjection(tap);
+
+await mock.close();
+```
+
+## Advanced Examples
+
+### Inject JSON Response
+
+```javascript
+const tap = mock.taps.inject(
+  {
+    response: { message: "Success", data: { id: 123 } },
+    statusCode: 200
+  },
+  { url: "/api/users/123" }
+);
+```
+
+### Wildcard URL Matching
+
+```javascript
+// Match all requests under /api/
+const tap = mock.taps.inject(
+  {
+    response: "API is mocked",
+    statusCode: 503
+  },
+  { url: "/api/*" }
+);
+```
+
+### Multiple Injections
+
+```javascript
+const tap1 = mock.taps.inject(
+  { response: "Users data" },
+  { url: "/api/users" }
+);
+
+const tap2 = mock.taps.inject(
+  { response: "Posts data" },
+  { url: "/api/posts" }
+);
+
+// View all active injections
+console.log(mock.taps.injections); // Map of all active taps
+
+// Remove specific injections
+mock.taps.removeInjection(tap1);
+mock.taps.removeInjection(tap2);
+```
+
+### Match by HTTP Method
+
+```javascript
+// Only intercept POST requests
+const tap = mock.taps.inject(
+  { response: "Created", statusCode: 201 },
+  { url: "/api/users", method: "POST" }
+);
+```
+
+### Match by Headers
+
+```javascript
+const tap = mock.taps.inject(
+  { response: "Authenticated response" },
+  {
+    url: "/api/secure",
+    headers: {
+      "authorization": "Bearer token123"
+    }
+  }
+);
+```
+
+### Catch-All Injection
+
+```javascript
+// Match ALL requests (no matcher specified)
+const tap = mock.taps.inject({
+  response: "Server is in maintenance mode",
+  statusCode: 503
+});
+```
+
+# API Reference
+
+## MockHttp Class
+
+### Constructor
+
+```javascript
+new MockHttp(options?)
+```
+
+**Parameters:**
+- `options?` (MockHttpOptions):
+  - `port?`: number - The port to listen on (default: 3000)
+  - `host?`: string - The host to listen on (default: '0.0.0.0')
+  - `autoDetectPort?`: boolean - Auto-detect next available port if in use (default: true)
+  - `helmet?`: boolean - Use Helmet for security headers (default: true)
+  - `apiDocs?`: boolean - Enable Swagger API documentation (default: true)
+  - `httpBin?`: HttpBinOptions - Configure which httpbin routes to enable
+  - `hookOptions?`: HookifiedOptions - Hookified options
+
+### Properties
+
+- `port`: number - Get/set the server port
+- `host`: string - Get/set the server host
+- `autoDetectPort`: boolean - Get/set auto-detect port behavior
+- `helmet`: boolean - Get/set Helmet security headers
+- `apiDocs`: boolean - Get/set API documentation
+- `httpBin`: HttpBinOptions - Get/set httpbin route options
+- `server`: FastifyInstance - Get/set the Fastify server instance
+- `taps`: TapManager - Get/set the TapManager instance
+
+### Methods
+
+#### `async start()`
+
+Start the Fastify server. If already running, it will be closed and restarted.
+
+#### `async close()`
+
+Stop the Fastify server.
+
+#### `async detectPort()`
+
+Detect the next available port.
+
+**Returns:** number - The available port
+
+#### `async registerApiDocs(fastifyInstance?)`
+
+Register Swagger API documentation routes.
+
+#### `async registerHttpMethods(fastifyInstance?)`
+
+Register HTTP method routes (GET, POST, PUT, PATCH, DELETE).
+
+#### `async registerStatusCodeRoutes(fastifyInstance?)`
+
+Register status code routes.
+
+#### `async registerRequestInspectionRoutes(fastifyInstance?)`
+
+Register request inspection routes (headers, ip, user-agent).
+
+#### `async registerResponseInspectionRoutes(fastifyInstance?)`
+
+Register response inspection routes (cache, etag, response-headers).
+
+#### `async registerResponseFormatRoutes(fastifyInstance?)`
+
+Register response format routes (json, xml, html, etc.).
+
+#### `async registerRedirectRoutes(fastifyInstance?)`
+
+Register redirect routes (absolute, relative, redirect-to).
+
+#### `async registerCookieRoutes(fastifyInstance?)`
+
+Register cookie routes (get, set, delete).
+
+#### `async registerAnythingRoutes(fastifyInstance?)`
+
+Register "anything" catch-all routes.
+
+#### `async registerAuthRoutes(fastifyInstance?)`
+
+Register authentication routes (basic, bearer, digest, hidden-basic).
+
+## Taps (Response Injection)
+
+Access the TapManager via `mockHttp.taps` to inject custom responses.
+
+### `taps.inject(response, matcher?)`
+
+Injects a custom response for requests matching the criteria.
+
+**Parameters:**
+- `response` (InjectionResponse):
+  - `response`: string | object | Buffer - The response body
+  - `statusCode?`: number - HTTP status code (default: 200)
+  - `headers?`: object - Response headers
+
+- `matcher?` (InjectionMatcher) - Optional matching criteria:
+  - `url?`: string - URL path (supports wildcards with `*`)
+  - `method?`: string - HTTP method (GET, POST, etc.)
+  - `hostname?`: string - Hostname to match
+  - `headers?`: object - Headers that must be present
+
+**Returns:** `InjectionTap` - A tap object with a unique `id` that can be used to remove the injection
+
+## `taps.removeInjection(tapOrId)`
+
+Removes an injection.
+
+**Parameters:**
+- `tapOrId`: InjectionTap | string - The tap object or tap ID to remove
+
+**Returns:** boolean - `true` if removed, `false` if not found
+
+### `taps.injections`
+
+A getter that returns a Map of all active injection taps.
+
+**Returns:** `Map<string, InjectionTap>` - Map of all active injections with tap IDs as keys
+
+## `taps.clear()`
+
+Removes all injections.
+
+## `taps.hasInjections`
+
+A getter that returns whether there are any active injections.
+
+**Returns:** boolean - `true` if there are active injections, `false` otherwise
 
 # About mockhttp.org 
 

@@ -27,3 +27,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 /* c8 ignore end */
 
 export { MockHttp as default, MockHttp as mockhttp } from "./mock-http.js";
+export type {
+	InjectionMatcher,
+	InjectionResponse,
+	InjectionTap,
+} from "./tap-manager.js";

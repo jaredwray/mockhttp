@@ -46,6 +46,7 @@ import {
 import { sitemapRoute } from "./routes/sitemap.js";
 import { statusCodeRoute } from "./routes/status-codes/index.js";
 import { fastifySwaggerConfig, registerSwaggerUi } from "./swagger.js";
+import { TapManager } from "./tap-manager.js";
 
 export type HttpBinOptions = {
 	httpMethods?: boolean;
@@ -110,6 +111,7 @@ export class MockHttp extends Hookified {
 	};
 
 	private _server: FastifyInstance = Fastify();
+	private _taps: TapManager = new TapManager();
 
 	constructor(options?: MockHttpOptions) {
 		super(options?.hookOptions);
@@ -246,6 +248,20 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
+	 * The TapManager instance for managing injection taps.
+	 */
+	public get taps(): TapManager {
+		return this._taps;
+	}
+
+	/**
+	 * The TapManager instance for managing injection taps.
+	 */
+	public set taps(taps: TapManager) {
+		this._taps = taps;
+	}
+
+	/**
 	 * Start the Fastify server. If the server is already running, it will be closed and restarted.
 	 */
 	public async start(): Promise<void> {
@@ -255,6 +271,27 @@ export class MockHttp extends Hookified {
 			}
 
 			this._server = Fastify(fastifyConfig);
+
+			// Register injection hook to intercept requests
+			this._server.addHook("onRequest", async (request, reply) => {
+				const matchedTap = this._taps.matchRequest(request);
+				if (matchedTap) {
+					const { response, statusCode = 200, headers } = matchedTap.response;
+
+					// Set status code
+					reply.code(statusCode);
+
+					// Set headers if provided
+					if (headers) {
+						for (const [key, value] of Object.entries(headers)) {
+							reply.header(key, value);
+						}
+					}
+
+					// Send the response and prevent further processing
+					return reply.send(response);
+				}
+			});
 
 			// Register Scalar API client
 			await this._server.register(fastifyStatic, {

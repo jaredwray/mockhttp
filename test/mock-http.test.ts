@@ -321,5 +321,116 @@ describe("MockHttp", () => {
 
 			await mock.close();
 		});
+
+		test("should support function response", async () => {
+			const mock = new MockHttp();
+			await mock.start();
+
+			mock.taps.inject(
+				(request) => ({
+					response: `Hello from ${request.url}`,
+					statusCode: 200,
+				}),
+				{ url: "/api/dynamic" },
+			);
+
+			const response = await mock.server.inject({
+				method: "GET",
+				url: "/api/dynamic",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.body).toBe("Hello from /api/dynamic");
+
+			await mock.close();
+		});
+
+		test("should support function response with dynamic status codes", async () => {
+			const mock = new MockHttp();
+			await mock.start();
+
+			mock.taps.inject((request) => {
+				const statusCode = request.url.includes("error") ? 500 : 200;
+				return {
+					response: { status: statusCode === 500 ? "error" : "success" },
+					statusCode,
+				};
+			});
+
+			const successResponse = await mock.server.inject({
+				method: "GET",
+				url: "/api/success",
+			});
+
+			const errorResponse = await mock.server.inject({
+				method: "GET",
+				url: "/api/error",
+			});
+
+			expect(successResponse.statusCode).toBe(200);
+			expect(successResponse.json()).toEqual({ status: "success" });
+
+			expect(errorResponse.statusCode).toBe(500);
+			expect(errorResponse.json()).toEqual({ status: "error" });
+
+			await mock.close();
+		});
+
+		test("should support function response with dynamic headers", async () => {
+			const mock = new MockHttp();
+			await mock.start();
+
+			mock.taps.inject(
+				(request) => ({
+					response: "OK",
+					statusCode: 200,
+					headers: {
+						"X-Request-Method": request.method,
+						"X-Request-URL": request.url,
+					},
+				}),
+				{ url: "/api/headers" },
+			);
+
+			const response = await mock.server.inject({
+				method: "POST",
+				url: "/api/headers",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["x-request-method"]).toBe("POST");
+			expect(response.headers["x-request-url"]).toBe("/api/headers");
+
+			await mock.close();
+		});
+
+		test("should support function response with request body inspection", async () => {
+			const mock = new MockHttp();
+			await mock.start();
+
+			mock.taps.inject(
+				(request) => ({
+					response: {
+						receivedMethod: request.method,
+						receivedUrl: request.url,
+					},
+					statusCode: 200,
+				}),
+				{ url: "/api/echo" },
+			);
+
+			const response = await mock.server.inject({
+				method: "POST",
+				url: "/api/echo",
+				payload: { test: "data" },
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = response.json();
+			expect(body.receivedMethod).toBe("POST");
+			expect(body.receivedUrl).toBe("/api/echo");
+
+			await mock.close();
+		});
 	});
 });

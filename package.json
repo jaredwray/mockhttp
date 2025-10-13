@@ -12,7 +12,7 @@
 		"test": "pnpm lint && vitest run --coverage",
 		"test:ci": "biome check --error-on-warnings && vitest run --coverage",
 		"dev": "pnpm lint && tsx src/index.ts --watch",
-		"build": "rimraf ./dist && tsup src/index.ts --format esm --dts --clean --minify",
+		"build": "rimraf ./dist && tsup src/index.ts --format esm --dts --clean",
 		"docker:build": "docker build -t jaredwray/mockhttp .",
 		"docker:run": "docker run -p 3000:3000 jaredwray/mockhttp",
 		"docker:push": "docker push jaredwray/mockhttp",

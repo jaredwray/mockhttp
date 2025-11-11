@@ -26,6 +26,7 @@ import {
 	postRoute,
 	putRoute,
 } from "./routes/http-methods/index.js";
+import { imageRoutes } from "./routes/images/index.js";
 import { indexRoute } from "./routes/index.js";
 import {
 	absoluteRedirectRoute,
@@ -58,6 +59,7 @@ export type HttpBinOptions = {
 	cookies?: boolean;
 	anything?: boolean;
 	auth?: boolean;
+	images?: boolean;
 };
 
 export type MockHttpOptions = {
@@ -108,6 +110,7 @@ export class MockHttp extends Hookified {
 		cookies: true,
 		anything: true,
 		auth: true,
+		images: true,
 	};
 
 	private _server: FastifyInstance = Fastify();
@@ -334,6 +337,7 @@ export class MockHttp extends Hookified {
 				cookies,
 				anything,
 				auth,
+				images,
 			} = this._httpBin;
 
 			if (httpMethods) {
@@ -370,6 +374,10 @@ export class MockHttp extends Hookified {
 
 			if (auth) {
 				await this.registerAuthRoutes();
+			}
+
+			if (images) {
+				await this.registerImageRoutes();
 			}
 
 			if (this._autoDetectPort) {
@@ -534,6 +542,17 @@ export class MockHttp extends Hookified {
 		await fastify.register(hiddenBasicAuthRoute);
 		await fastify.register(bearerAuthRoute);
 		await fastify.register(digestAuthRoute);
+	}
+
+	/**
+	 * Register the image routes.
+	 * @param fastifyInstance - the server instance to register the routes on.
+	 */
+	public async registerImageRoutes(
+		fastifyInstance?: FastifyInstance,
+	): Promise<void> {
+		const fastify = fastifyInstance ?? this._server;
+		await fastify.register(imageRoutes);
 	}
 }
 

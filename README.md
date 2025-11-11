@@ -265,6 +265,16 @@ new MockHttp(options?)
   - `helmet?`: boolean - Use Helmet for security headers (default: true)
   - `apiDocs?`: boolean - Enable Swagger API documentation (default: true)
   - `httpBin?`: HttpBinOptions - Configure which httpbin routes to enable
+    - `httpMethods?`: boolean - Enable HTTP method routes (default: true)
+    - `redirects?`: boolean - Enable redirect routes (default: true)
+    - `requestInspection?`: boolean - Enable request inspection routes (default: true)
+    - `responseInspection?`: boolean - Enable response inspection routes (default: true)
+    - `statusCodes?`: boolean - Enable status code routes (default: true)
+    - `responseFormats?`: boolean - Enable response format routes (default: true)
+    - `cookies?`: boolean - Enable cookie routes (default: true)
+    - `anything?`: boolean - Enable anything routes (default: true)
+    - `auth?`: boolean - Enable authentication routes (default: true)
+    - `images?`: boolean - Enable image routes (default: true)
   - `hookOptions?`: HookifiedOptions - Hookified options
 
 ### Properties
@@ -333,6 +343,10 @@ Register "anything" catch-all routes.
 #### `async registerAuthRoutes(fastifyInstance?)`
 
 Register authentication routes (basic, bearer, digest, hidden-basic).
+
+#### `async registerImageRoutes(fastifyInstance?)`
+
+Register image routes (jpeg, png, svg, webp) with content negotiation support.
 
 ## Taps (Response Injection)
 

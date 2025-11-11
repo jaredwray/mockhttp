@@ -33,7 +33,7 @@ const parseBasic = (header?: string) => {
 			password: decoded.slice(idx + 1),
 		};
 	} catch {
-		/* c8 ignore next 2 */
+		/* v8 ignore next -- @preserve */
 		return undefined;
 	}
 };

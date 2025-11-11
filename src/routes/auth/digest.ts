@@ -61,7 +61,7 @@ const parseDigest = (header?: string): Record<string, string> | undefined => {
 	}
 
 	const spaceIndex = header.indexOf(" ");
-	/* c8 ignore next 3 */
+	/* v8 ignore next -- @preserve */
 	if (spaceIndex === -1) {
 		return undefined;
 	}

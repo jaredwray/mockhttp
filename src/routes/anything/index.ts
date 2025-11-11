@@ -99,6 +99,7 @@ export const anythingRoute = (fastify: FastifyInstance) => {
 	const noValidation = {
 		schema: anythingSchema,
 		// Skip AJV on *this* route
+		/* v8 ignore next -- @preserve */
 		validatorCompiler: () => () => true,
 	};
 

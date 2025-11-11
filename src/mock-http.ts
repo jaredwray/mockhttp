@@ -266,6 +266,7 @@ export class MockHttp extends Hookified {
 	 */
 	public async start(): Promise<void> {
 		try {
+			/* v8 ignore next -- @preserve */
 			if (this._server) {
 				await this._server.close();
 			}
@@ -384,7 +385,7 @@ export class MockHttp extends Hookified {
 
 			await this._server.listen({ port: this._port, host: this._host });
 		} catch (error) {
-			/* c8 ignore next 2 */
+			/* v8 ignore next -- @preserve */
 			this._server.log.error(error);
 		}
 	}

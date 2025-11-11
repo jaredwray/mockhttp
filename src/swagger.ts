@@ -34,16 +34,18 @@ export const registerSwaggerUi = async (fastify: FastifyInstance) => {
 			deepLinking: false,
 		},
 		uiHooks: {
-			/* c8 ignore next 6 */
+			/* v8 ignore next -- @preserve */
 			onRequest(_request, _reply, next) {
 				next();
 			},
+			/* v8 ignore next -- @preserve */
 			preHandler(_request, _reply, next) {
 				next();
 			},
 		},
 
 		staticCSP: true,
+		/* v8 ignore next -- @preserve */
 		transformSpecification: (swaggerObject, _request, _reply) => swaggerObject,
 		transformSpecificationClone: true,
 	});

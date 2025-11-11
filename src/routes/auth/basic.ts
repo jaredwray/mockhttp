@@ -46,9 +46,9 @@ const parseBasic = (header?: string) => {
 		}
 
 		return { username, password };
-		/* c8 ignore next 4 */
 	} catch {
 		// Invalid base64 or encoding errors
+		/* v8 ignore next -- @preserve */
 		return undefined;
 	}
 };
@@ -61,9 +61,9 @@ const safeCompare = (a: string, b: string): boolean => {
 
 	try {
 		return timingSafeEqual(Buffer.from(a, "utf8"), Buffer.from(b, "utf8"));
-		/* c8 ignore next 4 */
 	} catch {
 		// Fallback for any encoding issues
+		/* v8 ignore next -- @preserve */
 		return false;
 	}
 };

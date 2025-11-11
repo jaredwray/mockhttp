@@ -4,7 +4,12 @@ export default defineConfig({
 	test: {
 		coverage: {
 			reporter: ["text", "lcov", "json"],
-			exclude: ["scripts/**", "dist/**", "vitest.config.ts"],
+			exclude: [
+				"scripts/**", 
+				"dist/**",
+				"*.json",
+				"vitest.config.ts"
+			],
 		},
 	},
 });

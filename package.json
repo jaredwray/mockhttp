@@ -61,8 +61,8 @@
 		"fastify": "^5.6.1",
 		"hookified": "^1.12.1",
 		"html-escaper": "^3.0.3",
-		"pino": "^10.0.0",
-		"pino-pretty": "^13.1.1"
+		"pino": "^10.1.0",
+		"pino-pretty": "^13.1.2"
 	},
 	"files": [
 		"dist",

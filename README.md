@@ -249,11 +249,25 @@ const tap = mock.taps.inject(
 
 # Rate Limiting
 
-MockHttp supports rate limiting using [@fastify/rate-limit](https://github.com/fastify/fastify-rate-limit). Rate limiting is **disabled by default** and can be enabled by providing configuration options.
+MockHttp supports rate limiting using [@fastify/rate-limit](https://github.com/fastify/fastify-rate-limit). Rate limiting is **enabled by default** at **1000 requests per minute** with **localhost (127.0.0.1 and ::1) excluded** from rate limiting.
 
-## Enabling Rate Limiting
+## Default Rate Limiting
 
-To enable rate limiting, pass a `rateLimit` configuration object when creating your MockHttp instance:
+By default, MockHttp applies the following rate limit:
+- **1000 requests per minute** per IP address
+- **Localhost is excluded** - requests from 127.0.0.1 and ::1 bypass rate limiting (ideal for local development and testing)
+
+```javascript
+import { MockHttp } from '@jaredwray/mockhttp';
+
+const mock = new MockHttp();
+await mock.start();
+// Rate limiting is active (1000 req/min) except for localhost
+```
+
+## Customizing Rate Limiting
+
+To customize rate limiting, pass a `rateLimit` configuration object when creating your MockHttp instance:
 
 ```javascript
 import { MockHttp } from '@jaredwray/mockhttp';
@@ -351,15 +365,27 @@ const mock = new MockHttp({
 
 ## Disabling Rate Limiting
 
-Rate limiting is disabled by default. To explicitly disable it (or disable it after it was enabled):
+To disable rate limiting completely, set the `rateLimit` option to `false`:
 
 ```javascript
-const mock = new MockHttp(); // No rateLimit option = disabled
-
-// Or explicitly set to undefined
-const mock2 = new MockHttp({
-  rateLimit: undefined
+const mock = new MockHttp({
+  rateLimit: false // Completely disable rate limiting
 });
+
+await mock.start();
+// No rate limiting is applied to any requests
+```
+
+**Note:** To change rate limiting settings after the server has started, you must restart the server:
+
+```javascript
+const mock = new MockHttp();
+await mock.start(); // Starts with default rate limiting
+
+// To change or disable rate limiting:
+await mock.close();
+mock.rateLimit = undefined; // or set new options
+await mock.start(); // Restarts with new settings
 ```
 
 ## Available Options
@@ -396,7 +422,7 @@ new MockHttp(options?)
   - `autoDetectPort?`: boolean - Auto-detect next available port if in use (default: true)
   - `helmet?`: boolean - Use Helmet for security headers (default: true)
   - `apiDocs?`: boolean - Enable Swagger API documentation (default: true)
-  - `rateLimit?`: RateLimitPluginOptions - Enable and configure rate limiting (default: undefined/disabled)
+  - `rateLimit?`: RateLimitPluginOptions - Configure rate limiting (default: 1000 req/min, localhost excluded)
   - `httpBin?`: HttpBinOptions - Configure which httpbin routes to enable
     - `httpMethods?`: boolean - Enable HTTP method routes (default: true)
     - `redirects?`: boolean - Enable redirect routes (default: true)

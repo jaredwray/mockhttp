@@ -320,7 +320,21 @@ export class MockHttp extends Hookified {
 
 			// Register the Helmet plugin for security headers
 			if (this._helmet) {
-				await this._server.register(fastifyHelmet);
+				await this._server.register(fastifyHelmet, {
+					contentSecurityPolicy: {
+						directives: {
+							defaultSrc: ["'self'"],
+							scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'"],
+							styleSrc: ["'self'", "'unsafe-inline'"],
+							imgSrc: ["'self'", "data:", "https:"],
+							fontSrc: ["'self'", "data:"],
+							connectSrc: ["'self'"],
+							frameSrc: ["'self'"],
+							objectSrc: ["'none'"],
+							upgradeInsecureRequests: [],
+						},
+					},
+				});
 			}
 
 			if (this._apiDocs) {

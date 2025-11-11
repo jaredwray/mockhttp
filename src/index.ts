@@ -5,10 +5,12 @@ import { MockHttp } from "./mock-http.js";
 export const start = async () => {
 	const mockHttp = new MockHttp();
 
+	/* v8 ignore next -- @preserve */
 	if (process.env.PORT) {
 		mockHttp.port = Number.parseInt(process.env.PORT, 10);
 	}
 
+	/* v8 ignore next -- @preserve */
 	if (process.env.HOST) {
 		mockHttp.host = process.env.HOST;
 	}
@@ -19,12 +21,10 @@ export const start = async () => {
 };
 
 // Only start the server if this is the main module (not imported)
-/* c8 ignore start */
+/* v8 ignore next -- @preserve */
 if (import.meta.url === `file://${process.argv[1]}`) {
 	await start();
 }
-
-/* c8 ignore end */
 
 export { MockHttp as default, MockHttp as mockhttp } from "./mock-http.js";
 export type {

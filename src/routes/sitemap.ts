@@ -20,9 +20,10 @@ export const sitemapRoute = (fastify: FastifyInstance) => {
                         </urlset>`;
 
 				await reply.type("text/xml").send(xml);
-				/* c8 ignore next 4 */
 			} catch (error) {
+				/* v8 ignore next -- @preserve */
 				fastify.log.error(error);
+				/* v8 ignore next -- @preserve */
 				await reply.status(500).send({ error: "Internal Server Error" });
 			}
 		},

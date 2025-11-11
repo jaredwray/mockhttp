@@ -92,10 +92,10 @@ export type MockHttpOptions = {
 	 */
 	httpBin?: HttpBinOptions;
 	/**
-	 * Rate limiting options. When undefined, rate limiting is disabled.
-	 * When set with options, rate limiting is enabled with those options.
+	 * Rate limiting options. Defaults to 1000 requests per minute (localhost excluded).
+	 * Set to undefined to disable rate limiting, or provide custom options to configure.
 	 */
-	rateLimit?: RateLimitPluginOptions;
+	rateLimit?: boolean | RateLimitPluginOptions;
 	/**
 	 * Hookified options.
 	 */
@@ -121,7 +121,11 @@ export class MockHttp extends Hookified {
 		images: true,
 	};
 
-	private _rateLimit?: RateLimitPluginOptions;
+	private _rateLimit?: RateLimitPluginOptions = {
+		max: 1000,
+		timeWindow: "1 minute",
+		allowList: ["127.0.0.1", "::1"],
+	};
 
 	private _server: FastifyInstance = Fastify();
 	private _taps: TapManager = new TapManager();
@@ -150,7 +154,11 @@ export class MockHttp extends Hookified {
 		}
 
 		if (options?.rateLimit !== undefined) {
-			this._rateLimit = options.rateLimit;
+			if (options.rateLimit === false) {
+				this._rateLimit = undefined;
+			} else {
+				this._rateLimit = options.rateLimit as RateLimitPluginOptions;
+			}
 		}
 	}
 
@@ -251,18 +259,20 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
-	 * Rate limiting options. When undefined, rate limiting is disabled.
-	 * When set with options, rate limiting is enabled with those options.
-	 * @default undefined
+	 * Rate limiting options. Defaults to 1000 requests per minute (localhost excluded).
+	 * Set to undefined to disable rate limiting, or provide custom options to configure.
+	 * @default { max: 1000, timeWindow: "1 minute", allowList: ["127.0.0.1", "::1"] }
 	 */
 	public get rateLimit(): RateLimitPluginOptions | undefined {
 		return this._rateLimit;
 	}
 
 	/**
-	 * Rate limiting options. When undefined, rate limiting is disabled.
-	 * When set with options, rate limiting is enabled with those options.
-	 * @default undefined
+	 * Rate limiting options. Defaults to 1000 requests per minute (localhost excluded).
+	 * Set to undefined to disable rate limiting, or provide custom options to configure.
+	 *
+	 * Note: Changing this property requires restarting the server (close() then start()) for changes to take effect.
+	 * @default { max: 1000, timeWindow: "1 minute", allowList: ["127.0.0.1", "::1"] }
 	 */
 	public set rateLimit(rateLimit: RateLimitPluginOptions | undefined) {
 		this._rateLimit = rateLimit;

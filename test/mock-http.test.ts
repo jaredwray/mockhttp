@@ -435,13 +435,23 @@ describe("MockHttp", () => {
 	});
 
 	describe("rate limiting", () => {
-		test("should be disabled by default", async () => {
+		test("should be enabled by default with 1000 requests per minute and localhost excluded", () => {
 			const mock = new MockHttp();
+			expect(mock.rateLimit).toBeDefined();
+			expect(mock.rateLimit?.max).toBe(1000);
+			expect(mock.rateLimit?.timeWindow).toBe("1 minute");
+			expect(mock.rateLimit?.allowList).toEqual(["127.0.0.1", "::1"]);
+		});
+
+		test("should be able to disable rate limiting", async () => {
+			const mock = new MockHttp({
+				rateLimit: false,
+			});
 			expect(mock.rateLimit).toBeUndefined();
 
 			await mock.start();
 
-			// Make multiple requests quickly - should all succeed
+			// Make many requests quickly - all should succeed without rate limiting
 			const responses = await Promise.all([
 				mock.server.inject({ method: "GET", url: "/get" }),
 				mock.server.inject({ method: "GET", url: "/get" }),
@@ -473,7 +483,7 @@ describe("MockHttp", () => {
 
 		test("should be able to modify rate limit options via setter", () => {
 			const mock = new MockHttp();
-			expect(mock.rateLimit).toBeUndefined();
+			expect(mock.rateLimit).toBeDefined();
 
 			const rateLimitOptions = {
 				max: 50,

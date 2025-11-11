@@ -1,6 +1,9 @@
 import path from "node:path";
 import fastifyCookie from "@fastify/cookie";
 import fastifyHelmet from "@fastify/helmet";
+import fastifyRateLimit, {
+	type RateLimitPluginOptions,
+} from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import { fastifySwagger } from "@fastify/swagger";
 import { detect } from "detect-port";
@@ -89,6 +92,11 @@ export type MockHttpOptions = {
 	 */
 	httpBin?: HttpBinOptions;
 	/**
+	 * Rate limiting options. When undefined, rate limiting is disabled.
+	 * When set with options, rate limiting is enabled with those options.
+	 */
+	rateLimit?: RateLimitPluginOptions;
+	/**
 	 * Hookified options.
 	 */
 	hookOptions?: HookifiedOptions;
@@ -112,6 +120,8 @@ export class MockHttp extends Hookified {
 		auth: true,
 		images: true,
 	};
+
+	private _rateLimit?: RateLimitPluginOptions;
 
 	private _server: FastifyInstance = Fastify();
 	private _taps: TapManager = new TapManager();
@@ -137,6 +147,10 @@ export class MockHttp extends Hookified {
 
 		if (options?.httpBin !== undefined) {
 			this._httpBin = options.httpBin;
+		}
+
+		if (options?.rateLimit !== undefined) {
+			this._rateLimit = options.rateLimit;
 		}
 	}
 
@@ -234,6 +248,24 @@ export class MockHttp extends Hookified {
 	 */
 	public set httpBin(httpBinary: HttpBinOptions) {
 		this._httpBin = httpBinary;
+	}
+
+	/**
+	 * Rate limiting options. When undefined, rate limiting is disabled.
+	 * When set with options, rate limiting is enabled with those options.
+	 * @default undefined
+	 */
+	public get rateLimit(): RateLimitPluginOptions | undefined {
+		return this._rateLimit;
+	}
+
+	/**
+	 * Rate limiting options. When undefined, rate limiting is disabled.
+	 * When set with options, rate limiting is enabled with those options.
+	 * @default undefined
+	 */
+	public set rateLimit(rateLimit: RateLimitPluginOptions | undefined) {
+		this._rateLimit = rateLimit;
 	}
 
 	/**
@@ -335,6 +367,11 @@ export class MockHttp extends Hookified {
 						},
 					},
 				});
+			}
+
+			// Register the rate limit plugin if configured
+			if (this._rateLimit) {
+				await this._server.register(fastifyRateLimit, this._rateLimit);
 			}
 
 			if (this._apiDocs) {

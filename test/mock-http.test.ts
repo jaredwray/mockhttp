@@ -433,4 +433,146 @@ describe("MockHttp", () => {
 			await mock.close();
 		});
 	});
+
+	describe("rate limiting", () => {
+		test("should be disabled by default", async () => {
+			const mock = new MockHttp();
+			expect(mock.rateLimit).toBeUndefined();
+
+			await mock.start();
+
+			// Make multiple requests quickly - should all succeed
+			const responses = await Promise.all([
+				mock.server.inject({ method: "GET", url: "/get" }),
+				mock.server.inject({ method: "GET", url: "/get" }),
+				mock.server.inject({ method: "GET", url: "/get" }),
+				mock.server.inject({ method: "GET", url: "/get" }),
+				mock.server.inject({ method: "GET", url: "/get" }),
+			]);
+
+			// All should return 200, not 429 (rate limit)
+			for (const response of responses) {
+				expect(response.statusCode).toBe(200);
+			}
+
+			await mock.close();
+		});
+
+		test("should be able to set rate limit options", () => {
+			const rateLimitOptions = {
+				max: 10,
+				timeWindow: "1 minute",
+			};
+
+			const mock = new MockHttp({
+				rateLimit: rateLimitOptions,
+			});
+
+			expect(mock.rateLimit).toEqual(rateLimitOptions);
+		});
+
+		test("should be able to modify rate limit options via setter", () => {
+			const mock = new MockHttp();
+			expect(mock.rateLimit).toBeUndefined();
+
+			const rateLimitOptions = {
+				max: 50,
+				timeWindow: 60000,
+			};
+
+			mock.rateLimit = rateLimitOptions;
+			expect(mock.rateLimit).toEqual(rateLimitOptions);
+		});
+
+		test("should enforce rate limits when enabled", async () => {
+			const mock = new MockHttp({
+				rateLimit: {
+					max: 3, // Only allow 3 requests
+					timeWindow: 60000, // Per minute
+				},
+			});
+
+			await mock.start();
+
+			// Make 3 requests - should all succeed
+			const response1 = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+			});
+			const response2 = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+			});
+			const response3 = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+			});
+
+			expect(response1.statusCode).toBe(200);
+			expect(response2.statusCode).toBe(200);
+			expect(response3.statusCode).toBe(200);
+
+			// 4th request should be rate limited
+			const response4 = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+			});
+			expect(response4.statusCode).toBe(429); // Too Many Requests
+
+			await mock.close();
+		});
+
+		test("should include rate limit headers when enabled", async () => {
+			const mock = new MockHttp({
+				rateLimit: {
+					max: 100,
+					timeWindow: "1 minute",
+				},
+			});
+
+			await mock.start();
+
+			const response = await mock.server.inject({ method: "GET", url: "/get" });
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["x-ratelimit-limit"]).toBeDefined();
+			expect(response.headers["x-ratelimit-remaining"]).toBeDefined();
+			expect(response.headers["x-ratelimit-reset"]).toBeDefined();
+
+			await mock.close();
+		});
+
+		test("should support custom error response builder", async () => {
+			const customErrorMessage = "Custom rate limit message";
+
+			const mock = new MockHttp({
+				rateLimit: {
+					max: 2,
+					timeWindow: 60000,
+					errorResponseBuilder: () => ({
+						statusCode: 429,
+						error: "Rate Limit Exceeded",
+						message: customErrorMessage,
+					}),
+				},
+			});
+
+			await mock.start();
+
+			// Make requests to exceed limit
+			await mock.server.inject({ method: "GET", url: "/get" });
+			await mock.server.inject({ method: "GET", url: "/get" });
+
+			const rateLimitedResponse = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+			});
+
+			expect(rateLimitedResponse.statusCode).toBe(429);
+			const body = rateLimitedResponse.json();
+			expect(body.message).toBe(customErrorMessage);
+
+			await mock.close();
+		});
+	});
 });

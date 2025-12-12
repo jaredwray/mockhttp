@@ -405,6 +405,26 @@ await mock.start(); // Restarts with new settings
 
 For the complete list of options, see the [@fastify/rate-limit documentation](https://github.com/fastify/fastify-rate-limit#options).
 
+# Logging
+
+MockHttp uses [Pino](https://github.com/pinojs/pino) for logging via Fastify's built-in logger. Logging is **enabled by default** but can be disabled when needed.
+
+## Disabling Logging
+
+```javascript
+import { MockHttp } from '@jaredwray/mockhttp';
+
+const mock = new MockHttp({ logging: false });
+await mock.start();
+// Server runs silently without any log output
+```
+
+You can also disable logging via the `LOGGING` environment variable:
+
+```bash
+LOGGING=false node your-app.js
+```
+
 # API Reference
 
 ## MockHttp Class
@@ -423,6 +443,7 @@ new MockHttp(options?)
   - `helmet?`: boolean - Use Helmet for security headers (default: true)
   - `apiDocs?`: boolean - Enable Swagger API documentation (default: true)
   - `rateLimit?`: RateLimitPluginOptions - Configure rate limiting (default: 1000 req/min, localhost excluded)
+  - `logging?`: boolean - Enable logging (default: true)
   - `httpBin?`: HttpBinOptions - Configure which httpbin routes to enable
     - `httpMethods?`: boolean - Enable HTTP method routes (default: true)
     - `redirects?`: boolean - Enable redirect routes (default: true)
@@ -443,6 +464,7 @@ new MockHttp(options?)
 - `autoDetectPort`: boolean - Get/set auto-detect port behavior
 - `helmet`: boolean - Get/set Helmet security headers
 - `apiDocs`: boolean - Get/set API documentation
+- `logging`: boolean - Get/set logging enabled state
 - `rateLimit`: RateLimitPluginOptions | undefined - Get/set rate limiting options
 - `httpBin`: HttpBinOptions - Get/set httpbin route options
 - `server`: FastifyInstance - Get/set the Fastify server instance

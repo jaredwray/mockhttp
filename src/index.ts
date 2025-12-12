@@ -15,6 +15,11 @@ export const start = async () => {
 		mockHttp.host = process.env.HOST;
 	}
 
+	/* v8 ignore next -- @preserve */
+	if (process.env.LOGGING === "false") {
+		mockHttp.logging = false;
+	}
+
 	await mockHttp.start();
 
 	return mockHttp;

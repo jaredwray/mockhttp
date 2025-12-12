@@ -9,7 +9,7 @@ import { fastifySwagger } from "@fastify/swagger";
 import { detect } from "detect-port";
 import Fastify, { type FastifyInstance } from "fastify";
 import { Hookified, type HookifiedOptions } from "hookified";
-import { fastifyConfig } from "./fastify-config.js";
+import { getFastifyConfig } from "./fastify-config.js";
 import { anythingRoute } from "./routes/anything/index.js";
 import {
 	basicAuthRoute,
@@ -100,6 +100,10 @@ export type MockHttpOptions = {
 	 * Hookified options.
 	 */
 	hookOptions?: HookifiedOptions;
+	/**
+	 * Whether to enable logging. Defaults to true.
+	 */
+	logging?: boolean;
 };
 
 export class MockHttp extends Hookified {
@@ -108,6 +112,7 @@ export class MockHttp extends Hookified {
 	private _autoDetectPort = true;
 	private _helmet = true;
 	private _apiDocs = true;
+	private _logging = true;
 	private _httpBin: HttpBinOptions = {
 		httpMethods: true,
 		redirects: true,
@@ -159,6 +164,10 @@ export class MockHttp extends Hookified {
 			} else {
 				this._rateLimit = options.rateLimit as RateLimitPluginOptions;
 			}
+		}
+
+		if (options?.logging !== undefined) {
+			this._logging = options.logging;
 		}
 	}
 
@@ -245,6 +254,22 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
+	 * Whether to enable logging. Defaults to true.
+	 * @default true
+	 */
+	public get logging(): boolean {
+		return this._logging;
+	}
+
+	/**
+	 * Whether to enable logging. Defaults to true.
+	 * @default true
+	 */
+	public set logging(logging: boolean) {
+		this._logging = logging;
+	}
+
+	/**
 	 * HTTP Bin options. Defaults to all enabled.
 	 */
 	public get httpBin(): HttpBinOptions {
@@ -316,7 +341,7 @@ export class MockHttp extends Hookified {
 				await this._server.close();
 			}
 
-			this._server = Fastify(fastifyConfig);
+			this._server = Fastify(getFastifyConfig(this._logging));
 
 			// Register injection hook to intercept requests
 			this._server.addHook("onRequest", async (request, reply) => {

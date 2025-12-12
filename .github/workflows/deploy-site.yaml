@@ -22,10 +22,10 @@ jobs:
         uses: actions/checkout@v4
 
       # Setup Node
-      - name: Use Node.js 22
+      - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       # DO NOT USE pnpm here, it will cause issues with Docker build
       - name: Install Dependencies

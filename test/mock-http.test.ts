@@ -434,6 +434,44 @@ describe("MockHttp", () => {
 		});
 	});
 
+	describe("logging", () => {
+		test("should be enabled by default", () => {
+			const mock = new MockHttp();
+			expect(mock.logging).toBe(true);
+		});
+
+		test("should be able to disable logging via options", () => {
+			const mock = new MockHttp({ logging: false });
+			expect(mock.logging).toBe(false);
+		});
+
+		test("should be able to enable logging via options", () => {
+			const mock = new MockHttp({ logging: true });
+			expect(mock.logging).toBe(true);
+		});
+
+		test("should be able to set logging via setter", () => {
+			const mock = new MockHttp();
+			expect(mock.logging).toBe(true);
+
+			mock.logging = false;
+			expect(mock.logging).toBe(false);
+
+			mock.logging = true;
+			expect(mock.logging).toBe(true);
+		});
+
+		test("should start server with logging disabled", async () => {
+			const mock = new MockHttp({ logging: false });
+			await mock.start();
+
+			// Server should start successfully with logging disabled
+			expect(mock.server).toBeDefined();
+
+			await mock.close();
+		});
+	});
+
 	describe("rate limiting", () => {
 		test("should be enabled by default with 1000 requests per minute and localhost excluded", () => {
 			const mock = new MockHttp();

@@ -1,5 +1,7 @@
 minimumReleaseAge: 2880
+
 onlyBuiltDependencies:
-  - "@swc/core"
-  - "unrs-resolver"
-  - "vue-demi"
+  - '@swc/core'
+  - esbuild
+  - unrs-resolver
+  - vue-demi

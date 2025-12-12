@@ -54,12 +54,12 @@
 		"@biomejs/biome": "^2.3.5",
 		"@swc/core": "^1.15.3",
 		"@types/html-escaper": "^3.0.4",
-		"@vitest/coverage-v8": "^4.0.8",
+		"@vitest/coverage-v8": "^4.0.15",
 		"rimraf": "^6.1.2",
 		"tsup": "^8.5.1",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
-		"vitest": "^4.0.8"
+		"vitest": "^4.0.15"
 	},
 	"dependencies": {
 		"@fastify/cookie": "^11.0.2",

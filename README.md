@@ -21,6 +21,18 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 * Auto detect the port that is not in use
 * Maintained and updated regularly!
 
+# Table of Contents
+- [Deploy via Docker](#deploy-via-docker)
+- [Deploy via Docker Compose](#deploy-via-docker-compose)
+- [Deploy via NodeJS](#deploy-via-nodejs)
+- [Response Injection (Tap Feature)](#response-injection-tap-feature)
+- [Rate Limiting](#rate-limiting)
+- [Logging](#logging)
+- [API Reference](#api-reference)
+- [About mockhttp.org](#about-mockhttporg)
+- [Contributing](#contributing)
+- [License](#license)
+
 # Deploy via Docker
 ```bash
 docker run -d -p 3000:3000 jaredwray/mockhttp

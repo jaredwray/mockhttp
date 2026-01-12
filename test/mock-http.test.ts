@@ -74,10 +74,10 @@ describe("MockHttp", () => {
 	});
 
 	test("should be able to auto detect the port if in use", async () => {
-		const mock1 = new MockHttp();
+		const mock1 = new MockHttp({ logging: false });
 		await mock1.start();
 
-		const mock2 = new MockHttp();
+		const mock2 = new MockHttp({ logging: false });
 		await mock2.start();
 
 		expect(mock2.port).to.not.toBe(mock1.port);
@@ -125,7 +125,7 @@ describe("MockHttp", () => {
 		});
 
 		test("should inject response for matching request", async () => {
-			const mock = new MockHttp();
+			const mock = new MockHttp({ logging: false });
 			await mock.start();
 
 			const tap = mock.taps.inject(
@@ -151,7 +151,7 @@ describe("MockHttp", () => {
 		});
 
 		test("should inject JSON response", async () => {
-			const mock = new MockHttp();
+			const mock = new MockHttp({ logging: false });
 			await mock.start();
 
 			const responseData = { message: "Hello", code: 200 };
@@ -175,7 +175,7 @@ describe("MockHttp", () => {
 		});
 
 		test("should match wildcard URL patterns", async () => {
-			const mock = new MockHttp();
+			const mock = new MockHttp({ logging: false });
 			await mock.start();
 
 			mock.taps.inject(
@@ -202,7 +202,7 @@ describe("MockHttp", () => {
 		});
 
 		test("should match specific HTTP method", async () => {
-			const mock = new MockHttp();
+			const mock = new MockHttp({ logging: false });
 			await mock.start();
 
 			mock.taps.inject(
@@ -230,7 +230,7 @@ describe("MockHttp", () => {
 		});
 
 		test("should allow multiple simultaneous injections", async () => {
-			const mock = new MockHttp();
+			const mock = new MockHttp({ logging: false });
 			await mock.start();
 
 			const tap1 = mock.taps.inject(
@@ -267,7 +267,7 @@ describe("MockHttp", () => {
 		});
 
 		test("should restore normal behavior after removing injection", async () => {
-			const mock = new MockHttp();
+			const mock = new MockHttp({ logging: false });
 			await mock.start();
 
 			const tap = mock.taps.inject(
@@ -299,7 +299,7 @@ describe("MockHttp", () => {
 		});
 
 		test("should match injection with no matcher for all requests", async () => {
-			const mock = new MockHttp();
+			const mock = new MockHttp({ logging: false });
 			await mock.start();
 
 			mock.taps.inject({
@@ -323,7 +323,7 @@ describe("MockHttp", () => {
 		});
 
 		test("should support function response", async () => {
-			const mock = new MockHttp();
+			const mock = new MockHttp({ logging: false });
 			await mock.start();
 
 			mock.taps.inject(
@@ -346,7 +346,7 @@ describe("MockHttp", () => {
 		});
 
 		test("should support function response with dynamic status codes", async () => {
-			const mock = new MockHttp();
+			const mock = new MockHttp({ logging: false });
 			await mock.start();
 
 			mock.taps.inject((request) => {
@@ -377,7 +377,7 @@ describe("MockHttp", () => {
 		});
 
 		test("should support function response with dynamic headers", async () => {
-			const mock = new MockHttp();
+			const mock = new MockHttp({ logging: false });
 			await mock.start();
 
 			mock.taps.inject(
@@ -405,7 +405,7 @@ describe("MockHttp", () => {
 		});
 
 		test("should support function response with request body inspection", async () => {
-			const mock = new MockHttp();
+			const mock = new MockHttp({ logging: false });
 			await mock.start();
 
 			mock.taps.inject(
@@ -472,7 +472,7 @@ describe("MockHttp", () => {
 		});
 
 		test("should start server with helmet disabled", async () => {
-			const mock = new MockHttp({ helmet: false });
+			const mock = new MockHttp({ helmet: false, logging: false });
 			await mock.start();
 
 			// Server should start successfully with helmet disabled
@@ -504,6 +504,7 @@ describe("MockHttp", () => {
 		test("should be able to disable rate limiting", async () => {
 			const mock = new MockHttp({
 				rateLimit: false,
+				logging: false,
 			});
 			expect(mock.rateLimit).toBeUndefined();
 
@@ -558,6 +559,7 @@ describe("MockHttp", () => {
 					max: 3, // Only allow 3 requests
 					timeWindow: 60000, // Per minute
 				},
+				logging: false,
 			});
 
 			await mock.start();
@@ -596,6 +598,7 @@ describe("MockHttp", () => {
 					max: 100,
 					timeWindow: "1 minute",
 				},
+				logging: false,
 			});
 
 			await mock.start();
@@ -623,6 +626,7 @@ describe("MockHttp", () => {
 						message: customErrorMessage,
 					}),
 				},
+				logging: false,
 			});
 
 			await mock.start();

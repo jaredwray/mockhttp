@@ -7,7 +7,7 @@ import type {
 
 type RangeRequest = FastifyRequest<{
 	Params: { numbytes: string };
-	Querystring: { duration?: string; chunk_size?: string };
+	Querystring: { duration?: string };
 }>;
 
 const rangeSchema: FastifySchema = {
@@ -30,10 +30,6 @@ const rangeSchema: FastifySchema = {
 			duration: {
 				type: "string",
 				description: "Delay before sending response in seconds",
-			},
-			chunk_size: {
-				type: "string",
-				description: "Size of each chunk",
 			},
 		},
 	},

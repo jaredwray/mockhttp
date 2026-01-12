@@ -80,5 +80,10 @@
 		"dist",
 		"public",
 		"LICENCE"
-	]
+	],
+	"pnpm": {
+		"overrides": {
+			"set-cookie-parser": "2.7.2"
+		}
+	}
 }

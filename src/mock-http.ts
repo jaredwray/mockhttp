@@ -3,11 +3,7 @@ import fastifyCookie from "@fastify/cookie";
 import fastifyStatic from "@fastify/static";
 import { detect } from "detect-port";
 import Fastify, { type FastifyInstance } from "fastify";
-import {
-	type FastifyRateLimitOptions,
-	type FuseOptions,
-	fuse,
-} from "fastify-fusion";
+import { type FuseOptions, fuse } from "fastify-fusion";
 import { Hookified, type HookifiedOptions } from "hookified";
 import pkg from "../package.json" with { type: "json" };
 import { anythingRoute } from "./routes/anything/index.js";
@@ -63,6 +59,24 @@ import { statusCodeRoute } from "./routes/status-codes/index.js";
 import { swaggerDescription } from "./swagger.js";
 import { TapManager } from "./tap-manager.js";
 
+/**
+ * Rate limiting options for MockHttp.
+ * Compatible with @fastify/rate-limit options.
+ */
+export type RateLimitOptions = {
+	/** Maximum number of requests allowed in the time window */
+	max?: number;
+	/** Time window for rate limiting (e.g., "1 minute", 60000) */
+	timeWindow?: number | string;
+	/** List of IPs to exclude from rate limiting */
+	allowList?: string[];
+	/** Custom error response builder */
+	errorResponseBuilder?: (
+		request: unknown,
+		context: unknown,
+	) => Record<string, unknown>;
+};
+
 export type HttpBinOptions = {
 	httpMethods?: boolean;
 	redirects?: boolean;
@@ -107,7 +121,7 @@ export type MockHttpOptions = {
 	 * Rate limiting options. Defaults to 1000 requests per minute (localhost excluded).
 	 * Set to undefined to disable rate limiting, or provide custom options to configure.
 	 */
-	rateLimit?: boolean | FastifyRateLimitOptions;
+	rateLimit?: boolean | RateLimitOptions;
 	/**
 	 * Hookified options.
 	 */
@@ -139,7 +153,7 @@ export class MockHttp extends Hookified {
 		dynamicData: true,
 	};
 
-	private _rateLimit?: FastifyRateLimitOptions = {
+	private _rateLimit?: RateLimitOptions = {
 		max: 1000,
 		timeWindow: "1 minute",
 		allowList: ["127.0.0.1", "::1"],
@@ -175,7 +189,7 @@ export class MockHttp extends Hookified {
 			if (options.rateLimit === false) {
 				this._rateLimit = undefined;
 			} else {
-				this._rateLimit = options.rateLimit as FastifyRateLimitOptions;
+				this._rateLimit = options.rateLimit as RateLimitOptions;
 			}
 		}
 
@@ -301,7 +315,7 @@ export class MockHttp extends Hookified {
 	 * Set to undefined to disable rate limiting, or provide custom options to configure.
 	 * @default { max: 1000, timeWindow: "1 minute", allowList: ["127.0.0.1", "::1"] }
 	 */
-	public get rateLimit(): FastifyRateLimitOptions | undefined {
+	public get rateLimit(): RateLimitOptions | undefined {
 		return this._rateLimit;
 	}
 
@@ -312,7 +326,7 @@ export class MockHttp extends Hookified {
 	 * Note: Changing this property requires restarting the server (close() then start()) for changes to take effect.
 	 * @default { max: 1000, timeWindow: "1 minute", allowList: ["127.0.0.1", "::1"] }
 	 */
-	public set rateLimit(rateLimit: FastifyRateLimitOptions | undefined) {
+	public set rateLimit(rateLimit: RateLimitOptions | undefined) {
 		this._rateLimit = rateLimit;
 	}
 

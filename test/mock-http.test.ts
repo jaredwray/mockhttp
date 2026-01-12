@@ -470,6 +470,26 @@ describe("MockHttp", () => {
 
 			await mock.close();
 		});
+
+		test("should start server with helmet disabled", async () => {
+			const mock = new MockHttp({ helmet: false });
+			await mock.start();
+
+			// Server should start successfully with helmet disabled
+			expect(mock.server).toBeDefined();
+
+			// Make a request - should work without security headers
+			const response = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+			});
+			expect(response.statusCode).toBe(200);
+
+			// Helmet headers should not be present
+			expect(response.headers["x-frame-options"]).toBeUndefined();
+
+			await mock.close();
+		});
 	});
 
 	describe("rate limiting", () => {

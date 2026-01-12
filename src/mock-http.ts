@@ -1,15 +1,17 @@
 import path from "node:path";
 import fastifyCookie from "@fastify/cookie";
-import fastifyHelmet from "@fastify/helmet";
-import fastifyRateLimit, {
-	type RateLimitPluginOptions,
-} from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import { fastifySwagger } from "@fastify/swagger";
+import { fastifySwaggerUi } from "@fastify/swagger-ui";
 import { detect } from "detect-port";
 import Fastify, { type FastifyInstance } from "fastify";
+import {
+	type FastifyRateLimitOptions,
+	type FuseOptions,
+	fuse,
+} from "fastify-fusion";
 import { Hookified, type HookifiedOptions } from "hookified";
-import { getFastifyConfig } from "./fastify-config.js";
+import pkg from "../package.json" with { type: "json" };
 import { anythingRoute } from "./routes/anything/index.js";
 import {
 	basicAuthRoute,
@@ -60,7 +62,7 @@ import {
 } from "./routes/response-inspection/index.js";
 import { sitemapRoute } from "./routes/sitemap.js";
 import { statusCodeRoute } from "./routes/status-codes/index.js";
-import { fastifySwaggerConfig, registerSwaggerUi } from "./swagger.js";
+import { swaggerDescription } from "./swagger.js";
 import { TapManager } from "./tap-manager.js";
 
 export type HttpBinOptions = {
@@ -107,7 +109,7 @@ export type MockHttpOptions = {
 	 * Rate limiting options. Defaults to 1000 requests per minute (localhost excluded).
 	 * Set to undefined to disable rate limiting, or provide custom options to configure.
 	 */
-	rateLimit?: boolean | RateLimitPluginOptions;
+	rateLimit?: boolean | FastifyRateLimitOptions;
 	/**
 	 * Hookified options.
 	 */
@@ -139,7 +141,7 @@ export class MockHttp extends Hookified {
 		dynamicData: true,
 	};
 
-	private _rateLimit?: RateLimitPluginOptions = {
+	private _rateLimit?: FastifyRateLimitOptions = {
 		max: 1000,
 		timeWindow: "1 minute",
 		allowList: ["127.0.0.1", "::1"],
@@ -175,7 +177,7 @@ export class MockHttp extends Hookified {
 			if (options.rateLimit === false) {
 				this._rateLimit = undefined;
 			} else {
-				this._rateLimit = options.rateLimit as RateLimitPluginOptions;
+				this._rateLimit = options.rateLimit as FastifyRateLimitOptions;
 			}
 		}
 
@@ -301,7 +303,7 @@ export class MockHttp extends Hookified {
 	 * Set to undefined to disable rate limiting, or provide custom options to configure.
 	 * @default { max: 1000, timeWindow: "1 minute", allowList: ["127.0.0.1", "::1"] }
 	 */
-	public get rateLimit(): RateLimitPluginOptions | undefined {
+	public get rateLimit(): FastifyRateLimitOptions | undefined {
 		return this._rateLimit;
 	}
 
@@ -312,7 +314,7 @@ export class MockHttp extends Hookified {
 	 * Note: Changing this property requires restarting the server (close() then start()) for changes to take effect.
 	 * @default { max: 1000, timeWindow: "1 minute", allowList: ["127.0.0.1", "::1"] }
 	 */
-	public set rateLimit(rateLimit: RateLimitPluginOptions | undefined) {
+	public set rateLimit(rateLimit: FastifyRateLimitOptions | undefined) {
 		this._rateLimit = rateLimit;
 	}
 
@@ -354,7 +356,7 @@ export class MockHttp extends Hookified {
 				await this._server.close();
 			}
 
-			this._server = Fastify(getFastifyConfig(this._logging));
+			this._server = Fastify();
 
 			// Register injection hook to intercept requests
 			this._server.addHook("onRequest", async (request, reply) => {
@@ -383,44 +385,50 @@ export class MockHttp extends Hookified {
 				}
 			});
 
-			// Register Scalar API client
+			// Configure fastify-fusion options
+			const fuseOptions: FuseOptions = {
+				log: this._logging,
+				helmet: this._helmet
+					? {
+							contentSecurityPolicy: {
+								directives: {
+									defaultSrc: ["'self'"],
+									scriptSrc: [
+										"'self'",
+										"'unsafe-inline'",
+										"'wasm-unsafe-eval'",
+									],
+									styleSrc: ["'self'", "'unsafe-inline'"],
+									imgSrc: ["'self'", "data:", "https:"],
+									fontSrc: ["'self'", "data:"],
+									connectSrc: ["'self'"],
+									frameSrc: ["'self'"],
+									objectSrc: ["'none'"],
+									upgradeInsecureRequests: [],
+								},
+							},
+						}
+					: false,
+				rateLimit: this._rateLimit ?? false,
+				static: [{ dir: "./public", path: "/" }],
+				// Disable fastify-fusion's openApi since we use custom Scalar UI at "/"
+				openApi: false,
+				cors: false,
+				cache: false,
+			};
+
+			// Apply fastify-fusion configuration
+			await fuse(this._server, fuseOptions);
+
+			// Register Scalar API client (separate static mount)
 			await this._server.register(fastifyStatic, {
 				root: path.resolve("./node_modules/@scalar/api-reference/dist"),
 				prefix: "/scalar",
-			});
-
-			// Register the Public for favicon
-			await this.server.register(fastifyStatic, {
-				root: path.resolve("./public"),
 				decorateReply: false,
 			});
 
 			// Register the site map route
 			await this._server.register(sitemapRoute);
-
-			// Register the Helmet plugin for security headers
-			if (this._helmet) {
-				await this._server.register(fastifyHelmet, {
-					contentSecurityPolicy: {
-						directives: {
-							defaultSrc: ["'self'"],
-							scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'"],
-							styleSrc: ["'self'", "'unsafe-inline'"],
-							imgSrc: ["'self'", "data:", "https:"],
-							fontSrc: ["'self'", "data:"],
-							connectSrc: ["'self'"],
-							frameSrc: ["'self'"],
-							objectSrc: ["'none'"],
-							upgradeInsecureRequests: [],
-						},
-					},
-				});
-			}
-
-			// Register the rate limit plugin if configured
-			if (this._rateLimit) {
-				await this._server.register(fastifyRateLimit, this._rateLimit);
-			}
 
 			if (this._apiDocs) {
 				await this.registerApiDocs();
@@ -527,13 +535,28 @@ export class MockHttp extends Hookified {
 	): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 
-		// Set up Swagger for API documentation
-		await fastify.register(fastifySwagger, fastifySwaggerConfig);
+		// Register Swagger for OpenAPI spec
+		await fastify.register(fastifySwagger, {
+			openapi: {
+				info: {
+					title: "Mock HTTP API",
+					description: swaggerDescription,
+					version: pkg.version,
+				},
+			},
+		});
 
-		// Register Swagger UI
-		await registerSwaggerUi(fastify);
+		// Register Swagger UI at /docs
+		await fastify.register(fastifySwaggerUi, {
+			routePrefix: "/docs",
+			uiConfig: {
+				docExpansion: "none",
+				deepLinking: false,
+			},
+			staticCSP: true,
+		});
 
-		// Register the index / home page route
+		// Register the index / home page route (Scalar UI)
 		await fastify.register(indexRoute);
 	}
 

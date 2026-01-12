@@ -1,8 +1,6 @@
 import path from "node:path";
 import fastifyCookie from "@fastify/cookie";
 import fastifyStatic from "@fastify/static";
-import { fastifySwagger } from "@fastify/swagger";
-import { fastifySwaggerUi } from "@fastify/swagger-ui";
 import { detect } from "detect-port";
 import Fastify, { type FastifyInstance } from "fastify";
 import {
@@ -425,8 +423,15 @@ export class MockHttp extends Hookified {
 					: false,
 				rateLimit: this._rateLimit ?? false,
 				static: [{ dir: "./public", path: "/" }],
-				// Disable fastify-fusion's openApi since we use custom Scalar UI at "/"
-				openApi: false,
+				openApi: this._apiDocs
+					? {
+							title: "Mock HTTP API",
+							description: swaggerDescription,
+							version: pkg.version,
+							openApiRoutePrefix: "/docs",
+							docsRoutePath: "/docs/ui", // Use different path than "/" for fusion's UI
+						}
+					: false,
 				cors: false,
 				cache: false,
 			};
@@ -541,34 +546,14 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
-	 * This will register the API documentation routes including openapi and swagger ui.
+	 * This will register the API documentation routes including the index/home page.
+	 * Note: Swagger/OpenAPI is registered by fastify-fusion's openApi option.
 	 * @param fastifyInstance - the server instance to register the routes on.
 	 */
 	public async registerApiDocs(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
-
-		// Register Swagger for OpenAPI spec
-		await fastify.register(fastifySwagger, {
-			openapi: {
-				info: {
-					title: "Mock HTTP API",
-					description: swaggerDescription,
-					version: pkg.version,
-				},
-			},
-		});
-
-		// Register Swagger UI at /docs
-		await fastify.register(fastifySwaggerUi, {
-			routePrefix: "/docs",
-			uiConfig: {
-				docExpansion: "none",
-				deepLinking: false,
-			},
-			staticCSP: true,
-		});
 
 		// Register the index / home page route (Scalar UI)
 		await fastify.register(indexRoute);

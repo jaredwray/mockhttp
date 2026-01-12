@@ -23,6 +23,17 @@ import {
 	postCookieRoute,
 } from "./routes/cookies/index.js";
 import {
+	base64Route,
+	bytesRoute,
+	delayRoute,
+	dripRoute,
+	linksRoute,
+	rangeRoute,
+	streamBytesRoute,
+	streamRoute,
+	uuidRoute,
+} from "./routes/dynamic-data/index.js";
+import {
 	deleteRoute,
 	getRoute,
 	patchRoute,
@@ -63,6 +74,7 @@ export type HttpBinOptions = {
 	anything?: boolean;
 	auth?: boolean;
 	images?: boolean;
+	dynamicData?: boolean;
 };
 
 export type MockHttpOptions = {
@@ -124,6 +136,7 @@ export class MockHttp extends Hookified {
 		anything: true,
 		auth: true,
 		images: true,
+		dynamicData: true,
 	};
 
 	private _rateLimit?: RateLimitPluginOptions = {
@@ -424,6 +437,7 @@ export class MockHttp extends Hookified {
 				anything,
 				auth,
 				images,
+				dynamicData,
 			} = this._httpBin;
 
 			if (httpMethods) {
@@ -464,6 +478,10 @@ export class MockHttp extends Hookified {
 
 			if (images) {
 				await this.registerImageRoutes();
+			}
+
+			if (dynamicData) {
+				await this.registerDynamicDataRoutes();
 			}
 
 			if (this._autoDetectPort) {
@@ -639,6 +657,25 @@ export class MockHttp extends Hookified {
 	): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
 		await fastify.register(imageRoutes);
+	}
+
+	/**
+	 * Register the dynamic data routes.
+	 * @param fastifyInstance - the server instance to register the routes on.
+	 */
+	public async registerDynamicDataRoutes(
+		fastifyInstance?: FastifyInstance,
+	): Promise<void> {
+		const fastify = fastifyInstance ?? this._server;
+		await fastify.register(uuidRoute);
+		await fastify.register(bytesRoute);
+		await fastify.register(streamBytesRoute);
+		await fastify.register(delayRoute);
+		await fastify.register(base64Route);
+		await fastify.register(streamRoute);
+		await fastify.register(rangeRoute);
+		await fastify.register(dripRoute);
+		await fastify.register(linksRoute);
 	}
 }
 

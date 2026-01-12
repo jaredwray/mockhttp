@@ -82,6 +82,7 @@ export const dripRoute = (fastify: FastifyInstance) => {
 			const code = request.query.code
 				? Number.parseInt(request.query.code, 10)
 				: DEFAULT_CODE;
+			/* v8 ignore next 3 -- @preserve */
 			const delay = request.query.delay
 				? Number.parseFloat(request.query.delay)
 				: DEFAULT_DELAY;

@@ -356,7 +356,21 @@ export class MockHttp extends Hookified {
 				await this._server.close();
 			}
 
-			this._server = Fastify();
+			this._server = Fastify({
+				logger: this._logging
+					? {
+							transport: {
+								target: "pino-pretty",
+								options: {
+									colorize: true,
+									translateTime: true,
+									ignore: "pid,hostname",
+									singleLine: true,
+								},
+							},
+						}
+					: false,
+			});
 
 			// Register injection hook to intercept requests
 			this._server.addHook("onRequest", async (request, reply) => {
@@ -387,7 +401,7 @@ export class MockHttp extends Hookified {
 
 			// Configure fastify-fusion options
 			const fuseOptions: FuseOptions = {
-				log: this._logging,
+				log: false, // Logging configured at Fastify construction time
 				helmet: this._helmet
 					? {
 							contentSecurityPolicy: {

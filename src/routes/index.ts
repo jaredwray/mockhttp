@@ -14,6 +14,18 @@ export const indexRoute = (fastify: FastifyInstance) => {
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1" />
+    <meta name="description" content="MockHttp - A powerful HTTP mock server and httpbin replacement for API testing. Built with Fastify, TypeScript, and Docker support." />
+    <meta name="keywords" content="mock, http, httpbin, testing, api, fastify, docker, typescript, rest, mock-server, api-testing, http-testing, httpbin-alternative" />
+    <meta property="og:title" content="MockHttp - HTTP Mock Server" />
+    <meta property="og:description" content="A powerful HTTP mock server and httpbin replacement for API testing. Built with Fastify, TypeScript, and Docker support." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://mockhttp.org" />
+    <meta property="og:image" content="https://mockhttp.org/logo.png" />
+    <meta property="og:site_name" content="MockHttp" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="MockHttp - HTTP Mock Server" />
+    <meta name="twitter:description" content="A powerful HTTP mock server and httpbin replacement for API testing." />
+    <meta name="twitter:image" content="https://mockhttp.org/logo.png" />
       <style>
       :root {
   --scalar-custom-header-height: 70px;

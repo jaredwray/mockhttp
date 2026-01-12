@@ -40,7 +40,14 @@ const base64Schema: FastifySchema = {
 function isValidBase64(str: string): boolean {
 	// Base64 should only contain A-Z, a-z, 0-9, +, /, = (or - and _ for base64url)
 	const base64Regex = /^[A-Za-z0-9+/\-_]*={0,2}$/;
-	return base64Regex.test(str);
+	if (!base64Regex.test(str)) {
+		return false;
+	}
+
+	// Check for valid length: base64 length mod 4 cannot be 1
+	// (0, 2, 3 are valid; 1 is invalid as it can't represent valid encoded data)
+	const strippedLength = str.replace(/=+$/, "").length;
+	return strippedLength % 4 !== 1;
 }
 
 export const base64Route = (fastify: FastifyInstance) => {

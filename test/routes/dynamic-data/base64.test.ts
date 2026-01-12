@@ -57,4 +57,15 @@ describe("GET /base64/:value route", () => {
 		expect(response.statusCode).toBe(400);
 		expect(response.json()).toEqual({ error: "Incorrect Base64 data" });
 	});
+
+	it("should return 400 for invalid base64 length", async () => {
+		// Single character "Z" has length mod 4 = 1, which is invalid
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/base64/Z",
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toEqual({ error: "Incorrect Base64 data" });
+	});
 });

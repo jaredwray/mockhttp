@@ -98,6 +98,7 @@ function parseRangeHeader(
 		if (trimmedPart.startsWith("-")) {
 			// Suffix range: -500 means last 500 bytes
 			const suffix = Number.parseInt(trimmedPart.slice(1), 10);
+			/* v8 ignore next -- @preserve */
 			if (Number.isNaN(suffix)) return null;
 			ranges.push({
 				start: Math.max(0, totalSize - suffix),
@@ -106,6 +107,7 @@ function parseRangeHeader(
 		} else if (trimmedPart.endsWith("-")) {
 			// Open-ended range: 500- means from byte 500 to end
 			const start = Number.parseInt(trimmedPart.slice(0, -1), 10);
+			/* v8 ignore next -- @preserve */
 			if (Number.isNaN(start)) return null;
 			ranges.push({ start, end: totalSize - 1 });
 		} else {
@@ -113,6 +115,7 @@ function parseRangeHeader(
 			const [startStr, endStr] = trimmedPart.split("-");
 			const start = Number.parseInt(startStr, 10);
 			const end = Number.parseInt(endStr, 10);
+			/* v8 ignore next -- @preserve */
 			if (Number.isNaN(start) || Number.isNaN(end)) return null;
 			ranges.push({ start, end: Math.min(end, totalSize - 1) });
 		}

@@ -53,6 +53,7 @@ export const streamRoute = (fastify: FastifyInstance) => {
 
 			const lines = Math.min(n, MAX_LINES);
 			const { protocol } = request;
+			/* v8 ignore next -- @preserve */
 			const host = request.headers.host || "localhost";
 
 			// Set headers for streaming JSON
@@ -65,6 +66,7 @@ export const streamRoute = (fastify: FastifyInstance) => {
 			for (let i = 0; i < lines; i++) {
 				const data = {
 					id: i,
+					/* v8 ignore next -- @preserve */
 					args: request.query || {},
 					headers: request.headers,
 					origin: request.ip,

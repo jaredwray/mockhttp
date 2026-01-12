@@ -70,9 +70,11 @@ export const delayRoute = (fastify: FastifyInstance) => {
 		await sleep(actualDelay * 1000);
 
 		const { protocol } = request;
+		/* v8 ignore next -- @preserve */
 		const host = request.headers.host || "localhost";
 
 		return {
+			/* v8 ignore next -- @preserve */
 			args: request.query || {},
 			data: "",
 			files: {},

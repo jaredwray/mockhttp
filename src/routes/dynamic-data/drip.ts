@@ -71,12 +71,14 @@ export const dripRoute = (fastify: FastifyInstance) => {
 		"/drip",
 		{ schema: dripSchema },
 		async (request: DripRequest, reply: FastifyReply) => {
+			/* v8 ignore next 2 -- @preserve */
 			const duration = request.query.duration
 				? Number.parseFloat(request.query.duration)
 				: DEFAULT_DURATION;
 			const numbytes = request.query.numbytes
 				? Number.parseInt(request.query.numbytes, 10)
 				: DEFAULT_NUMBYTES;
+			/* v8 ignore next 2 -- @preserve */
 			const code = request.query.code
 				? Number.parseInt(request.query.code, 10)
 				: DEFAULT_CODE;

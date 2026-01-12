@@ -57,4 +57,14 @@ describe("GET /stream-bytes/:n route", () => {
 
 		expect(response.statusCode).toBe(400);
 	});
+
+	it("should return 400 for invalid seed", async () => {
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/stream-bytes/100?seed=notanumber",
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toEqual({ error: "seed must be an integer" });
+	});
 });

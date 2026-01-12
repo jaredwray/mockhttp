@@ -47,4 +47,14 @@ describe("GET /base64/:value route", () => {
 
 		expect(response.headers["content-type"]).toBe("text/html; charset=utf-8");
 	});
+
+	it("should return 400 for invalid base64 data", async () => {
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/base64/!!!invalid!!!",
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toEqual({ error: "Incorrect Base64 data" });
+	});
 });

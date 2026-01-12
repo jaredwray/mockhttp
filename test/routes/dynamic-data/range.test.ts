@@ -111,4 +111,16 @@ describe("GET /range/:numbytes route", () => {
 
 		expect(response.payload).toBe("abcdefghijklmnopqrstuvwxyz");
 	});
+
+	it("should delay response with duration parameter", async () => {
+		const startTime = Date.now();
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/range/10?duration=0.1",
+		});
+		const endTime = Date.now();
+
+		expect(response.statusCode).toBe(200);
+		expect(endTime - startTime).toBeGreaterThanOrEqual(80); // Allow some tolerance
+	});
 });

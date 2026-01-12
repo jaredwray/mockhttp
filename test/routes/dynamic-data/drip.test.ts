@@ -77,4 +77,28 @@ describe("GET /drip route", () => {
 		expect(response.statusCode).toBe(200);
 		expect(response.rawPayload.length).toBe(0);
 	});
+
+	it("should return 400 for invalid delay", async () => {
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/drip?delay=-1&duration=0",
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toEqual({
+			error: "delay must be a non-negative number",
+		});
+	});
+
+	it("should wait for initial delay", async () => {
+		const startTime = Date.now();
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/drip?delay=0.1&duration=0&numbytes=1",
+		});
+		const endTime = Date.now();
+
+		expect(response.statusCode).toBe(200);
+		expect(endTime - startTime).toBeGreaterThanOrEqual(80); // Allow some tolerance
+	});
 });

@@ -8,6 +8,7 @@ export default defineConfig({
 				"scripts/**", 
 				"dist/**",
 				"*.json",
+				"src/routes/**/index.ts",
 				"vitest.config.ts"
 			],
 		},

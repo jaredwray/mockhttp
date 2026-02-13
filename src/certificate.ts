@@ -352,21 +352,20 @@ export function generateCertificate(
 	serialNumber[0] &= 0x7f;
 
 	// Build TBS certificate
-	const publicKeyDer = publicKey as unknown as Buffer;
 	const tbsCertificate = buildTbsCertificate(
 		serialNumber,
 		commonName,
 		notBefore,
 		notAfter,
 		commonName,
-		publicKeyDer,
+		publicKey,
 		altNames,
 	);
 
 	// Sign the TBS certificate
 	const signer = crypto.createSign("SHA256");
 	signer.update(tbsCertificate);
-	const signature = signer.sign(privateKey as unknown as string);
+	const signature = signer.sign(privateKey);
 
 	// Build the full certificate
 	const certificate = encodeSequence(
@@ -377,7 +376,7 @@ export function generateCertificate(
 
 	return {
 		cert: derToPem(certificate, "CERTIFICATE"),
-		key: privateKey as unknown as string,
+		key: privateKey,
 	};
 }
 

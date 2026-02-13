@@ -25,6 +25,7 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 - [Deploy via Docker](#deploy-via-docker)
 - [Deploy via Docker Compose](#deploy-via-docker-compose)
 - [Deploy via NodeJS](#deploy-via-nodejs)
+- [HTTPS Support](#https-support)
 - [Response Injection (Tap Feature)](#response-injection-tap-feature)
 - [Rate Limiting](#rate-limiting)
 - [Logging](#logging)
@@ -69,12 +70,132 @@ npm install @jaredwray/mockhttp --save
 then run `mockhttp` in your code.
 
 ```javascript
-import { mockhttp } from '@jaredwray/mockhttp';
-await mockhttp.start(); // start the server
+import { MockHttp } from '@jaredwray/mockhttp';
+const mock = new MockHttp();
+await mock.start(); // start the server
 const response = await fetch('http://localhost:3000/get');
 console.log(response);
-await mockhttp.stop(); // stop the server
+await mock.close(); // stop the server
 ```
+
+# HTTPS Support
+
+MockHttp supports HTTPS with auto-generated self-signed certificates or your own custom certificates. No external dependencies are required — certificate generation uses only Node.js built-in `crypto`.
+
+## Auto-Generated Certificate
+
+The simplest way to enable HTTPS is to pass `https: true`. A self-signed certificate for `localhost` is generated automatically:
+
+```javascript
+import { MockHttp } from '@jaredwray/mockhttp';
+
+const mock = new MockHttp({ https: true });
+await mock.start();
+
+console.log(mock.isHttps); // true
+
+// Use Fastify's built-in inject() for testing (no TLS setup needed)
+const response = await mock.server.inject({ method: 'GET', url: '/get' });
+console.log(response.statusCode); // 200
+
+await mock.close();
+```
+
+> **Note:** Self-signed certificates are not trusted by default. When making real HTTPS requests (e.g. with `fetch`), set `NODE_TLS_REJECT_UNAUTHORIZED=0` in your test environment or use a custom HTTPS agent.
+
+## Custom Certificate Options
+
+You can customize the auto-generated certificate by passing `certificateOptions`:
+
+```javascript
+const mock = new MockHttp({
+  https: {
+    certificateOptions: {
+      commonName: 'my-test-server',
+      validityDays: 30,
+      keySize: 4096,
+      altNames: [
+        { type: 'dns', value: 'example.local' },
+        { type: 'dns', value: '*.example.local' },
+        { type: 'ip', value: '192.168.1.100' },
+      ],
+    },
+  },
+});
+
+await mock.start();
+// Make requests...
+await mock.close();
+```
+
+## Provide Your Own Certificate
+
+You can supply your own PEM-encoded certificate and key, either as strings or file paths:
+
+```javascript
+// Using PEM strings
+const mock = new MockHttp({
+  https: {
+    cert: '-----BEGIN CERTIFICATE-----\n...',
+    key: '-----BEGIN PRIVATE KEY-----\n...',
+  },
+});
+await mock.start();
+// Make requests...
+await mock.close();
+```
+
+```javascript
+// Using file paths
+const mock = new MockHttp({
+  https: {
+    cert: '/path/to/cert.pem',
+    key: '/path/to/key.pem',
+  },
+});
+await mock.start();
+// Make requests...
+await mock.close();
+```
+
+## Standalone Certificate Generation
+
+You can also generate certificates independently using the exported utility functions:
+
+```javascript
+import { generateCertificate, generateCertificateFiles } from '@jaredwray/mockhttp';
+
+// Generate in-memory PEM strings
+const { cert, key } = generateCertificate({
+  commonName: 'my-app',
+  validityDays: 90,
+});
+
+// Generate and write to disk
+const result = await generateCertificateFiles({
+  certPath: './certs/cert.pem',
+  keyPath: './certs/key.pem',
+  commonName: 'my-app',
+});
+```
+
+## HTTPS Options Reference
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `cert` | string | — | PEM-encoded certificate string or file path |
+| `key` | string | — | PEM-encoded private key string or file path |
+| `autoGenerate` | boolean | `true` | Auto-generate a self-signed certificate when cert/key are not provided |
+| `certificateOptions` | CertificateOptions | — | Options for the auto-generated certificate |
+
+### Certificate Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `commonName` | string | `'localhost'` | Certificate subject Common Name (CN) |
+| `altNames` | Array\<{ type, value }\> | `[dns:localhost, ip:127.0.0.1, ip:::1]` | Subject Alternative Names with type `'dns'` or `'ip'` |
+| `validityDays` | number | `365` | Certificate validity period in days |
+| `keySize` | number | `2048` | RSA key size in bits |
 
 # Response Injection (Tap Feature)
 
@@ -467,6 +588,7 @@ new MockHttp(options?)
     - `anything?`: boolean - Enable anything routes (default: true)
     - `auth?`: boolean - Enable authentication routes (default: true)
     - `images?`: boolean - Enable image routes (default: true)
+  - `https?`: boolean | HttpsOptions - Enable HTTPS with auto-generated or custom certificates (default: undefined/disabled)
   - `hookOptions?`: HookifiedOptions - Hookified options
 
 ### Properties
@@ -479,6 +601,8 @@ new MockHttp(options?)
 - `logging`: boolean - Get/set logging enabled state
 - `rateLimit`: RateLimitPluginOptions | undefined - Get/set rate limiting options
 - `httpBin`: HttpBinOptions - Get/set httpbin route options
+- `https`: HttpsOptions | undefined - Get/set HTTPS configuration
+- `isHttps`: boolean - Whether the server is running with HTTPS
 - `server`: FastifyInstance - Get/set the Fastify server instance
 - `taps`: TapManager - Get/set the TapManager instance
 

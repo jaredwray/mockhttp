@@ -416,18 +416,16 @@ export class MockHttp extends Hookified {
 	 * Start the Fastify server. If the server is already running, it will be closed and restarted.
 	 */
 	public async start(): Promise<void> {
+		// Resolve HTTPS credentials before try/catch so config errors propagate
+		this._httpsCredentials = undefined;
+		if (this._https) {
+			this._httpsCredentials = await this.resolveHttpsCredentials(this._https);
+		}
+
 		try {
 			/* v8 ignore next -- @preserve */
 			if (this._server) {
 				await this._server.close();
-			}
-
-			// Resolve HTTPS credentials
-			this._httpsCredentials = undefined;
-			if (this._https) {
-				this._httpsCredentials = await this.resolveHttpsCredentials(
-					this._https,
-				);
 			}
 
 			// Create Fastify instance with or without HTTPS

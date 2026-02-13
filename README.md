@@ -193,7 +193,7 @@ const result = await generateCertificateFiles({
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `commonName` | string | `'localhost'` | Certificate subject Common Name (CN) |
-| `altNames` | Array | localhost, 127.0.0.1, ::1 | Subject Alternative Names (`{ type: 'dns' \| 'ip', value: string }`) |
+| `altNames` | Array\<{ type, value }\> | `[dns:localhost, ip:127.0.0.1, ip:::1]` | Subject Alternative Names with type `'dns'` or `'ip'` |
 | `validityDays` | number | `365` | Certificate validity period in days |
 | `keySize` | number | `2048` | RSA key size in bits |
 

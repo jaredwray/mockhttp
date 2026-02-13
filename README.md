@@ -124,6 +124,8 @@ const mock = new MockHttp({
 });
 
 await mock.start();
+// Make requests...
+await mock.close();
 ```
 
 ## Provide Your Own Certificate
@@ -138,7 +140,12 @@ const mock = new MockHttp({
     key: '-----BEGIN PRIVATE KEY-----\n...',
   },
 });
+await mock.start();
+// Make requests...
+await mock.close();
+```
 
+```javascript
 // Using file paths
 const mock = new MockHttp({
   https: {
@@ -146,8 +153,9 @@ const mock = new MockHttp({
     key: '/path/to/key.pem',
   },
 });
-
 await mock.start();
+// Make requests...
+await mock.close();
 ```
 
 ## Standalone Certificate Generation

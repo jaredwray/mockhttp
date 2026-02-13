@@ -771,6 +771,12 @@ export class MockHttp extends Hookified {
 			return { cert, key };
 		}
 
+		if ((options.cert || options.key) && options.autoGenerate !== true) {
+			throw new Error(
+				"HTTPS options must include both 'cert' and 'key'. Only one was provided.",
+			);
+		}
+
 		if (options.autoGenerate !== false) {
 			const result = generateCertificate(options.certificateOptions);
 			return { cert: result.cert, key: result.key };

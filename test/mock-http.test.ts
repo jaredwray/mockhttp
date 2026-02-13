@@ -601,6 +601,43 @@ describe("MockHttp", () => {
 			);
 		});
 
+		test("should throw when only cert is provided without autoGenerate", async () => {
+			const { cert } = generateCertificate();
+			const mock = new MockHttp({
+				https: { cert },
+				logging: false,
+			});
+
+			await expect(mock.start()).rejects.toThrow(
+				"HTTPS options must include both 'cert' and 'key'. Only one was provided.",
+			);
+		});
+
+		test("should throw when only key is provided without autoGenerate", async () => {
+			const { key } = generateCertificate();
+			const mock = new MockHttp({
+				https: { key },
+				logging: false,
+			});
+
+			await expect(mock.start()).rejects.toThrow(
+				"HTTPS options must include both 'cert' and 'key'. Only one was provided.",
+			);
+		});
+
+		test("should auto-generate when only cert is provided with autoGenerate true", async () => {
+			const { cert } = generateCertificate();
+			const mock = new MockHttp({
+				https: { cert, autoGenerate: true },
+				logging: false,
+			});
+			await mock.start();
+
+			expect(mock.isHttps).toBe(true);
+
+			await mock.close();
+		});
+
 		test("should not be https when started without https option", async () => {
 			const mock = new MockHttp({ logging: false });
 			await mock.start();

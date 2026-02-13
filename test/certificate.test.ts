@@ -176,6 +176,11 @@ describe("expandIpv6", () => {
 		const result = _expandIpv6("fe80::");
 		expect(result).toBe("fe80:0000:0000:0000:0000:0000:0000:0000");
 	});
+
+	test("should expand :: in the middle of an address", () => {
+		const result = _expandIpv6("2001:db8::1");
+		expect(result).toBe("2001:0db8:0000:0000:0000:0000:0000:0001");
+	});
 });
 
 describe("generateCertificate with fully-expanded IPv6", () => {

@@ -92,15 +92,16 @@ import { MockHttp } from '@jaredwray/mockhttp';
 const mock = new MockHttp({ https: true });
 await mock.start();
 
-// Make requests over HTTPS
-const response = await fetch('https://localhost:3000/get', {
-  // Self-signed certs require disabling TLS verification in tests
-});
-
 console.log(mock.isHttps); // true
+
+// Use Fastify's built-in inject() for testing (no TLS setup needed)
+const response = await mock.server.inject({ method: 'GET', url: '/get' });
+console.log(response.statusCode); // 200
 
 await mock.close();
 ```
+
+> **Note:** Self-signed certificates are not trusted by default. When making real HTTPS requests (e.g. with `fetch`), set `NODE_TLS_REJECT_UNAUTHORIZED=0` in your test environment or use a custom HTTPS agent.
 
 ## Custom Certificate Options
 

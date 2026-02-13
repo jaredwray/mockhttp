@@ -31,17 +31,17 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 	await start();
 }
 
-export { MockHttp as default, MockHttp as mockhttp } from "./mock-http.js";
-export type { HttpsOptions } from "./mock-http.js";
+export type {
+	CertificateFileOptions,
+	CertificateOptions,
+	CertificateResult,
+} from "./certificate.js";
 export {
 	generateCertificate,
 	generateCertificateFiles,
 } from "./certificate.js";
-export type {
-	CertificateOptions,
-	CertificateResult,
-	CertificateFileOptions,
-} from "./certificate.js";
+export type { HttpsOptions } from "./mock-http.js";
+export { MockHttp as default, MockHttp as mockhttp } from "./mock-http.js";
 export type {
 	InjectionMatcher,
 	InjectionResponse,

@@ -357,9 +357,11 @@ export function generateCertificate(
 	// Strip leading zero bytes to produce minimal DER encoding,
 	// but keep at least one byte
 	let start = 0;
+	/* v8 ignore start -- depends on random data producing leading zeros */
 	while (start < serialBytes.length - 1 && serialBytes[start] === 0) {
 		start++;
 	}
+	/* v8 ignore stop */
 
 	const serialNumber = serialBytes.subarray(start);
 

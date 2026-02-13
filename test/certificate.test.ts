@@ -5,6 +5,8 @@ import * as path from "node:path";
 import * as tls from "node:tls";
 import { afterEach, describe, expect, test } from "vitest";
 import {
+	_encodeInteger,
+	_expandIpv6,
 	generateCertificate,
 	generateCertificateFiles,
 } from "../src/certificate.js";
@@ -134,6 +136,62 @@ describe("generateCertificate", () => {
 		expect(result1.cert).not.toBe(result2.cert);
 		// Keys should be different
 		expect(result1.key).not.toBe(result2.key);
+	});
+});
+
+describe("encodeInteger", () => {
+	test("should encode zero as a single zero byte", () => {
+		const result = _encodeInteger(0);
+		// DER INTEGER tag=0x02, length=1, value=0x00
+		expect(result).toEqual(Buffer.from([0x02, 0x01, 0x00]));
+	});
+
+	test("should add leading zero when high bit is set on number", () => {
+		// 128 = 0x80, high bit is set so a leading 0x00 must be prepended
+		const result = _encodeInteger(128);
+		// DER INTEGER tag=0x02, length=2, value=0x00 0x80
+		expect(result).toEqual(Buffer.from([0x02, 0x02, 0x00, 0x80]));
+	});
+
+	test("should add leading zero when high bit is set on Buffer", () => {
+		const buf = Buffer.from([0x80, 0x01]);
+		const result = _encodeInteger(buf);
+		// DER INTEGER tag=0x02, length=3, value=0x00 0x80 0x01
+		expect(result).toEqual(Buffer.from([0x02, 0x03, 0x00, 0x80, 0x01]));
+	});
+});
+
+describe("expandIpv6", () => {
+	test("should pad groups in a fully-expanded IPv6 address", () => {
+		const result = _expandIpv6("2001:db8:0:0:0:0:0:1");
+		expect(result).toBe("2001:0db8:0000:0000:0000:0000:0000:0001");
+	});
+
+	test("should expand :: with empty left side", () => {
+		const result = _expandIpv6("::1");
+		expect(result).toBe("0000:0000:0000:0000:0000:0000:0000:0001");
+	});
+
+	test("should expand :: with empty right side", () => {
+		const result = _expandIpv6("fe80::");
+		expect(result).toBe("fe80:0000:0000:0000:0000:0000:0000:0000");
+	});
+
+	test("should expand :: in the middle of an address", () => {
+		const result = _expandIpv6("2001:db8::1");
+		expect(result).toBe("2001:0db8:0000:0000:0000:0000:0000:0001");
+	});
+});
+
+describe("generateCertificate with fully-expanded IPv6", () => {
+	test("should handle a fully-expanded IPv6 altName without ::", () => {
+		const result = generateCertificate({
+			altNames: [
+				{ type: "ip", value: "2001:0db8:0000:0000:0000:0000:0000:0001" },
+			],
+		});
+		const x509 = new crypto.X509Certificate(result.cert);
+		expect(x509.subjectAltName).toContain("IP Address:2001:DB8");
 	});
 });
 

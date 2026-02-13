@@ -316,6 +316,10 @@ function derToPem(der: Buffer, label: string): string {
 	return `-----BEGIN ${label}-----\n${lines.join("\n")}\n-----END ${label}-----\n`;
 }
 
+// --- Exported for testing ---
+
+export { encodeInteger as _encodeInteger, expandIpv6 as _expandIpv6 };
+
 // --- Public API ---
 
 /**
@@ -347,9 +351,19 @@ export function generateCertificate(
 	notAfter.setDate(notAfter.getDate() + validityDays);
 
 	// Generate random serial number (16 bytes, positive)
-	const serialNumber = crypto.randomBytes(16);
+	const serialBytes = crypto.randomBytes(16);
 	// Ensure positive by clearing the high bit
-	serialNumber[0] &= 0x7f;
+	serialBytes[0] &= 0x7f;
+	// Strip leading zero bytes to produce minimal DER encoding,
+	// but keep at least one byte
+	let start = 0;
+	/* v8 ignore start -- depends on random data producing leading zeros */
+	while (start < serialBytes.length - 1 && serialBytes[start] === 0) {
+		start++;
+	}
+	/* v8 ignore stop */
+
+	const serialNumber = serialBytes.subarray(start);
 
 	// Build TBS certificate
 	const tbsCertificate = buildTbsCertificate(

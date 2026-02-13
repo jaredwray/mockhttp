@@ -70,11 +70,12 @@ npm install @jaredwray/mockhttp --save
 then run `mockhttp` in your code.
 
 ```javascript
-import { mockhttp } from '@jaredwray/mockhttp';
-await mockhttp.start(); // start the server
+import { MockHttp } from '@jaredwray/mockhttp';
+const mock = new MockHttp();
+await mock.start(); // start the server
 const response = await fetch('http://localhost:3000/get');
 console.log(response);
-await mockhttp.stop(); // stop the server
+await mock.close(); // stop the server
 ```
 
 # HTTPS Support

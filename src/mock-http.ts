@@ -1,3 +1,4 @@
+import * as fsPromises from "node:fs/promises";
 import path from "node:path";
 import fastifyCookie from "@fastify/cookie";
 import fastifyHelmet from "@fastify/helmet";
@@ -9,6 +10,7 @@ import { fastifySwagger } from "@fastify/swagger";
 import { detect } from "detect-port";
 import Fastify, { type FastifyInstance } from "fastify";
 import { Hookified, type HookifiedOptions } from "hookified";
+import { type CertificateOptions, generateCertificate } from "./certificate.js";
 import { getFastifyConfig } from "./fastify-config.js";
 import { anythingRoute } from "./routes/anything/index.js";
 import {
@@ -77,6 +79,25 @@ export type HttpBinOptions = {
 	dynamicData?: boolean;
 };
 
+export type HttpsOptions = {
+	/**
+	 * PEM-encoded certificate string, or file path to a certificate PEM file.
+	 */
+	cert?: string;
+	/**
+	 * PEM-encoded private key string, or file path to a private key PEM file.
+	 */
+	key?: string;
+	/**
+	 * If true, auto-generate a self-signed certificate. Defaults to true when no cert/key provided.
+	 */
+	autoGenerate?: boolean;
+	/**
+	 * Options for auto-generating a self-signed certificate. Only used when auto-generating.
+	 */
+	certificateOptions?: CertificateOptions;
+};
+
 export type MockHttpOptions = {
 	/**
 	 * The port to listen on. If not provided, defaults to 3000 and detects the next available port if in use.
@@ -116,6 +137,11 @@ export type MockHttpOptions = {
 	 * Whether to enable logging. Defaults to true.
 	 */
 	logging?: boolean;
+	/**
+	 * HTTPS configuration. Set to true to auto-generate a self-signed certificate,
+	 * or provide an object with cert/key strings/paths or auto-generation options.
+	 */
+	https?: boolean | HttpsOptions;
 };
 
 export class MockHttp extends Hookified {
@@ -144,6 +170,9 @@ export class MockHttp extends Hookified {
 		timeWindow: "1 minute",
 		allowList: ["127.0.0.1", "::1"],
 	};
+
+	private _https: HttpsOptions | undefined;
+	private _httpsCredentials: { cert: string; key: string } | undefined;
 
 	private _server: FastifyInstance = Fastify();
 	private _taps: TapManager = new TapManager();
@@ -181,6 +210,16 @@ export class MockHttp extends Hookified {
 
 		if (options?.logging !== undefined) {
 			this._logging = options.logging;
+		}
+
+		if (options?.https !== undefined) {
+			if (options.https === true) {
+				this._https = { autoGenerate: true };
+			} else if (options.https === false) {
+				this._https = undefined;
+			} else {
+				this._https = options.https;
+			}
 		}
 	}
 
@@ -283,6 +322,35 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
+	 * HTTPS configuration. Set to true to auto-generate a self-signed certificate,
+	 * or provide an HttpsOptions object with cert/key or auto-generation options.
+	 */
+	public get https(): HttpsOptions | undefined {
+		return this._https;
+	}
+
+	/**
+	 * HTTPS configuration. Set to true to auto-generate a self-signed certificate,
+	 * or provide an HttpsOptions object with cert/key or auto-generation options.
+	 */
+	public set https(value: boolean | HttpsOptions | undefined) {
+		if (value === true) {
+			this._https = { autoGenerate: true };
+		} else if (value === false || value === undefined) {
+			this._https = undefined;
+		} else {
+			this._https = value;
+		}
+	}
+
+	/**
+	 * Whether the server is running in HTTPS mode.
+	 */
+	public get isHttps(): boolean {
+		return this._httpsCredentials !== undefined;
+	}
+
+	/**
 	 * HTTP Bin options. Defaults to all enabled.
 	 */
 	public get httpBin(): HttpBinOptions {
@@ -348,13 +416,30 @@ export class MockHttp extends Hookified {
 	 * Start the Fastify server. If the server is already running, it will be closed and restarted.
 	 */
 	public async start(): Promise<void> {
+		// Resolve HTTPS credentials before try/catch so config errors propagate
+		this._httpsCredentials = undefined;
+		if (this._https) {
+			this._httpsCredentials = await this.resolveHttpsCredentials(this._https);
+		}
+
 		try {
 			/* v8 ignore next -- @preserve */
 			if (this._server) {
 				await this._server.close();
 			}
 
-			this._server = Fastify(getFastifyConfig(this._logging));
+			// Create Fastify instance with or without HTTPS
+			if (this._httpsCredentials) {
+				this._server = Fastify({
+					...getFastifyConfig(this._logging),
+					https: {
+						key: this._httpsCredentials.key,
+						cert: this._httpsCredentials.cert,
+					},
+				} as Record<string, unknown>) as unknown as FastifyInstance;
+			} else {
+				this._server = Fastify(getFastifyConfig(this._logging));
+			}
 
 			// Register injection hook to intercept requests
 			this._server.addHook("onRequest", async (request, reply) => {
@@ -676,6 +761,38 @@ export class MockHttp extends Hookified {
 		await fastify.register(rangeRoute);
 		await fastify.register(dripRoute);
 		await fastify.register(linksRoute);
+	}
+	private async resolveHttpsCredentials(
+		options: HttpsOptions,
+	): Promise<{ cert: string; key: string }> {
+		if (options.cert && options.key) {
+			const cert = await this.loadPemValue(options.cert);
+			const key = await this.loadPemValue(options.key);
+			return { cert, key };
+		}
+
+		if ((options.cert || options.key) && options.autoGenerate !== true) {
+			throw new Error(
+				"HTTPS options must include both 'cert' and 'key'. Only one was provided.",
+			);
+		}
+
+		if (options.autoGenerate !== false) {
+			const result = generateCertificate(options.certificateOptions);
+			return { cert: result.cert, key: result.key };
+		}
+
+		throw new Error(
+			"HTTPS is enabled but no certificate was provided and autoGenerate is false.",
+		);
+	}
+
+	private async loadPemValue(value: string): Promise<string> {
+		if (value.startsWith("-----")) {
+			return value;
+		}
+
+		return fsPromises.readFile(value, "utf8");
 	}
 }
 

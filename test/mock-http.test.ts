@@ -1,5 +1,9 @@
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import Fastify from "fastify";
 import { describe, expect, test } from "vitest";
+import { generateCertificate } from "../src/certificate.js";
 import { MockHttp, type MockHttpOptions, mockhttp } from "../src/mock-http.js";
 import { TapManager } from "../src/tap-manager.js";
 
@@ -467,6 +471,202 @@ describe("MockHttp", () => {
 
 			// Server should start successfully with logging disabled
 			expect(mock.server).toBeDefined();
+
+			await mock.close();
+		});
+	});
+
+	describe("https", () => {
+		test("should default to no https", () => {
+			const mock = new MockHttp();
+			expect(mock.https).toBeUndefined();
+			expect(mock.isHttps).toBe(false);
+		});
+
+		test("should accept https: true option", () => {
+			const mock = new MockHttp({ https: true });
+			expect(mock.https).toEqual({ autoGenerate: true });
+		});
+
+		test("should accept https: false option", () => {
+			const mock = new MockHttp({ https: false });
+			expect(mock.https).toBeUndefined();
+		});
+
+		test("should accept https object option", () => {
+			const mock = new MockHttp({
+				https: { cert: "test-cert", key: "test-key" },
+			});
+			expect(mock.https).toEqual({ cert: "test-cert", key: "test-key" });
+		});
+
+		test("should support https getter/setter with boolean", () => {
+			const mock = new MockHttp();
+			expect(mock.https).toBeUndefined();
+
+			mock.https = true;
+			expect(mock.https).toEqual({ autoGenerate: true });
+
+			mock.https = false;
+			expect(mock.https).toBeUndefined();
+		});
+
+		test("should support https getter/setter with object", () => {
+			const mock = new MockHttp();
+			mock.https = {
+				autoGenerate: true,
+				certificateOptions: { commonName: "test" },
+			};
+			expect(mock.https?.autoGenerate).toBe(true);
+			expect(mock.https?.certificateOptions?.commonName).toBe("test");
+
+			mock.https = undefined;
+			expect(mock.https).toBeUndefined();
+		});
+
+		test("should start with auto-generated cert and respond to requests", async () => {
+			const mock = new MockHttp({ https: true, logging: false });
+			await mock.start();
+
+			expect(mock.isHttps).toBe(true);
+
+			const response = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+			});
+
+			expect(response.statusCode).toBe(200);
+
+			await mock.close();
+		});
+
+		test("should start with provided PEM cert/key strings", async () => {
+			const { cert, key } = generateCertificate();
+			const mock = new MockHttp({
+				https: { cert, key },
+				logging: false,
+			});
+			await mock.start();
+
+			expect(mock.isHttps).toBe(true);
+
+			const response = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+			});
+
+			expect(response.statusCode).toBe(200);
+
+			await mock.close();
+		});
+
+		test("should start with cert/key from file paths", async () => {
+			const { cert, key } = generateCertificate();
+			const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "mockhttp-https-"));
+			const certPath = path.join(tmpDir, "cert.pem");
+			const keyPath = path.join(tmpDir, "key.pem");
+			fs.writeFileSync(certPath, cert);
+			fs.writeFileSync(keyPath, key);
+
+			try {
+				const mock = new MockHttp({
+					https: { cert: certPath, key: keyPath },
+					logging: false,
+				});
+				await mock.start();
+
+				expect(mock.isHttps).toBe(true);
+
+				const response = await mock.server.inject({
+					method: "GET",
+					url: "/get",
+				});
+
+				expect(response.statusCode).toBe(200);
+
+				await mock.close();
+			} finally {
+				fs.rmSync(tmpDir, { recursive: true });
+			}
+		});
+
+		test("should throw when autoGenerate is false and no cert/key provided", async () => {
+			const mock = new MockHttp({
+				https: { autoGenerate: false },
+				logging: false,
+			});
+
+			await expect(mock.start()).rejects.toThrow(
+				"HTTPS is enabled but no certificate was provided and autoGenerate is false.",
+			);
+		});
+
+		test("should throw when only cert is provided without autoGenerate", async () => {
+			const { cert } = generateCertificate();
+			const mock = new MockHttp({
+				https: { cert },
+				logging: false,
+			});
+
+			await expect(mock.start()).rejects.toThrow(
+				"HTTPS options must include both 'cert' and 'key'. Only one was provided.",
+			);
+		});
+
+		test("should throw when only key is provided without autoGenerate", async () => {
+			const { key } = generateCertificate();
+			const mock = new MockHttp({
+				https: { key },
+				logging: false,
+			});
+
+			await expect(mock.start()).rejects.toThrow(
+				"HTTPS options must include both 'cert' and 'key'. Only one was provided.",
+			);
+		});
+
+		test("should auto-generate when only cert is provided with autoGenerate true", async () => {
+			const { cert } = generateCertificate();
+			const mock = new MockHttp({
+				https: { cert, autoGenerate: true },
+				logging: false,
+			});
+			await mock.start();
+
+			expect(mock.isHttps).toBe(true);
+
+			await mock.close();
+		});
+
+		test("should not be https when started without https option", async () => {
+			const mock = new MockHttp({ logging: false });
+			await mock.start();
+
+			expect(mock.isHttps).toBe(false);
+
+			await mock.close();
+		});
+
+		test("should support custom certificate options for auto-generation", async () => {
+			const mock = new MockHttp({
+				https: {
+					certificateOptions: {
+						commonName: "custom-test-server",
+						validityDays: 30,
+					},
+				},
+				logging: false,
+			});
+			await mock.start();
+
+			expect(mock.isHttps).toBe(true);
+
+			const response = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+			});
+
+			expect(response.statusCode).toBe(200);
 
 			await mock.close();
 		});

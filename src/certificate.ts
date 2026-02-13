@@ -147,10 +147,6 @@ function encodeUtf8String(value: string): Buffer {
 	return encodeTlv(0x0c, Buffer.from(value, "utf8"));
 }
 
-function encodePrintableString(value: string): Buffer {
-	return encodeTlv(0x13, Buffer.from(value, "ascii"));
-}
-
 function encodeUtcTime(date: Date): Buffer {
 	const year = date.getUTCFullYear() % 100;
 	const str = `${pad2(year)}${pad2(date.getUTCMonth() + 1)}${pad2(date.getUTCDate())}${pad2(date.getUTCHours())}${pad2(date.getUTCMinutes())}${pad2(date.getUTCSeconds())}Z`;
@@ -177,7 +173,10 @@ const OID_SUBJECT_ALT_NAME = [2, 5, 29, 17];
 // --- X.509 certificate builder ---
 
 function buildAlgorithmIdentifier(): Buffer {
-	return encodeSequence(encodeOid(OID_SHA256_WITH_RSA), encodeTlv(0x05, Buffer.alloc(0))); // NULL
+	return encodeSequence(
+		encodeOid(OID_SHA256_WITH_RSA),
+		encodeTlv(0x05, Buffer.alloc(0)),
+	); // NULL
 }
 
 function buildName(cn: string): Buffer {
@@ -310,7 +309,9 @@ function derToPem(der: Buffer, label: string): string {
  * Generate a self-signed certificate using only Node.js built-in crypto.
  * Returns PEM-encoded certificate and private key strings.
  */
-export function generateCertificate(options?: CertificateOptions): CertificateResult {
+export function generateCertificate(
+	options?: CertificateOptions,
+): CertificateResult {
 	const commonName = options?.commonName ?? "localhost";
 	const validityDays = options?.validityDays ?? 365;
 	const keySize = options?.keySize ?? 2048;

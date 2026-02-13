@@ -10,10 +10,7 @@ import { fastifySwagger } from "@fastify/swagger";
 import { detect } from "detect-port";
 import Fastify, { type FastifyInstance } from "fastify";
 import { Hookified, type HookifiedOptions } from "hookified";
-import {
-	generateCertificate,
-	type CertificateOptions,
-} from "./certificate.js";
+import { type CertificateOptions, generateCertificate } from "./certificate.js";
 import { getFastifyConfig } from "./fastify-config.js";
 import { anythingRoute } from "./routes/anything/index.js";
 import {
@@ -428,8 +425,9 @@ export class MockHttp extends Hookified {
 			// Resolve HTTPS credentials
 			this._httpsCredentials = undefined;
 			if (this._https) {
-				this._httpsCredentials =
-					await this.resolveHttpsCredentials(this._https);
+				this._httpsCredentials = await this.resolveHttpsCredentials(
+					this._https,
+				);
 			}
 
 			// Create Fastify instance with or without HTTPS

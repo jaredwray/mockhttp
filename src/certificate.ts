@@ -316,6 +316,10 @@ function derToPem(der: Buffer, label: string): string {
 	return `-----BEGIN ${label}-----\n${lines.join("\n")}\n-----END ${label}-----\n`;
 }
 
+// --- Exported for testing ---
+
+export { encodeInteger as _encodeInteger, expandIpv6 as _expandIpv6 };
+
 // --- Public API ---
 
 /**

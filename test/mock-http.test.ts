@@ -1,5 +1,9 @@
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import Fastify from "fastify";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
+import { generateCertificate } from "../src/certificate.js";
 import { MockHttp, type MockHttpOptions, mockhttp } from "../src/mock-http.js";
 import { TapManager } from "../src/tap-manager.js";
 

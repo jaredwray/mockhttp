@@ -112,6 +112,21 @@ describe("generateCertificate", () => {
 		expect(ctx).toBeDefined();
 	});
 
+	test("should handle validity dates past 2049 using GeneralizedTime", () => {
+		// 10000 days from now will be past 2050
+		const result = generateCertificate({ validityDays: 10000 });
+		const x509 = new crypto.X509Certificate(result.cert);
+		const validTo = new Date(x509.validTo);
+		// The cert should be valid well past 2049
+		expect(validTo.getUTCFullYear()).toBeGreaterThanOrEqual(2050);
+		// Verify it's still parseable and valid
+		const ctx = tls.createSecureContext({
+			cert: result.cert,
+			key: result.key,
+		});
+		expect(ctx).toBeDefined();
+	});
+
 	test("should generate unique certificates each time", () => {
 		const result1 = generateCertificate();
 		const result2 = generateCertificate();

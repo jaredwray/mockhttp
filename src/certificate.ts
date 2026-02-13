@@ -147,9 +147,22 @@ function encodeUtf8String(value: string): Buffer {
 	return encodeTlv(0x0c, Buffer.from(value, "utf8"));
 }
 
-function encodeUtcTime(date: Date): Buffer {
-	const year = date.getUTCFullYear() % 100;
-	const str = `${pad2(year)}${pad2(date.getUTCMonth() + 1)}${pad2(date.getUTCDate())}${pad2(date.getUTCHours())}${pad2(date.getUTCMinutes())}${pad2(date.getUTCSeconds())}Z`;
+/**
+ * Encode a date as ASN.1 time. Uses UTCTime (tag 0x17) for years 1950-2049
+ * and GeneralizedTime (tag 0x18) for years >= 2050, per RFC 5280 Section 4.1.2.5.
+ */
+function encodeTime(date: Date): Buffer {
+	const fullYear = date.getUTCFullYear();
+	const timePart = `${pad2(date.getUTCMonth() + 1)}${pad2(date.getUTCDate())}${pad2(date.getUTCHours())}${pad2(date.getUTCMinutes())}${pad2(date.getUTCSeconds())}Z`;
+
+	if (fullYear >= 2050) {
+		// GeneralizedTime: 4-digit year
+		const str = `${fullYear}${timePart}`;
+		return encodeTlv(0x18, Buffer.from(str, "ascii"));
+	}
+
+	// UTCTime: 2-digit year
+	const str = `${pad2(fullYear % 100)}${timePart}`;
 	return encodeTlv(0x17, Buffer.from(str, "ascii"));
 }
 
@@ -187,7 +200,7 @@ function buildName(cn: string): Buffer {
 }
 
 function buildValidity(notBefore: Date, notAfter: Date): Buffer {
-	return encodeSequence(encodeUtcTime(notBefore), encodeUtcTime(notAfter));
+	return encodeSequence(encodeTime(notBefore), encodeTime(notAfter));
 }
 
 function encodeIpAddress(ip: string): Buffer {

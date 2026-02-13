@@ -351,9 +351,17 @@ export function generateCertificate(
 	notAfter.setDate(notAfter.getDate() + validityDays);
 
 	// Generate random serial number (16 bytes, positive)
-	const serialNumber = crypto.randomBytes(16);
+	const serialBytes = crypto.randomBytes(16);
 	// Ensure positive by clearing the high bit
-	serialNumber[0] &= 0x7f;
+	serialBytes[0] &= 0x7f;
+	// Strip leading zero bytes to produce minimal DER encoding,
+	// but keep at least one byte
+	let start = 0;
+	while (start < serialBytes.length - 1 && serialBytes[start] === 0) {
+		start++;
+	}
+
+	const serialNumber = serialBytes.subarray(start);
 
 	// Build TBS certificate
 	const tbsCertificate = buildTbsCertificate(

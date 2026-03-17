@@ -389,13 +389,6 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
-	 * Whether the server is running in HTTP/2 mode.
-	 */
-	public get isHttp2(): boolean {
-		return this._http2;
-	}
-
-	/**
 	 * Whether to allow HTTP/1.1 fallback when using HTTP/2 with HTTPS.
 	 * @default true
 	 */
@@ -490,32 +483,27 @@ export class MockHttp extends Hookified {
 			}
 
 			// Create Fastify instance with appropriate protocol options
-			if (this._httpsCredentials && this._http2) {
-				this._server = Fastify({
-					...getFastifyConfig(this._logging),
-					http2: true,
-					https: {
-						allowHTTP1: this._http1,
-						key: this._httpsCredentials.key,
-						cert: this._httpsCredentials.cert,
-					},
-				} as Record<string, unknown>) as unknown as FastifyInstance;
-			} else if (this._httpsCredentials) {
-				this._server = Fastify({
-					...getFastifyConfig(this._logging),
-					https: {
-						key: this._httpsCredentials.key,
-						cert: this._httpsCredentials.cert,
-					},
-				} as Record<string, unknown>) as unknown as FastifyInstance;
-			} else if (this._http2) {
-				this._server = Fastify({
-					...getFastifyConfig(this._logging),
-					http2: true,
-				} as Record<string, unknown>) as unknown as FastifyInstance;
-			} else {
-				this._server = Fastify(getFastifyConfig(this._logging));
+			const fastifyOptions: Record<string, unknown> = {
+				...getFastifyConfig(this._logging),
+			};
+
+			if (this._http2) {
+				fastifyOptions.http2 = true;
 			}
+
+			if (this._httpsCredentials) {
+				const httpsOptions: Record<string, unknown> = {
+					key: this._httpsCredentials.key,
+					cert: this._httpsCredentials.cert,
+				};
+				if (this._http2) {
+					httpsOptions.allowHTTP1 = this._http1;
+				}
+
+				fastifyOptions.https = httpsOptions;
+			}
+
+			this._server = Fastify(fastifyOptions) as unknown as FastifyInstance;
 
 			// Register injection hook to intercept requests
 			this._server.addHook("onRequest", async (request, reply) => {

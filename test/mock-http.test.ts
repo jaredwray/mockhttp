@@ -676,13 +676,13 @@ describe("MockHttp", () => {
 		test("should default to no http2", () => {
 			const mock = new MockHttp();
 			expect(mock.http2).toBe(false);
-			expect(mock.isHttp2).toBe(false);
+			expect(mock.http2).toBe(false);
 		});
 
 		test("should accept http2: true option", () => {
 			const mock = new MockHttp({ http2: true });
 			expect(mock.http2).toBe(true);
-			expect(mock.isHttp2).toBe(true);
+			expect(mock.http2).toBe(true);
 		});
 
 		test("should accept http2: false option", () => {
@@ -726,7 +726,7 @@ describe("MockHttp", () => {
 			const mock = new MockHttp({ http2: true, logging: false });
 			await mock.start();
 
-			expect(mock.isHttp2).toBe(true);
+			expect(mock.http2).toBe(true);
 
 			const response = await mock.server.inject({
 				method: "GET",
@@ -742,7 +742,7 @@ describe("MockHttp", () => {
 			const mock = new MockHttp({ http2: true, https: true, logging: false });
 			await mock.start();
 
-			expect(mock.isHttp2).toBe(true);
+			expect(mock.http2).toBe(true);
 			expect(mock.isHttps).toBe(true);
 
 			const response = await mock.server.inject({
@@ -764,7 +764,7 @@ describe("MockHttp", () => {
 			});
 			await mock.start();
 
-			expect(mock.isHttp2).toBe(true);
+			expect(mock.http2).toBe(true);
 			expect(mock.isHttps).toBe(true);
 			expect(mock.http1).toBe(false);
 
@@ -787,7 +787,7 @@ describe("MockHttp", () => {
 			});
 			await mock.start();
 
-			expect(mock.isHttp2).toBe(true);
+			expect(mock.http2).toBe(true);
 			expect(mock.isHttps).toBe(true);
 
 			const response = await mock.server.inject({

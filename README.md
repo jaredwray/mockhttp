@@ -212,7 +212,7 @@ import { MockHttp } from '@jaredwray/mockhttp';
 const mock = new MockHttp({ http2: true, https: true });
 await mock.start();
 
-console.log(mock.isHttp2); // true
+console.log(mock.http2); // true
 console.log(mock.isHttps); // true
 
 const response = await mock.server.inject({ method: 'GET', url: '/get' });
@@ -234,7 +234,7 @@ await mock.start();
 const mock = new MockHttp({ http2: true });
 await mock.start();
 
-console.log(mock.isHttp2); // true
+console.log(mock.http2); // true
 
 await mock.close();
 ```
@@ -656,7 +656,6 @@ new MockHttp(options?)
 - `https`: HttpsOptions | undefined - Get/set HTTPS configuration
 - `isHttps`: boolean - Whether the server is running with HTTPS
 - `http2`: boolean - Get/set HTTP/2 support
-- `isHttp2`: boolean - Whether the server is running with HTTP/2
 - `http1`: boolean - Get/set HTTP/1.1 fallback for HTTP/2 with HTTPS
 - `server`: FastifyInstance - Get/set the Fastify server instance
 - `taps`: TapManager - Get/set the TapManager instance

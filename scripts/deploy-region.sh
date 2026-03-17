@@ -10,9 +10,10 @@ gcloud run deploy $SERVICE_NAME-$REGION \
     --min-instances=1 \
     --min=1 \
     --concurrency=500 \
-    --memory=2Gi \
+    --memory=1Gi \
     --timeout=300 \
     --port=3000 \
     --platform=managed \
     --region=$REGION \
-    --allow-unauthenticated
+    --allow-unauthenticated \
+    --no-cpu-throttling

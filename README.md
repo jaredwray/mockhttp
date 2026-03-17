@@ -26,6 +26,7 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 - [Deploy via Docker Compose](#deploy-via-docker-compose)
 - [Deploy via NodeJS](#deploy-via-nodejs)
 - [HTTPS Support](#https-support)
+- [HTTP/2 Support](#http2-support)
 - [Response Injection (Tap Feature)](#response-injection-tap-feature)
 - [Rate Limiting](#rate-limiting)
 - [Logging](#logging)
@@ -196,6 +197,55 @@ const result = await generateCertificateFiles({
 | `altNames` | Array\<{ type, value }\> | `[dns:localhost, ip:127.0.0.1, ip:::1]` | Subject Alternative Names with type `'dns'` or `'ip'` |
 | `validityDays` | number | `365` | Certificate validity period in days |
 | `keySize` | number | `2048` | RSA key size in bits |
+
+# HTTP/2 Support
+
+MockHttp supports HTTP/2 in two modes:
+- **h2** — HTTP/2 over TLS (used by browsers), enabled with both `http2: true` and `https: true`
+- **h2c** — HTTP/2 cleartext (no TLS), enabled with just `http2: true`, useful for service-to-service testing
+
+## HTTP/2 over TLS (h2)
+
+```javascript
+import { MockHttp } from '@jaredwray/mockhttp';
+
+const mock = new MockHttp({ http2: true, https: true });
+await mock.start();
+
+console.log(mock.http2); // true
+console.log(mock.isHttps); // true
+
+const response = await mock.server.inject({ method: 'GET', url: '/get' });
+console.log(response.statusCode); // 200
+
+await mock.close();
+```
+
+By default, HTTP/1.1 clients can still connect via ALPN negotiation (`http1` defaults to `true`). To disable HTTP/1.1 fallback:
+
+```javascript
+const mock = new MockHttp({ http2: true, https: true, http1: false });
+await mock.start();
+```
+
+## HTTP/2 Cleartext (h2c)
+
+```javascript
+const mock = new MockHttp({ http2: true });
+await mock.start();
+
+console.log(mock.http2); // true
+
+await mock.close();
+```
+
+> **Note:** Browsers do not support h2c. This mode is useful for testing gRPC or service-to-service communication.
+
+## HTTP/2 via Environment Variable
+
+```bash
+HTTP2=true node your-app.js
+```
 
 # Response Injection (Tap Feature)
 
@@ -589,6 +639,8 @@ new MockHttp(options?)
     - `auth?`: boolean - Enable authentication routes (default: true)
     - `images?`: boolean - Enable image routes (default: true)
   - `https?`: boolean | HttpsOptions - Enable HTTPS with auto-generated or custom certificates (default: undefined/disabled)
+  - `http2?`: boolean - Enable HTTP/2 support (default: false)
+  - `http1?`: boolean - Allow HTTP/1.1 fallback when using HTTP/2 with HTTPS (default: true)
   - `hookOptions?`: HookifiedOptions - Hookified options
 
 ### Properties
@@ -603,6 +655,8 @@ new MockHttp(options?)
 - `httpBin`: HttpBinOptions - Get/set httpbin route options
 - `https`: HttpsOptions | undefined - Get/set HTTPS configuration
 - `isHttps`: boolean - Whether the server is running with HTTPS
+- `http2`: boolean - Get/set HTTP/2 support
+- `http1`: boolean - Get/set HTTP/1.1 fallback for HTTP/2 with HTTPS
 - `server`: FastifyInstance - Get/set the Fastify server instance
 - `taps`: TapManager - Get/set the TapManager instance
 

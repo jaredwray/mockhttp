@@ -20,6 +20,11 @@ export const start = async () => {
 		mockHttp.logging = false;
 	}
 
+	/* v8 ignore next -- @preserve */
+	if (process.env.HTTP2 === "true") {
+		mockHttp.http2 = true;
+	}
+
 	await mockHttp.start();
 
 	return mockHttp;

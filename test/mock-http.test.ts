@@ -672,6 +672,135 @@ describe("MockHttp", () => {
 		});
 	});
 
+	describe("http2", () => {
+		test("should default to no http2", () => {
+			const mock = new MockHttp();
+			expect(mock.http2).toBe(false);
+			expect(mock.http2).toBe(false);
+		});
+
+		test("should accept http2: true option", () => {
+			const mock = new MockHttp({ http2: true });
+			expect(mock.http2).toBe(true);
+			expect(mock.http2).toBe(true);
+		});
+
+		test("should accept http2: false option", () => {
+			const mock = new MockHttp({ http2: false });
+			expect(mock.http2).toBe(false);
+		});
+
+		test("should support http2 getter/setter", () => {
+			const mock = new MockHttp();
+			expect(mock.http2).toBe(false);
+
+			mock.http2 = true;
+			expect(mock.http2).toBe(true);
+
+			mock.http2 = false;
+			expect(mock.http2).toBe(false);
+		});
+
+		test("should default http1 to true", () => {
+			const mock = new MockHttp();
+			expect(mock.http1).toBe(true);
+		});
+
+		test("should accept http1: false option", () => {
+			const mock = new MockHttp({ http1: false });
+			expect(mock.http1).toBe(false);
+		});
+
+		test("should support http1 getter/setter", () => {
+			const mock = new MockHttp();
+			expect(mock.http1).toBe(true);
+
+			mock.http1 = false;
+			expect(mock.http1).toBe(false);
+
+			mock.http1 = true;
+			expect(mock.http1).toBe(true);
+		});
+
+		test("should start with http2 enabled (h2c)", async () => {
+			const mock = new MockHttp({ http2: true, logging: false });
+			await mock.start();
+
+			expect(mock.http2).toBe(true);
+
+			const response = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+			});
+
+			expect(response.statusCode).toBe(200);
+
+			await mock.close();
+		});
+
+		test("should start with http2 and https enabled (h2)", async () => {
+			const mock = new MockHttp({ http2: true, https: true, logging: false });
+			await mock.start();
+
+			expect(mock.http2).toBe(true);
+			expect(mock.isHttps).toBe(true);
+
+			const response = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+			});
+
+			expect(response.statusCode).toBe(200);
+
+			await mock.close();
+		});
+
+		test("should start with http2, https, and http1 false", async () => {
+			const mock = new MockHttp({
+				http2: true,
+				https: true,
+				http1: false,
+				logging: false,
+			});
+			await mock.start();
+
+			expect(mock.http2).toBe(true);
+			expect(mock.isHttps).toBe(true);
+			expect(mock.http1).toBe(false);
+
+			const response = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+			});
+
+			expect(response.statusCode).toBe(200);
+
+			await mock.close();
+		});
+
+		test("should start with http2 and provided PEM cert/key", async () => {
+			const { cert, key } = generateCertificate();
+			const mock = new MockHttp({
+				http2: true,
+				https: { cert, key },
+				logging: false,
+			});
+			await mock.start();
+
+			expect(mock.http2).toBe(true);
+			expect(mock.isHttps).toBe(true);
+
+			const response = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+			});
+
+			expect(response.statusCode).toBe(200);
+
+			await mock.close();
+		});
+	});
+
 	describe("rate limiting", () => {
 		test("should be enabled by default with 1000 requests per minute and localhost excluded", () => {
 			const mock = new MockHttp();

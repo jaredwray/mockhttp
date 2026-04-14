@@ -67,8 +67,8 @@ jobs:
           node-version: 24
           cache: 'pnpm'
 
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install Production Dependencies
+        run: pnpm install --frozen-lockfile --prod
 
       - uses: actions/download-artifact@v4
         with:

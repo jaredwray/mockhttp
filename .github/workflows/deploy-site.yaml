@@ -3,7 +3,7 @@ name: deploy-site
 on:
   workflow_dispatch:
   release:
-    types: [ released ]
+    types: [released]
 
 permissions:
   contents: read
@@ -13,37 +13,64 @@ env:
   SERVICE_NAME: mockhttp
 
 jobs:
-  setup-build-deploy:
-    name: Setup and Deploy to Prod
+  test:
+    name: Test
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # Setup Node
-      - name: Use Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:ci
 
-      # DO NOT USE pnpm here, it will cause issues with Docker build
-      - name: Install Dependencies
-        run: npm install -g pnpm && pnpm install
+  build:
+    name: Build
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
 
-      - name: Build
-        run: pnpm build
+  deploy:
+    name: Deploy to Production
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
 
-      # Setup gcloud CLI
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
       - name: Authenticate with Google Cloud
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
 
-      # Build and push image to Google Container Registry
       - name: Docker Auth
         run: gcloud auth configure-docker
 
@@ -54,32 +81,25 @@ jobs:
         run: docker push gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA
 
       - name: Make deploy-region.sh executable
-        run: chmod +x ./scripts/deploy-region.sh 
+        run: chmod +x ./scripts/deploy-region.sh
 
-      # Deploy image to Cloud Run
       - name: Deploy to [us-central1]
         run: ./scripts/deploy-region.sh us-central1
 
-      # Deploy image to Cloud Run
       - name: Deploy to [us-west1]
         run: ./scripts/deploy-region.sh us-west1
 
-      # Deploy image to Cloud Run
       - name: Deploy to [us-east1]
         run: ./scripts/deploy-region.sh us-east1
 
-      # Deploy image to Cloud Run
       - name: Deploy to [europe-west1]
         run: ./scripts/deploy-region.sh europe-west1
 
-      # Deploy image to Cloud Run
       - name: Deploy to [europe-west3]
         run: ./scripts/deploy-region.sh europe-west3
 
-      # Deploy image to Cloud Run
       - name: Deploy to [asia-northeast1]
         run: ./scripts/deploy-region.sh asia-northeast1
 
-      # Deploy image to Cloud Run
       - name: Deploy to [asia-southeast1]
         run: ./scripts/deploy-region.sh asia-southeast1

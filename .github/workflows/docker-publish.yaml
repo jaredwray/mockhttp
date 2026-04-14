@@ -1,32 +1,74 @@
 name: docker-publish
 
 on:
-    workflow_dispatch:
-    release:
-      types: [released]
+  workflow_dispatch:
+  release:
+    types: [released]
 
 permissions:
   contents: read
 
 jobs:
-  build-and-push:
+  test:
+    name: Test
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
         with:
-         node-version: 24
+          version: 10
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:ci
 
-      - name: Install pnpm
-        run: npm install -g pnpm && pnpm install
+  build:
+    name: Build
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
 
+  publish:
+    name: Publish to Docker Hub
+    needs: build
+    runs-on: ubuntu-latest
+    environment: docker
+    steps:
+      - uses: actions/checkout@v5
 
-      - name: Build
-        run: pnpm build
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
       - name: Set version variable
         run: |
@@ -42,21 +84,20 @@ jobs:
       - name: Build Docker Image
         run: docker build -t jaredwray/mockhttp:${{ env.VERSION }} -t jaredwray/mockhttp:latest .
 
-      - name: Build and push Docker image as SHA
+      - name: Push Docker image (version)
         run: docker push docker.io/jaredwray/mockhttp:${{ env.VERSION }}
 
-      - name: Build and push Docker image as Latest
+      - name: Push Docker image (latest)
         run: docker push docker.io/jaredwray/mockhttp:latest
 
       - name: Build Docker Markdown
         run: pnpm docker:readme
 
-        # Update Docker Hub description
       - name: Update Docker Hub description
-        uses: peter-evans/dockerhub-description@v2
+        uses: peter-evans/dockerhub-description@v4
         with:
-         username: ${{ secrets.DOCKER_USERNAME }}
-         password: ${{ secrets.DOCKER_PASSWORD }}
-         repository: jaredwray/mockhttp
-         short-description: ${{ github.event.repository.description }}
-         readme-filepath: ./DOCKER.md
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: jaredwray/mockhttp
+          short-description: ${{ github.event.repository.description }}
+          readme-filepath: ./DOCKER.md

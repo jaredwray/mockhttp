@@ -68,7 +68,7 @@
 		"@fastify/static": "^9.1.0",
 		"@fastify/swagger": "^9.7.0",
 		"@fastify/swagger-ui": "^5.2.5",
-		"@scalar/api-reference": "^1.48.7",
+		"@scalar/api-reference": "^1.52.1",
 		"detect-port": "^2.1.0",
 		"fastify": "^5.8.4",
 		"hookified": "^2.1.1",
@@ -84,6 +84,14 @@
 	"pnpm": {
 		"overrides": {
 			"set-cookie-parser": "2.7.2"
-		}
+		},
+		"onlyBuiltDependencies": [
+			"@swc/core",
+			"core-js",
+			"esbuild",
+			"protobufjs",
+			"unrs-resolver",
+			"vue-demi"
+		]
 	}
 }

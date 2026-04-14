@@ -71,7 +71,7 @@
 		"@scalar/api-reference": "^1.48.7",
 		"detect-port": "^2.1.0",
 		"fastify": "^5.8.4",
-		"hookified": "^2.1.0",
+		"hookified": "^2.1.1",
 		"html-escaper": "^3.0.3",
 		"pino": "^10.3.1",
 		"pino-pretty": "^13.1.3"

@@ -90,6 +90,29 @@ describe("MockHttp", () => {
 		await mock2.close();
 	});
 
+	test("should ignore trailing path segments after the parsable portion", async () => {
+		const mock = new MockHttp({ logging: false });
+		await mock.start();
+
+		const response = await mock.server.inject({
+			method: "GET",
+			url: "/status/429/foo",
+		});
+
+		expect(response.statusCode).toBe(429);
+		expect(response.json()).toEqual({
+			status: "Response with status code 429",
+		});
+
+		const unknown = await mock.server.inject({
+			method: "GET",
+			url: "/totally/unknown/path",
+		});
+		expect(unknown.statusCode).toBe(404);
+
+		await mock.close();
+	});
+
 	describe("injection/tap feature", () => {
 		test("should be able to set taps property", () => {
 			const mock = new MockHttp();

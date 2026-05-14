@@ -47,6 +47,23 @@ describe("rewriteUrl", () => {
 		await fastify.close();
 	});
 
+	it("rewrites a trailing-slash-only path to the segments without the slash", async () => {
+		const fastify = Fastify({ logger: false, rewriteUrl });
+		fastify.get("/status/:code", async (request) => ({
+			params: request.params,
+		}));
+		fastify.get("/*", async () => ({ matched: "wildcard" }));
+		await fastify.ready();
+
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/status/429/",
+		});
+		expect(response.json()).toEqual({ params: { code: "429" } });
+
+		await fastify.close();
+	});
+
 	it("rewrites several trailing segments down to a known route", async () => {
 		const fastify = buildFastify();
 		const response = await fastify.inject({

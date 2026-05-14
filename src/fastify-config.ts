@@ -21,22 +21,28 @@ export function rewriteUrl(
 		return originalUrl;
 	}
 
-	if (isSpecificMatch(this.findRoute({ method, url: originalUrl }))) {
-		return originalUrl;
-	}
-
 	const queryIdx = originalUrl.indexOf("?");
 	const path = queryIdx >= 0 ? originalUrl.slice(0, queryIdx) : originalUrl;
 	const query = queryIdx >= 0 ? originalUrl.slice(queryIdx) : "";
 
+	if (isSpecificMatch(this.findRoute({ method, url: path }))) {
+		return originalUrl;
+	}
+
 	const segments = path.split("/").filter(Boolean);
 
-	while (segments.length > 1) {
-		segments.pop();
+	while (segments.length >= 1) {
 		const candidatePath = `/${segments.join("/")}`;
-		if (isSpecificMatch(this.findRoute({ method, url: candidatePath }))) {
+		if (
+			candidatePath !== path &&
+			isSpecificMatch(this.findRoute({ method, url: candidatePath }))
+		) {
 			return candidatePath + query;
 		}
+		if (segments.length === 1) {
+			break;
+		}
+		segments.pop();
 	}
 
 	return originalUrl;

@@ -30,6 +30,7 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 - [Response Injection (Tap Feature)](#response-injection-tap-feature)
 - [Rate Limiting](#rate-limiting)
 - [Logging](#logging)
+- [Flexible URL Matching](#flexible-url-matching)
 - [API Reference](#api-reference)
 - [About mockhttp.org](#about-mockhttporg)
 - [Contributing](#contributing)
@@ -607,6 +608,21 @@ You can also disable logging via the `LOGGING` environment variable:
 ```bash
 LOGGING=false node your-app.js
 ```
+
+# Flexible URL Matching
+
+MockHttp ignores trailing path segments that come after the parsable portion of a URL. This is useful when a client appends extra data to a known endpoint — instead of returning 404, MockHttp serves the closest matching route.
+
+For example, all of these are served by `/status/:code`:
+
+```
+GET /status/429
+GET /status/429/
+GET /status/429/foo
+GET /status/429/foo/bar
+```
+
+The rewrite preserves the query string and only triggers when a more specific route exists; URLs whose first path segment doesn't correspond to a registered route still return 404.
 
 # API Reference
 

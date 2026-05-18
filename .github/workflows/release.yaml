@@ -14,13 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          cache: 'pnpm'
+          package-manager-cache: false
+      - run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:ci
 
@@ -30,13 +28,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          cache: 'pnpm'
+          package-manager-cache: false
+      - run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - uses: actions/upload-artifact@v4
@@ -58,6 +54,7 @@ jobs:
         with:
           node-version: 24
           registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
 
       - uses: actions/download-artifact@v4
         with:

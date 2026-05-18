@@ -46,8 +46,12 @@ export class BinManager {
 	constructor(options?: BinManagerOptions) {
 		this._store = options?.store ?? new InMemoryBinStore();
 		this._defaultTtlMs = options?.defaultTtlMs ?? DEFAULT_TTL_MS;
-		this._maxRequestsPerBin =
-			options?.maxRequestsPerBin ?? DEFAULT_MAX_REQUESTS;
+		// Clamp to 0 so a negative cap can't drive the storage layer into a
+		// runaway pop loop.
+		this._maxRequestsPerBin = Math.max(
+			0,
+			options?.maxRequestsPerBin ?? DEFAULT_MAX_REQUESTS,
+		);
 		this._maxBodySize = options?.maxBodySize ?? DEFAULT_MAX_BODY_SIZE;
 		this._idLength = options?.idLength ?? DEFAULT_ID_LENGTH;
 		this._cleanupIntervalMs =

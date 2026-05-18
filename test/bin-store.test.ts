@@ -125,6 +125,16 @@ describe("InMemoryBinStore", () => {
 		expect(store.getRequests("bin1")).toHaveLength(1);
 	});
 
+	it("does not spin forever when max is negative", () => {
+		store.createBin(makeBin());
+		expect(() => {
+			store.addRequest("bin1", makeRequest({ id: "r1" }), -1);
+		}).not.toThrow();
+		// With max < 0, the single request just added gets evicted on the same
+		// call, leaving the bin empty.
+		expect(store.getRequests("bin1")).toEqual([]);
+	});
+
 	it("cleans up expired bins and returns their ids", () => {
 		const now = Date.now();
 		store.createBin(

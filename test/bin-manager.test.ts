@@ -22,6 +22,11 @@ describe("BinManager", () => {
 			expect(manager.store).toBeInstanceOf(InMemoryBinStore);
 		});
 
+		it("clamps a negative maxRequestsPerBin to 0", () => {
+			const m = new BinManager({ maxRequestsPerBin: -10 });
+			expect(m.maxRequestsPerBin).toBe(0);
+		});
+
 		it("accepts a custom store and option overrides", () => {
 			const store = new InMemoryBinStore();
 			const custom = new BinManager({

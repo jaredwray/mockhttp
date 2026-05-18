@@ -112,7 +112,9 @@ export class InMemoryBinStore implements BinStore {
 		}
 
 		list.unshift(req);
-		while (list.length > max) {
+		// Guard against negative `max` values: pop only while the list has
+		// something to drop, otherwise we'd spin forever on an empty array.
+		while (list.length > max && list.length > 0) {
 			list.pop();
 		}
 		bin.requestCount = list.length;

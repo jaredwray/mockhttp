@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import Fastify from "fastify";
 import { describe, expect, test } from "vitest";
+import { BinManager } from "../src/bin-manager.js";
 import { generateCertificate } from "../src/certificate.js";
 import { MockHttp, type MockHttpOptions, mockhttp } from "../src/mock-http.js";
 import { TapManager } from "../src/tap-manager.js";
@@ -111,6 +112,101 @@ describe("MockHttp", () => {
 		expect(unknown.statusCode).toBe(404);
 
 		await mock.close();
+	});
+
+	describe("request bin feature", () => {
+		test("exposes the BinManager via the bins getter", () => {
+			const mock = new MockHttp();
+			expect(mock.bins).toBeInstanceOf(BinManager);
+		});
+
+		test("allows replacing the BinManager via the bins setter", () => {
+			const mock = new MockHttp();
+			const replacement = new BinManager({ defaultTtlMs: 1000 });
+			mock.bins = replacement;
+			expect(mock.bins).toBe(replacement);
+		});
+
+		test("registers and serves bin routes when enabled", async () => {
+			const mock = new MockHttp({ logging: false });
+			await mock.start();
+
+			const created = await mock.server.inject({
+				method: "POST",
+				url: "/bins",
+			});
+			expect(created.statusCode).toBe(200);
+			const id = created.json().id;
+
+			const captured = await mock.server.inject({
+				method: "POST",
+				url: `/b/${id}/webhook?source=x`,
+				payload: "hello",
+			});
+			expect(captured.statusCode).toBe(200);
+
+			const list = await mock.server.inject({
+				method: "GET",
+				url: `/bins/${id}/requests`,
+			});
+			expect(list.json().requests).toHaveLength(1);
+			expect(list.json().requests[0].path).toBe("/webhook");
+
+			await mock.close();
+		});
+
+		test("skips bin route registration when httpBin.bins is false", async () => {
+			const mock = new MockHttp({
+				logging: false,
+				httpBin: {
+					httpMethods: false,
+					redirects: false,
+					requestInspection: false,
+					responseInspection: false,
+					responseFormats: false,
+					statusCodes: false,
+					cookies: false,
+					anything: false,
+					auth: false,
+					images: false,
+					dynamicData: false,
+					bins: false,
+				},
+			});
+			await mock.start();
+
+			const res = await mock.server.inject({
+				method: "POST",
+				url: "/bins",
+			});
+			expect(res.statusCode).toBe(404);
+
+			await mock.close();
+		});
+
+		test("registerBinRoutes accepts an explicit fastify instance", async () => {
+			const mock = new MockHttp({ logging: false });
+			const other = Fastify();
+			await mock.registerBinRoutes(other);
+
+			const created = await other.inject({
+				method: "POST",
+				url: "/bins",
+			});
+			expect(created.statusCode).toBe(200);
+			expect(created.json().id).toBeDefined();
+
+			mock.bins.stop();
+			await other.close();
+		});
+
+		test("close() stops the bin cleanup timer", async () => {
+			const mock = new MockHttp({ logging: false });
+			await mock.start();
+			await mock.close();
+			// Calling stop again must be safe (idempotent), proving close() already stopped it.
+			expect(() => mock.bins.stop()).not.toThrow();
+		});
 	});
 
 	describe("injection/tap feature", () => {

@@ -18,11 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: corepack enable
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          cache: 'pnpm'
+      - run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:ci
 
@@ -32,11 +31,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: corepack enable
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          cache: 'pnpm'
+      - run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - uses: actions/upload-artifact@v4
@@ -54,12 +52,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - run: corepack enable
-
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          cache: 'pnpm'
+
+      - run: corepack enable
 
       - name: Install Production Dependencies
         run: pnpm install --frozen-lockfile --prod

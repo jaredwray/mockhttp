@@ -8,12 +8,12 @@ trustPolicy: no-downgrade
 
 allowBuilds:
   '@swc/core': true
-  core-js: true
+  core-js: false
   esbuild: true
-  protobufjs: true
-  unrs-resolver: true
+  protobufjs: false
   vue-demi: true
 
 overrides:
   set-cookie-parser: 2.7.2
+  '@ungap/structured-clone': '>=1.3.1'
   'glob@<=11.1.0': '11.1.0'

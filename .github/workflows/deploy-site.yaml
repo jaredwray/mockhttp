@@ -28,7 +28,6 @@ jobs:
 
   build:
     name: Build
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -48,7 +47,7 @@ jobs:
 
   deploy:
     name: Deploy to Production
-    needs: build
+    needs: [test, build]
     runs-on: ubuntu-latest
     environment: production
     steps:

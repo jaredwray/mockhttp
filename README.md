@@ -431,6 +431,144 @@ const tap = mock.taps.inject(
 );
 ```
 
+# Request Bins
+
+Bins are ephemeral URL endpoints that **capture incoming HTTP requests** so you
+can inspect them later. They're the inverse of Taps: instead of injecting a
+response, they record everything they receive. Useful for debugging webhooks,
+exercising client SDKs, or recording fixtures.
+
+There are two URL prefixes:
+
+- **`/bins`** — JSON management API: create, list, inspect, delete bins
+- **`/b/:id`** — the capture URL. Any HTTP method, any sub-path, any body sent
+  here is stored against bin `:id`
+
+## Quick Start
+
+```bash
+# 1. create a bin
+curl -s -X POST http://localhost:3000/bins
+# → { "id": "abc123def456", "url": "http://localhost:3000/b/abc123def456",
+#     "createdAt": "...", "expiresAt": "...", "requestCount": 0 }
+
+# 2. send anything to the capture URL
+curl -X POST "http://localhost:3000/b/abc123def456/webhook?source=stripe" \
+  -H 'content-type: application/json' \
+  -d '{"event":"payment.succeeded"}'
+
+# 3. list captured requests (newest first)
+curl http://localhost:3000/bins/abc123def456/requests
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/bins` | Create a new bin |
+| GET | `/bins` | List all active bins |
+| GET | `/bins/:id` | Get bin metadata |
+| GET | `/bins/:id/requests` | List captured requests (newest first) |
+| GET | `/bins/:id/requests/:reqId` | Get a single captured request |
+| DELETE | `/bins/:id/requests` | Clear all captured requests in a bin |
+| DELETE | `/bins/:id` | Delete a bin |
+| ANY | `/b/:id` and `/b/:id/*` | Capture requests sent to a bin |
+
+## Captured Request Shape
+
+```json
+{
+  "id": "req_abcd1234efgh",
+  "binId": "abc123def456",
+  "method": "POST",
+  "url": "/webhook?source=stripe",
+  "path": "/webhook",
+  "query": { "source": "stripe" },
+  "headers": { "content-type": "application/json", "...": "..." },
+  "remoteAddress": "127.0.0.1",
+  "contentType": "application/json",
+  "bodySize": 32,
+  "body": "{\"event\":\"payment.succeeded\"}",
+  "bodyEncoding": "utf8",
+  "truncated": false,
+  "capturedAt": "2026-05-18T12:00:00.000Z"
+}
+```
+
+- **`bodyEncoding`** is `"utf8"` for text content types (text/*, application/json,
+  application/xml, application/x-www-form-urlencoded, application/javascript),
+  `"base64"` for everything else (binary payloads), or `"none"` when no body
+  was sent.
+- **`truncated`** is `true` when the body exceeded `maxBodySize` and was cut
+  off. `bodySize` reflects the original length.
+
+## Programmatic Access
+
+The bin manager is exposed on the `MockHttp` instance as `mock.bins`:
+
+```javascript
+import { MockHttp } from '@jaredwray/mockhttp';
+
+const mock = new MockHttp();
+await mock.start();
+
+// Create a bin directly
+const bin = mock.bins.createBin();
+console.log(bin.id);
+
+// Read captured requests
+const requests = mock.bins.getRequests(bin.id);
+
+await mock.close(); // also stops the bin cleanup timer
+```
+
+## Configuration
+
+Bins can be disabled or tuned. Limits are passed via the `BinManager`
+constructor and require replacing the default manager:
+
+```javascript
+import { MockHttp, BinManager } from '@jaredwray/mockhttp';
+
+const mock = new MockHttp({
+  httpBin: { bins: true }, // default — set false to disable the routes entirely
+});
+
+// Replace the default manager with custom limits
+mock.bins = new BinManager({
+  defaultTtlMs: 60 * 60 * 1000,   // 1 hour (default: 24h)
+  maxRequestsPerBin: 500,          // (default: 100)
+  maxBodySize: 5 * 1024 * 1024,    // 5 MiB (default: 1 MiB)
+  idLength: 16,                    // (default: 12)
+});
+
+await mock.start();
+```
+
+### Defaults
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `defaultTtlMs` | `86400000` (24h) | Bin lifetime. Expired bins return 404 and are lazily removed. |
+| `maxRequestsPerBin` | `100` | When exceeded, oldest captures are dropped (FIFO). |
+| `maxBodySize` | `1048576` (1 MiB) | Larger bodies are truncated; `truncated: true` is set on the capture. |
+| `idLength` | `12` | Length of generated bin and request ids. |
+| `cleanupIntervalMs` | `60000` (1 min) | How often expired bins are swept. The timer is `unref()`'d so it never keeps the process alive. |
+
+### Pluggable Storage
+
+`BinManager` accepts a `store: BinStore` so you can plug in alternative
+backends (Redis, SQLite, etc.) without changing the rest of the codebase. The
+default `InMemoryBinStore` keeps state in process memory.
+
+```typescript
+import { BinManager, type BinStore } from '@jaredwray/mockhttp';
+
+class MyStore implements BinStore { /* ... */ }
+
+mock.bins = new BinManager({ store: new MyStore() });
+```
+
 # Rate Limiting
 
 MockHttp supports rate limiting using [@fastify/rate-limit](https://github.com/fastify/fastify-rate-limit). Rate limiting is **enabled by default** at **1000 requests per minute** with **localhost (127.0.0.1 and ::1) excluded** from rate limiting.
@@ -654,6 +792,7 @@ new MockHttp(options?)
     - `anything?`: boolean - Enable anything routes (default: true)
     - `auth?`: boolean - Enable authentication routes (default: true)
     - `images?`: boolean - Enable image routes (default: true)
+    - `bins?`: boolean - Enable request bin routes /bins and /b/:id (default: true)
   - `https?`: boolean | HttpsOptions - Enable HTTPS with auto-generated or custom certificates (default: undefined/disabled)
   - `http2?`: boolean - Enable HTTP/2 support (default: false)
   - `http1?`: boolean - Allow HTTP/1.1 fallback when using HTTP/2 with HTTPS (default: true)

@@ -36,6 +36,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 	await start();
 }
 
+export type { BinManagerOptions } from "./bin-manager.js";
+export { BinManager } from "./bin-manager.js";
+export type {
+	Bin,
+	BinStore,
+	CapturedRequest,
+} from "./bin-store.js";
+export { InMemoryBinStore } from "./bin-store.js";
 export type {
 	CertificateFileOptions,
 	CertificateOptions,

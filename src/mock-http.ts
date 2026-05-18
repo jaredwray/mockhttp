@@ -10,6 +10,7 @@ import { fastifySwagger } from "@fastify/swagger";
 import { detect } from "detect-port";
 import Fastify, { type FastifyInstance } from "fastify";
 import { Hookified, type HookifiedOptions } from "hookified";
+import { BinManager } from "./bin-manager.js";
 import { type CertificateOptions, generateCertificate } from "./certificate.js";
 import { getFastifyConfig } from "./fastify-config.js";
 import { anythingRoute } from "./routes/anything/index.js";
@@ -19,6 +20,8 @@ import {
 	digestAuthRoute,
 	hiddenBasicAuthRoute,
 } from "./routes/auth/index.js";
+import { binsCaptureRoute } from "./routes/bins/capture.js";
+import { binsManagementRoute } from "./routes/bins/management.js";
 import {
 	deleteCookieRoute,
 	getCookiesRoute,
@@ -77,6 +80,7 @@ export type HttpBinOptions = {
 	auth?: boolean;
 	images?: boolean;
 	dynamicData?: boolean;
+	bins?: boolean;
 };
 
 export type HttpsOptions = {
@@ -175,6 +179,7 @@ export class MockHttp extends Hookified {
 		auth: true,
 		images: true,
 		dynamicData: true,
+		bins: true,
 	};
 
 	private _rateLimit?: RateLimitPluginOptions = {
@@ -190,6 +195,7 @@ export class MockHttp extends Hookified {
 
 	private _server: FastifyInstance = Fastify();
 	private _taps: TapManager = new TapManager();
+	private _bins: BinManager = new BinManager();
 
 	constructor(options?: MockHttpOptions) {
 		super(options?.hookOptions);
@@ -467,6 +473,20 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
+	 * The BinManager instance for managing request bins.
+	 */
+	public get bins(): BinManager {
+		return this._bins;
+	}
+
+	/**
+	 * The BinManager instance for managing request bins.
+	 */
+	public set bins(bins: BinManager) {
+		this._bins = bins;
+	}
+
+	/**
 	 * Start the Fastify server. If the server is already running, it will be closed and restarted.
 	 */
 	public async start(): Promise<void> {
@@ -587,6 +607,7 @@ export class MockHttp extends Hookified {
 				auth,
 				images,
 				dynamicData,
+				bins,
 			} = this._httpBin;
 
 			if (httpMethods) {
@@ -633,6 +654,11 @@ export class MockHttp extends Hookified {
 				await this.registerDynamicDataRoutes();
 			}
 
+			if (bins) {
+				await this.registerBinRoutes();
+				this._bins.start();
+			}
+
 			if (this._autoDetectPort) {
 				const originalPort = this._port;
 				this._port = await this.detectPort();
@@ -655,6 +681,7 @@ export class MockHttp extends Hookified {
 	 * Close the Fastify server.
 	 */
 	public async close(): Promise<void> {
+		this._bins.stop();
 		await this._server.close();
 	}
 
@@ -825,6 +852,18 @@ export class MockHttp extends Hookified {
 		await fastify.register(rangeRoute);
 		await fastify.register(dripRoute);
 		await fastify.register(linksRoute);
+	}
+
+	/**
+	 * Register the request bin routes (management at /bins and capture at /b/:id).
+	 * @param fastifyInstance - the server instance to register the routes on.
+	 */
+	public async registerBinRoutes(
+		fastifyInstance?: FastifyInstance,
+	): Promise<void> {
+		const fastify = fastifyInstance ?? this._server;
+		await fastify.register(binsManagementRoute(this._bins));
+		await fastify.register(binsCaptureRoute(this._bins));
 	}
 	private async resolveHttpsCredentials(
 		options: HttpsOptions,

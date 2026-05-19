@@ -8,7 +8,14 @@ function isSpecificMatch(
 		return false;
 	}
 	const params = route.params as Record<string, unknown> | undefined;
-	return params === undefined || params["*"] === undefined;
+	// A literal route or one whose params include something other than the
+	// catch-all wildcard is considered specific. `/*` (params keyed only by
+	// "*") is a fallback that should defer to a more specific prefix match.
+	if (!params) {
+		return true;
+	}
+	const keys = Object.keys(params);
+	return keys.length === 0 || keys.some((k) => k !== "*");
 }
 
 export function rewriteUrl(

@@ -124,6 +124,33 @@ describe("rewriteUrl", () => {
 		await fastify.close();
 	});
 
+	it("does not strip when an explicit wildcard subroute exists", async () => {
+		const fastify = Fastify({ logger: false, rewriteUrl });
+		fastify.get("/b/:id", async (request) => ({
+			params: request.params,
+			matched: "root",
+		}));
+		fastify.get("/b/:id/*", async (request) => ({
+			params: request.params,
+			matched: "wildcard",
+		}));
+		await fastify.ready();
+
+		const subpath = await fastify.inject({
+			method: "GET",
+			url: "/b/abc/foo/bar",
+		});
+		expect(subpath.json()).toEqual({
+			params: { id: "abc", "*": "foo/bar" },
+			matched: "wildcard",
+		});
+
+		const root = await fastify.inject({ method: "GET", url: "/b/abc" });
+		expect(root.json()).toEqual({ params: { id: "abc" }, matched: "root" });
+
+		await fastify.close();
+	});
+
 	it("prefers a specific route over a wildcard catch-all when stripping", async () => {
 		const fastify = Fastify({ logger: false, rewriteUrl });
 		fastify.get("/status/:code", async () => ({ matched: "status" }));
@@ -156,6 +183,17 @@ describe("rewriteUrl", () => {
 			method: undefined,
 		} as unknown as import("node:http").IncomingMessage);
 		expect(result).toBe("/status/429/foo");
+	});
+
+	it("treats routes with undefined params as specific", () => {
+		const fakeFastify = {
+			findRoute: () => ({ params: undefined }),
+		} as unknown as import("fastify").FastifyInstance;
+		const result = rewriteUrl.call(fakeFastify, {
+			url: "/something/anything",
+			method: "GET",
+		} as unknown as import("node:http").IncomingMessage);
+		expect(result).toBe("/something/anything");
 	});
 
 	it("returns '/' when the request URL is missing", () => {

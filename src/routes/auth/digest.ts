@@ -69,7 +69,7 @@ const parseDigest = (header?: string): Record<string, string> | undefined => {
 	const scheme = header.slice(0, spaceIndex);
 	const rest = header.slice(spaceIndex + 1);
 
-	if (!scheme || scheme.toLowerCase() !== "digest" || !rest) {
+	if (scheme?.toLowerCase() !== "digest" || !rest) {
 		return undefined;
 	}
 

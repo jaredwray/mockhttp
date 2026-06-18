@@ -17,7 +17,7 @@ const parseBasic = (header?: string) => {
 	}
 
 	const [scheme, value] = header.split(" ");
-	if (!scheme || scheme.toLowerCase() !== "basic" || !value) {
+	if (scheme?.toLowerCase() !== "basic" || !value) {
 		return undefined;
 	}
 

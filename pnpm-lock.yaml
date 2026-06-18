@@ -41,8 +41,8 @@ importers:
         specifier: ^5.8.5
         version: 5.8.5
       hookified:
-        specifier: ^2.2.0
-        version: 2.2.0
+        specifier: ^3.0.0
+        version: 3.0.0
       html-escaper:
         specifier: ^3.0.3
         version: 3.0.3
@@ -1807,8 +1807,9 @@ packages:
   hookable@6.1.1:
     resolution: {integrity: sha512-U9LYDy1CwhMCnprUfeAZWZGByVbhd54hwepegYTK7Pi5NvqEj63ifz5z+xukznehT7i6NIZRu89Ay1AZmRsLEQ==}
 
-  hookified@2.2.0:
-    resolution: {integrity: sha512-p/LgFzRN5FeoD3DLS6bkUapeye6E4SI6yJs6KetENd18S+FBthqYq2amJUWpt5z0EQwwHemidjY5OqJGEKm5uA==}
+  hookified@3.0.0:
+    resolution: {integrity: sha512-x+jzDjd9CWxdgl6u/K4pjnvw7PZx6ZSpiPGAV43uXlJiJy7r2jIEUxxU1Cv7+rwy1GK5Qt5S+Jp7n81DpcUvTA==}
+    engines: {node: '>=22.18.0'}
 
   html-escaper@2.0.2:
     resolution: {integrity: sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg==}
@@ -4623,7 +4624,7 @@ snapshots:
 
   hookable@6.1.1: {}
 
-  hookified@2.2.0: {}
+  hookified@3.0.0: {}
 
   html-escaper@2.0.2: {}
 

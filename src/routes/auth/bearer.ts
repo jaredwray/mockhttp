@@ -11,7 +11,7 @@ const parseBearer = (header?: string) => {
 	}
 
 	const [scheme, token] = header.split(" ");
-	if (!scheme || scheme.toLowerCase() !== "bearer" || !token) {
+	if (scheme?.toLowerCase() !== "bearer" || !token) {
 		return undefined;
 	}
 

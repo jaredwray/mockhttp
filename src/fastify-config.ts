@@ -56,22 +56,48 @@ export function rewriteUrl(
 }
 
 /**
+ * Parses an `application/x-www-form-urlencoded` body string into a plain
+ * object (last value wins for repeated keys, matching how this server
+ * already exposes `request.query` for querystrings).
+ *
+ * Non-string input (Fastify's `parseAs: "string"` guarantees a string in
+ * practice, but the parser type signature is `unknown`) parses as empty.
+ *
+ * `Object.fromEntries` wouldn't trigger the `Object.prototype.__proto__`
+ * setter here, so building this by hand isn't closing an exploitable
+ * prototype-pollution hole - but it does stop a form field literally named
+ * "constructor" or "__proto__" from shadowing the real one on the object
+ * this server echoes back to the client.
+ */
+export function parseFormUrlencoded(body: unknown): Record<string, string> {
+	if (typeof body !== "string") {
+		return {};
+	}
+
+	const parsed: Record<string, string> = {};
+	for (const [key, value] of new URLSearchParams(body)) {
+		if (key === "__proto__" || key === "constructor") {
+			continue;
+		}
+		parsed[key] = value;
+	}
+
+	return parsed;
+}
+
+/**
  * Registers an `application/x-www-form-urlencoded` body parser on the given
  * Fastify instance. Fastify only understands `application/json` and
  * `text/plain` out of the box, so a plain HTML form POST (or any client that
  * sends url-encoded bodies, e.g. GM_xmlhttpRequest/XHR form submissions)
  * otherwise gets rejected with a 415 before it ever reaches a route handler.
- *
- * The parsed body is exposed as a plain object (last value wins for repeated
- * keys), matching how this server already exposes `request.query` for
- * querystrings.
  */
 export function registerFormUrlencodedParser(fastify: FastifyInstance) {
 	fastify.addContentTypeParser(
 		"application/x-www-form-urlencoded",
 		{ parseAs: "string" },
 		(_request, body, done) => {
-			done(null, Object.fromEntries(new URLSearchParams(body as string)));
+			done(null, parseFormUrlencoded(body));
 		},
 	);
 }

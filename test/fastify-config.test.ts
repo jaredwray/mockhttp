@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import { describe, expect, it } from "vitest";
 import {
 	getFastifyConfig,
+	parseFormUrlencoded,
 	registerFormUrlencodedParser,
 	rewriteUrl,
 } from "../src/fastify-config.js";
@@ -54,6 +55,30 @@ describe("registerFormUrlencodedParser", () => {
 		expect(response.json()).toEqual({ a: 1 });
 
 		await fastify.close();
+	});
+});
+
+describe("parseFormUrlencoded", () => {
+	it("parses a url-encoded string into a plain object", () => {
+		expect(parseFormUrlencoded("a=1&b=two")).toEqual({ a: "1", b: "two" });
+	});
+
+	it("last value wins for repeated keys, matching request.query", () => {
+		expect(parseFormUrlencoded("a=1&a=2")).toEqual({ a: "2" });
+	});
+
+	it("returns an empty object for non-string input", () => {
+		expect(parseFormUrlencoded(undefined)).toEqual({});
+		expect(parseFormUrlencoded(null)).toEqual({});
+		expect(parseFormUrlencoded(Buffer.from("a=1"))).toEqual({});
+	});
+
+	it("drops __proto__ and constructor keys instead of letting them shadow the real ones", () => {
+		const parsed = parseFormUrlencoded("__proto__=x&constructor=y&a=1");
+
+		expect(parsed).toEqual({ a: "1" });
+		expect(Object.getPrototypeOf(parsed)).toBe(Object.prototype);
+		expect(typeof parsed.constructor).toBe("function");
 	});
 });
 

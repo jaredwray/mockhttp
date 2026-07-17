@@ -4,6 +4,10 @@ import type {
 	FastifyRequest,
 	FastifySchema,
 } from "fastify";
+import {
+	encodeRequestBody,
+	registerRawBodyFallbackParser,
+} from "../http-methods/raw-body.js";
 
 const anythingSchema: FastifySchema = {
 	description: "Will return anything that you send it",
@@ -19,11 +23,11 @@ const anythingSchema: FastifySchema = {
 					additionalProperties: true,
 				},
 
-				// Echo back whatever was in the request.body
+				// Echo back whatever was in the request.body. Any valid JSON
+				// value, or the utf8/base64 string produced for non-JSON
+				// content types - see raw-body.ts.
 				data: {
-					type: "object",
 					description: "Request body data",
-					additionalProperties: true,
 				},
 
 				// If you’re using fastify-multipart, you’ll get
@@ -39,9 +43,7 @@ const anythingSchema: FastifySchema = {
 				// these fields land in request.body too, but you can
 				// mirror them separately if you like
 				form: {
-					type: "object",
 					description: "Form data",
-					additionalProperties: true,
 				},
 
 				headers: {
@@ -51,9 +53,7 @@ const anythingSchema: FastifySchema = {
 				},
 
 				json: {
-					type: "object",
 					description: "Parsed JSON body",
-					additionalProperties: true,
 				},
 
 				method: { type: "string", description: "HTTP method used" },
@@ -68,26 +68,30 @@ const anythingSchema: FastifySchema = {
 
 export type AnythingResponse = {
 	args: Record<string, unknown>;
-	data: Record<string, unknown>;
+	data: unknown;
 	files: Record<string, unknown>;
-	form: Record<string, unknown>;
+	form: unknown;
 	headers: Record<string, unknown>;
-	json: Record<string, unknown>;
+	json: unknown;
 	method: string;
 	origin: string;
 	url: string;
 };
 
 export const anythingRoute = (fastify: FastifyInstance) => {
+	registerRawBodyFallbackParser(fastify);
+
 	const handler = async (request: FastifyRequest, reply: FastifyReply) => {
+		const body =
+			encodeRequestBody(request.body, request.headers["content-type"]) ?? {};
 		const response: AnythingResponse = {
 			args: request.query as Record<string, unknown>,
-			data: (request.body as Record<string, unknown>) ?? {},
+			data: body,
 			// biome-ignore lint/suspicious/noExplicitAny: expected
 			files: (request.raw as any)?.files ?? {},
-			form: (request.body as Record<string, unknown>) ?? {},
+			form: body,
 			headers: request.headers,
-			json: (request.body as Record<string, unknown>) ?? {},
+			json: body,
 			method: request.method,
 			origin: request.headers.origin ?? request.headers.host ?? "",
 			url: request.url,

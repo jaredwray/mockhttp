@@ -68,4 +68,39 @@ describe("POST /post route", async () => {
 		);
 		expect(responseBody.headers).toHaveProperty("custom-header", "CustomValue");
 	});
+
+	it("should accept a binary body instead of rejecting it with 415", async () => {
+		const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+		const response = await fastify.inject({
+			method: "POST",
+			url: "/post",
+			payload: png,
+			headers: { "content-type": "image/png" },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().body).toBe(png.toString("base64"));
+	});
+
+	it("should accept a plain-text body and echo it back decoded", async () => {
+		const response = await fastify.inject({
+			method: "POST",
+			url: "/post",
+			payload: "hello world",
+			headers: { "content-type": "text/plain" },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().body).toBe("hello world");
+	});
+
+	it("should return 200 with an empty body instead of crashing when no body is sent at all", async () => {
+		const response = await fastify.inject({
+			method: "POST",
+			url: "/post",
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().body).toEqual({});
+	});
 });

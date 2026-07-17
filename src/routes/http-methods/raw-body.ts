@@ -1,7 +1,13 @@
 import type { FastifyInstance } from "fastify";
 
+// Matches text/*, the common textual application/* types, and any type using
+// a structured syntax suffix (RFC 6839) like application/ld+json,
+// application/vnd.api+json, or image/svg+xml - those are textual regardless
+// of which top-level media type they hang off of. The trailing \b keeps
+// lookalikes like application/jsonp from matching just because they share a
+// "json"/"xml" prefix.
 const TEXT_CONTENT_TYPE_REGEX =
-	/^(text\/|application\/(json|xml|x-www-form-urlencoded|javascript))/i;
+	/^(text\/|application\/(json|xml|x-www-form-urlencoded|javascript)|[\w.-]+\/[\w.-]*\+(json|xml))\b/i;
 
 /**
  * Registers a catch-all content-type parser, scoped to whichever plugin
@@ -48,4 +54,20 @@ export function encodeRequestBody(
 		? TEXT_CONTENT_TYPE_REGEX.test(contentType)
 		: false;
 	return isText ? body.toString("utf8") : body.toString("base64");
+}
+
+const JSON_CONTENT_TYPE_REGEX = /^application\/(?:[\w.-]*\+)?json\b/i;
+const FORM_CONTENT_TYPE_REGEX =
+	/^(application\/x-www-form-urlencoded|multipart\/form-data)\b/i;
+
+/** Whether a Content-Type header denotes a JSON body (including structured
+ * syntax suffixes like application/ld+json). */
+export function isJsonContentType(contentType: string | undefined): boolean {
+	return contentType != null && JSON_CONTENT_TYPE_REGEX.test(contentType);
+}
+
+/** Whether a Content-Type header denotes a form body (url-encoded or
+ * multipart). */
+export function isFormContentType(contentType: string | undefined): boolean {
+	return contentType != null && FORM_CONTENT_TYPE_REGEX.test(contentType);
 }

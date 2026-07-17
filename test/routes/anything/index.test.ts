@@ -35,8 +35,42 @@ describe("Status Codes Route", () => {
 
 		expect(response.statusCode).toBe(200);
 		const body = response.json();
+		// `data` always carries the encoded body, but a binary payload isn't a
+		// form or a JSON body, so `form`/`json` must not echo it too.
 		expect(body.data).toBe(png.toString("base64"));
-		expect(body.form).toBe(png.toString("base64"));
-		expect(body.json).toBe(png.toString("base64"));
+		expect(body.form).toEqual({});
+		expect(body.json).toEqual({});
+	});
+
+	it("should only populate `form` for a form-urlencoded body", async () => {
+		const response = await fastify.inject({
+			method: "POST",
+			url: "/anything",
+			payload: "a=1&b=two",
+			headers: { "content-type": "application/x-www-form-urlencoded" },
+		});
+
+		expect(response.statusCode).toBe(200);
+		const body = response.json();
+		// This server doesn't register a dedicated application/x-www-form-urlencoded
+		// parser (that's a separate, independent change), so the raw-body
+		// fallback parser here decodes it as text rather than an object - but
+		// it must still land under `form`, not `json`.
+		expect(body.form).toBe("a=1&b=two");
+		expect(body.json).toEqual({});
+	});
+
+	it("should only populate `json` for a JSON body", async () => {
+		const response = await fastify.inject({
+			method: "POST",
+			url: "/anything",
+			payload: { a: 1 },
+			headers: { "content-type": "application/json" },
+		});
+
+		expect(response.statusCode).toBe(200);
+		const body = response.json();
+		expect(body.json).toEqual({ a: 1 });
+		expect(body.form).toEqual({});
 	});
 });

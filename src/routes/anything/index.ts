@@ -6,6 +6,8 @@ import type {
 } from "fastify";
 import {
 	encodeRequestBody,
+	isFormContentType,
+	isJsonContentType,
 	registerRawBodyFallbackParser,
 } from "../http-methods/raw-body.js";
 
@@ -82,16 +84,19 @@ export const anythingRoute = (fastify: FastifyInstance) => {
 	registerRawBodyFallbackParser(fastify);
 
 	const handler = async (request: FastifyRequest, reply: FastifyReply) => {
-		const body =
-			encodeRequestBody(request.body, request.headers["content-type"]) ?? {};
+		const contentType = request.headers["content-type"];
+		const body = encodeRequestBody(request.body, contentType) ?? {};
 		const response: AnythingResponse = {
 			args: request.query as Record<string, unknown>,
 			data: body,
 			// biome-ignore lint/suspicious/noExplicitAny: expected
 			files: (request.raw as any)?.files ?? {},
-			form: body,
+			// Only mirror the body into `form`/`json` when the Content-Type
+			// actually says so, so a binary/raw payload doesn't show up under
+			// a field that implies it was parsed as something it wasn't.
+			form: isFormContentType(contentType) ? body : {},
 			headers: request.headers,
-			json: body,
+			json: isJsonContentType(contentType) ? body : {},
 			method: request.method,
 			origin: request.headers.origin ?? request.headers.host ?? "",
 			url: request.url,

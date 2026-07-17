@@ -13,6 +13,11 @@ describe("getFastifyConfig", () => {
 		const config = getFastifyConfig(false);
 		expect(config.logger).toBe(false);
 	});
+
+	it("raises the router's maxParamLength past find-my-way's 100-char default", () => {
+		const config = getFastifyConfig();
+		expect(config.routerOptions.maxParamLength).toBeGreaterThan(100);
+	});
 });
 
 describe("rewriteUrl", () => {

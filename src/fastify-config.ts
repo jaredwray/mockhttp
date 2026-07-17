@@ -71,5 +71,13 @@ export function getFastifyConfig(logging = true) {
 				}
 			: false,
 		rewriteUrl,
+		// find-my-way (Fastify's router) defaults maxParamLength to 100, which
+		// silently 404s routes like /base64/:value once the encoded payload
+		// exceeds 100 characters. Raise it so single-segment params (base64
+		// payloads, bin ids, etc.) can hold realistically sized values while
+		// still bounding worst-case route-matching cost.
+		routerOptions: {
+			maxParamLength: 8192,
+		},
 	};
 }

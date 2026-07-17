@@ -114,6 +114,29 @@ describe("MockHttp", () => {
 		await mock.close();
 	});
 
+	test("should route single-segment params longer than find-my-way's 100-char default", async () => {
+		const mock = new MockHttp({ logging: false });
+		await mock.start();
+
+		// "The quick brown fox..." (338 chars) base64-encoded, well past the
+		// find-my-way default maxParamLength of 100.
+		const longValue =
+			"VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZy4gVGhpcyBzZW50ZW5jZSBjb250YWlucyBldmVyeSBsZXR0ZXIgb2YgdGhlIEVuZ2xpc2ggYWxwaGFiZXQgYW5kIGlzIG9mdGVuIHVzZWQgZm9yIHR5cGluZyBwcmFjdGljZSwgZm9udCB0ZXN0aW5nLCBhbmQgZW5jb2RpbmcgZXhwZXJpbWVudHMuIEJhc2U2NCBlbmNvZGluZyB0cmFuc2Zvcm1zIHRoaXMgcmVhZGFibGUgdGV4dCBpbnRvIGEgc2VxdWVuY2Ugb2YgQVNDSUkgY2hhcmFjdGVycyB0aGF0IGNhbiBzYWZlbHkgYmUgdHJhbnNtaXR0ZWQgb3Igc3RvcmVkIGluIHN5c3RlbXMgdGhhdCBoYW5kbGUgdGV4dC1vbmx5IGRhdGEu";
+		expect(longValue.length).toBeGreaterThan(100);
+
+		const response = await mock.server.inject({
+			method: "GET",
+			url: `/base64/${longValue}`,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.payload).toBe(
+			"The quick brown fox jumps over the lazy dog. This sentence contains every letter of the English alphabet and is often used for typing practice, font testing, and encoding experiments. Base64 encoding transforms this readable text into a sequence of ASCII characters that can safely be transmitted or stored in systems that handle text-only data.",
+		);
+
+		await mock.close();
+	});
+
 	describe("request bin feature", () => {
 		test("exposes the BinManager via the bins getter", () => {
 			const mock = new MockHttp();

@@ -23,4 +23,15 @@ describe("Status Codes Route", () => {
 		expect(response.json().json).toEqual({});
 		expect(response.json().origin).toBeDefined();
 	});
+
+	it("should handle OPTIONS the same as any other method", async () => {
+		const response = await fastify.inject({
+			method: "OPTIONS",
+			url: "/anything",
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().method).toBe("OPTIONS");
+		expect(response.json().url).toBe("/anything");
+	});
 });

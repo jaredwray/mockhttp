@@ -108,4 +108,9 @@ export const anythingRoute = (fastify: FastifyInstance) => {
 	fastify.put("/anything", noValidation, handler);
 	fastify.patch("/anything", noValidation, handler);
 	fastify.delete("/anything", noValidation, handler);
+	// OPTIONS goes through the same echo handler as every other method here,
+	// consistent with how the /b/:id bin-capture route already treats OPTIONS
+	// as just another method to record and echo back rather than a bare
+	// CORS-style 204 - "anything" means anything.
+	fastify.options("/anything", noValidation, handler);
 };

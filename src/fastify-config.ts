@@ -55,6 +55,27 @@ export function rewriteUrl(
 	return originalUrl;
 }
 
+/**
+ * Registers an `application/x-www-form-urlencoded` body parser on the given
+ * Fastify instance. Fastify only understands `application/json` and
+ * `text/plain` out of the box, so a plain HTML form POST (or any client that
+ * sends url-encoded bodies, e.g. GM_xmlhttpRequest/XHR form submissions)
+ * otherwise gets rejected with a 415 before it ever reaches a route handler.
+ *
+ * The parsed body is exposed as a plain object (last value wins for repeated
+ * keys), matching how this server already exposes `request.query` for
+ * querystrings.
+ */
+export function registerFormUrlencodedParser(fastify: FastifyInstance) {
+	fastify.addContentTypeParser(
+		"application/x-www-form-urlencoded",
+		{ parseAs: "string" },
+		(_request, body, done) => {
+			done(null, Object.fromEntries(new URLSearchParams(body as string)));
+		},
+	);
+}
+
 export function getFastifyConfig(logging = true) {
 	return {
 		logger: logging

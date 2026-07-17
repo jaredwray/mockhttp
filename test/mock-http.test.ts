@@ -114,6 +114,33 @@ describe("MockHttp", () => {
 		await mock.close();
 	});
 
+	test("should parse application/x-www-form-urlencoded bodies instead of rejecting them with 415", async () => {
+		const mock = new MockHttp({ logging: false });
+		await mock.start();
+
+		const response = await mock.server.inject({
+			method: "POST",
+			url: "/post",
+			payload: "a=1&b=two",
+			headers: { "content-type": "application/x-www-form-urlencoded" },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().body).toEqual({ a: "1", b: "two" });
+
+		const anything = await mock.server.inject({
+			method: "POST",
+			url: "/anything",
+			payload: "a=1&b=two",
+			headers: { "content-type": "application/x-www-form-urlencoded" },
+		});
+
+		expect(anything.statusCode).toBe(200);
+		expect(anything.json().form).toEqual({ a: "1", b: "two" });
+
+		await mock.close();
+	});
+
 	describe("request bin feature", () => {
 		test("exposes the BinManager via the bins getter", () => {
 			const mock = new MockHttp();

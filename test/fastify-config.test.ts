@@ -1,6 +1,10 @@
 import Fastify from "fastify";
 import { describe, expect, it } from "vitest";
-import { getFastifyConfig, rewriteUrl } from "../src/fastify-config.js";
+import {
+	getFastifyConfig,
+	registerFormUrlencodedParser,
+	rewriteUrl,
+} from "../src/fastify-config.js";
 
 describe("getFastifyConfig", () => {
 	it("returns logger config when logging is enabled (default)", () => {
@@ -12,6 +16,44 @@ describe("getFastifyConfig", () => {
 	it("disables the logger when logging is false", () => {
 		const config = getFastifyConfig(false);
 		expect(config.logger).toBe(false);
+	});
+});
+
+describe("registerFormUrlencodedParser", () => {
+	it("parses application/x-www-form-urlencoded bodies into an object", async () => {
+		const fastify = Fastify();
+		registerFormUrlencodedParser(fastify);
+		fastify.post("/echo", async (request) => request.body);
+
+		const response = await fastify.inject({
+			method: "POST",
+			url: "/echo",
+			payload: "a=1&b=two",
+			headers: { "content-type": "application/x-www-form-urlencoded" },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({ a: "1", b: "two" });
+
+		await fastify.close();
+	});
+
+	it("still lets the default JSON parser handle application/json bodies", async () => {
+		const fastify = Fastify();
+		registerFormUrlencodedParser(fastify);
+		fastify.post("/echo", async (request) => request.body);
+
+		const response = await fastify.inject({
+			method: "POST",
+			url: "/echo",
+			payload: { a: 1 },
+			headers: { "content-type": "application/json" },
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json()).toEqual({ a: 1 });
+
+		await fastify.close();
 	});
 });
 

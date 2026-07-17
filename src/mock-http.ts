@@ -12,7 +12,10 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { Hookified, type HookifiedOptions } from "hookified";
 import { BinManager } from "./bin-manager.js";
 import { type CertificateOptions, generateCertificate } from "./certificate.js";
-import { getFastifyConfig } from "./fastify-config.js";
+import {
+	getFastifyConfig,
+	registerFormUrlencodedParser,
+} from "./fastify-config.js";
 import { anythingRoute } from "./routes/anything/index.js";
 import {
 	basicAuthRoute,
@@ -524,6 +527,7 @@ export class MockHttp extends Hookified {
 			}
 
 			this._server = Fastify(fastifyOptions) as unknown as FastifyInstance;
+			registerFormUrlencodedParser(this._server);
 
 			// Register injection hook to intercept requests
 			this._server.addHook("onRequest", async (request, reply) => {

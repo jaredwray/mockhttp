@@ -101,4 +101,37 @@ describe("GET /drip route", () => {
 		expect(response.statusCode).toBe(200);
 		expect(endTime - startTime).toBeGreaterThanOrEqual(80); // Allow some tolerance
 	});
+
+	it("should not set X-Accel-Buffering by default", async () => {
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/drip?numbytes=1&duration=0&delay=0",
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.headers["x-accel-buffering"]).toBeUndefined();
+	});
+
+	it.each([
+		"true",
+		"1",
+	])("should set X-Accel-Buffering: no when no_buffering=%s", async (value) => {
+		const response = await fastify.inject({
+			method: "GET",
+			url: `/drip?numbytes=1&duration=0&delay=0&no_buffering=${value}`,
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.headers["x-accel-buffering"]).toBe("no");
+	});
+
+	it("should not set X-Accel-Buffering for an unrecognized no_buffering value", async () => {
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/drip?numbytes=1&duration=0&delay=0&no_buffering=yes",
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.headers["x-accel-buffering"]).toBeUndefined();
+	});
 });

@@ -11,6 +11,7 @@ type DripRequest = FastifyRequest<{
 		numbytes?: string;
 		code?: string;
 		delay?: string;
+		no_buffering?: string;
 	};
 }>;
 
@@ -37,6 +38,11 @@ const dripSchema: FastifySchema = {
 			delay: {
 				type: "string",
 				description: "Initial delay in seconds before starting (default: 2)",
+			},
+			no_buffering: {
+				type: "string",
+				description:
+					"When 'true' or '1', sets the X-Accel-Buffering: no response header, asking any buffering reverse proxy in front of this server (e.g. Cloudflare, nginx) to stream bytes through as they're written instead of holding the full response until it's complete. Off by default since it has no effect running directly against this server and is only useful when deployed behind such a proxy.",
 			},
 		},
 	},
@@ -120,10 +126,24 @@ export const dripRoute = (fastify: FastifyInstance) => {
 			}
 
 			// Set headers - NOT using chunked encoding (per httpbin spec)
-			reply.raw.writeHead(code, {
+			const headers: Record<string, string> = {
 				"Content-Type": "application/octet-stream",
 				"Content-Length": actualBytes.toString(),
-			});
+			};
+			// A reverse proxy sitting in front of this server (this is how
+			// mockhttp.org itself is deployed - see the "Cloudflare" section of
+			// the README) may buffer the whole response before forwarding it,
+			// which defeats the entire point of "drip"-ing bytes over time.
+			// X-Accel-Buffering: no is a de facto standard (originally an
+			// nginx directive, also honored by Cloudflare) for asking a proxy
+			// to pass bytes through as written instead of buffering them.
+			if (
+				request.query.no_buffering === "true" ||
+				request.query.no_buffering === "1"
+			) {
+				headers["X-Accel-Buffering"] = "no";
+			}
+			reply.raw.writeHead(code, headers);
 
 			if (actualBytes === 0) {
 				reply.raw.end();

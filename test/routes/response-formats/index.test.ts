@@ -778,6 +778,42 @@ describe("Plain, Text, and HTML Routes", () => {
 			const json = JSON.parse(response.body);
 			expect(json.error).toBe("Template index must be between 1 and 5");
 		});
+
+		it("should keep stable JSON output when a hook mutates the payload", async () => {
+			const mutatingFastify = Fastify();
+			mutatingFastify.addHook(
+				"preSerialization",
+				async (_request, _reply, payload) => {
+					const data = payload as { permissions?: string[] };
+					if (Array.isArray(data.permissions)) {
+						data.permissions.push("mutated-by-hook");
+					}
+					return payload;
+				},
+			);
+			await mutatingFastify.register(responseFormatRoutes);
+
+			const first = await mutatingFastify.inject({
+				method: "GET",
+				url: "/json/2",
+			});
+			const second = await mutatingFastify.inject({
+				method: "GET",
+				url: "/json/2",
+			});
+
+			// The hook's mutation must not leak into the shared template
+			expect(first.statusCode).toBe(200);
+			expect(first.body).toBe(second.body);
+			expect(JSON.parse(second.body).permissions).toEqual([
+				"read",
+				"write",
+				"delete",
+				"mutated-by-hook",
+			]);
+
+			await mutatingFastify.close();
+		});
 	});
 
 	// Tests for /deny endpoint

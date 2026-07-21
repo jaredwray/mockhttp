@@ -478,7 +478,9 @@ export const responseFormatRoutes = (fastify: FastifyInstance) => {
 		}
 
 		reply.type("application/json");
-		return randomJsonContent[index];
+		// Clone so hooks that mutate the payload cannot contaminate the
+		// shared template and break the stable output guarantee.
+		return structuredClone(randomJsonContent[index]);
 	};
 
 	fastify.get("/json/:index?", { schema: jsonSchema }, jsonHandler);

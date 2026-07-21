@@ -722,6 +722,20 @@ describe("Plain, Text, and HTML Routes", () => {
 			}
 		});
 
+		it("should return 404 for a trailing slash without an index", async () => {
+			// /json/ resolves the optional param to an empty string; a
+			// malformed index must fail loudly rather than silently
+			// falling back to a random template.
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/json/",
+			});
+
+			expect(response.statusCode).toBe(404);
+			const json = JSON.parse(response.body);
+			expect(json.error).toBe("Template index must be between 1 and 5");
+		});
+
 		it("should return 404 for non-integer JSON indexes", async () => {
 			for (const index of ["abc", "1.5"]) {
 				const response = await fastify.inject({

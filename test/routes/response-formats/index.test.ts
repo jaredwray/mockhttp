@@ -561,6 +561,225 @@ describe("Plain, Text, and HTML Routes", () => {
 		});
 	});
 
+	// Tests for stable template output via optional index parameter
+	describe("stable template output via /:index", () => {
+		it("should return identical JSON for the same index across multiple calls", async () => {
+			for (let index = 1; index <= 5; index++) {
+				const first = await fastify.inject({
+					method: "GET",
+					url: `/json/${index}`,
+				});
+				const second = await fastify.inject({
+					method: "GET",
+					url: `/json/${index}`,
+				});
+
+				expect(first.statusCode).toBe(200);
+				expect(first.headers["content-type"]).toContain("application/json");
+				expect(first.body).toBe(second.body);
+			}
+		});
+
+		it("should return the exact first JSON template for /json/1", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/json/1",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(JSON.parse(response.body)).toEqual({
+				message: "Hello from MockHTTP",
+				timestamp: "2024-01-15T10:30:00.000Z",
+				status: "success",
+				code: 200,
+			});
+		});
+
+		it("should return distinct JSON templates for distinct indexes", async () => {
+			const bodies = new Set();
+
+			for (let index = 1; index <= 5; index++) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: `/json/${index}`,
+				});
+				expect(response.statusCode).toBe(200);
+				bodies.add(response.body);
+			}
+
+			expect(bodies.size).toBe(5);
+		});
+
+		it("should return stable JSON output for all HTTP methods", async () => {
+			const methods = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
+			const bodies = new Set();
+
+			for (const method of methods) {
+				const response = await fastify.inject({
+					method,
+					url: "/json/2",
+				});
+				expect(response.statusCode).toBe(200);
+				bodies.add(response.body);
+			}
+
+			// Every method returns the exact same template
+			expect(bodies.size).toBe(1);
+			const json = JSON.parse([...bodies][0] as string);
+			expect(json.user.name).toBe("John Doe");
+			expect(json.permissions).toEqual(["read", "write", "delete"]);
+		});
+
+		it("should return the first text template for /plain/1", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/plain/1",
+			});
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["content-type"]).toContain("text/plain");
+			expect(response.body).toBe(
+				"The quick brown fox jumps over the lazy dog.",
+			);
+		});
+
+		it("should return identical plain text for the same index across calls", async () => {
+			for (let index = 1; index <= 10; index++) {
+				const first = await fastify.inject({
+					method: "GET",
+					url: `/plain/${index}`,
+				});
+				const second = await fastify.inject({
+					method: "GET",
+					url: `/plain/${index}`,
+				});
+
+				expect(first.statusCode).toBe(200);
+				expect(first.body).toBe(second.body);
+			}
+		});
+
+		it("should return identical text for the same index across calls", async () => {
+			const first = await fastify.inject({
+				method: "GET",
+				url: "/text/10",
+			});
+			const second = await fastify.inject({
+				method: "GET",
+				url: "/text/10",
+			});
+
+			expect(first.statusCode).toBe(200);
+			expect(first.headers["content-type"]).toContain("text/plain");
+			expect(first.body).toBe("Knowledge is power. France is bacon.");
+			expect(first.body).toBe(second.body);
+		});
+
+		it("should return identical HTML for the same index across calls", async () => {
+			const first = await fastify.inject({
+				method: "GET",
+				url: "/html/1",
+			});
+			const second = await fastify.inject({
+				method: "GET",
+				url: "/html/1",
+			});
+
+			expect(first.statusCode).toBe(200);
+			expect(first.headers["content-type"]).toContain("text/html");
+			expect(first.body).toContain("<title>Sample Page</title>");
+			expect(first.body).toBe(second.body);
+		});
+
+		it("should return identical XML for the same index across calls", async () => {
+			const first = await fastify.inject({
+				method: "GET",
+				url: "/xml/1",
+			});
+			const second = await fastify.inject({
+				method: "GET",
+				url: "/xml/1",
+			});
+
+			expect(first.statusCode).toBe(200);
+			expect(first.headers["content-type"]).toContain("application/xml");
+			expect(first.body).toContain(
+				"<timestamp>2024-01-15T10:30:00.000Z</timestamp>",
+			);
+			expect(first.body).toBe(second.body);
+		});
+
+		it("should return 404 for out-of-range JSON indexes", async () => {
+			for (const index of ["0", "6", "99", "-1"]) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: `/json/${index}`,
+				});
+
+				expect(response.statusCode).toBe(404);
+				const json = JSON.parse(response.body);
+				expect(json.error).toBe("Template index must be between 1 and 5");
+			}
+		});
+
+		it("should return 404 for non-integer JSON indexes", async () => {
+			for (const index of ["abc", "1.5"]) {
+				const response = await fastify.inject({
+					method: "GET",
+					url: `/json/${index}`,
+				});
+
+				expect(response.statusCode).toBe(404);
+				const json = JSON.parse(response.body);
+				expect(json.error).toBe("Template index must be between 1 and 5");
+			}
+		});
+
+		it("should return 404 for invalid plain text indexes", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/plain/11",
+			});
+
+			expect(response.statusCode).toBe(404);
+			const json = JSON.parse(response.body);
+			expect(json.error).toBe("Template index must be between 1 and 10");
+		});
+
+		it("should return 404 for invalid text indexes", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/text/0",
+			});
+
+			expect(response.statusCode).toBe(404);
+			const json = JSON.parse(response.body);
+			expect(json.error).toBe("Template index must be between 1 and 10");
+		});
+
+		it("should return 404 for invalid HTML indexes", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/html/6",
+			});
+
+			expect(response.statusCode).toBe(404);
+			const json = JSON.parse(response.body);
+			expect(json.error).toBe("Template index must be between 1 and 5");
+		});
+
+		it("should return 404 for invalid XML indexes", async () => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/xml/abc",
+			});
+
+			expect(response.statusCode).toBe(404);
+			const json = JSON.parse(response.body);
+			expect(json.error).toBe("Template index must be between 1 and 5");
+		});
+	});
+
 	// Tests for /deny endpoint
 	describe("/deny endpoint", () => {
 		it("should return 403 Forbidden status", async () => {

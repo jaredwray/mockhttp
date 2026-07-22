@@ -6,59 +6,93 @@ import type {
 	FastifySchema,
 } from "fastify";
 
+const templateIndexParams = {
+	type: "object",
+	properties: {
+		index: {
+			type: "string",
+			description:
+				"Optional 1-based template index for stable, repeatable output. Omit for a random template.",
+		},
+	},
+};
+
+const templateNotFoundResponse = {
+	type: "object",
+	description: "The requested template index does not exist",
+	properties: {
+		error: { type: "string" },
+	},
+};
+
 const plainSchema: FastifySchema = {
-	description: "Returns random plain text content",
+	description:
+		"Returns plain text content. A random template is selected unless a 1-based template index is provided (e.g. /plain/1) for stable output.",
 	tags: ["Response Formats"],
+	params: templateIndexParams,
 	response: {
 		200: {
 			type: "string",
-			description: "Random plain text content",
+			description: "Plain text content",
 		},
+		404: templateNotFoundResponse,
 	},
 };
 
 const textSchema: FastifySchema = {
-	description: "Returns random text content",
+	description:
+		"Returns text content. A random template is selected unless a 1-based template index is provided (e.g. /text/1) for stable output.",
 	tags: ["Response Formats"],
+	params: templateIndexParams,
 	response: {
 		200: {
 			type: "string",
-			description: "Random text content",
+			description: "Text content",
 		},
+		404: templateNotFoundResponse,
 	},
 };
 
 const htmlSchema: FastifySchema = {
-	description: "Returns random HTML content",
+	description:
+		"Returns HTML content. A random template is selected unless a 1-based template index is provided (e.g. /html/1) for stable output.",
 	tags: ["Response Formats"],
+	params: templateIndexParams,
 	response: {
 		200: {
 			type: "string",
-			description: "Random HTML content",
+			description: "HTML content",
 		},
+		404: templateNotFoundResponse,
 	},
 };
 
 const xmlSchema: FastifySchema = {
-	description: "Returns random XML content",
+	description:
+		"Returns XML content. A random template is selected unless a 1-based template index is provided (e.g. /xml/1) for stable output.",
 	tags: ["Response Formats"],
+	params: templateIndexParams,
 	response: {
 		200: {
 			type: "string",
-			description: "Random XML content",
+			description: "XML content",
 		},
+		404: templateNotFoundResponse,
 	},
 };
 
 const jsonSchema: FastifySchema = {
-	description: "Returns random JSON content",
+	description:
+		"Returns JSON content. A random template is selected unless a 1-based template index is provided (e.g. /json/1) for stable output.",
 	tags: ["Response Formats"],
+	params: templateIndexParams,
 	response: {
 		200: {
 			type: "object",
-			description: "Random JSON content",
+			description: "JSON content",
 			additionalProperties: true,
 		},
+		404: templateNotFoundResponse,
 	},
 };
 
@@ -210,7 +244,7 @@ const randomXmlContent = [
 	`<?xml version="1.0" encoding="UTF-8"?>
 <root>
     <message>Hello from MockHTTP</message>
-    <timestamp>${new Date().toISOString()}</timestamp>
+    <timestamp>2024-01-15T10:30:00.000Z</timestamp>
     <status>success</status>
 </root>`,
 	`<?xml version="1.0" encoding="UTF-8"?>
@@ -253,20 +287,20 @@ const randomXmlContent = [
             <title>First Article</title>
             <link>http://example.com/article1</link>
             <description>This is the first article in our feed</description>
-            <pubDate>${new Date().toUTCString()}</pubDate>
+            <pubDate>Mon, 15 Jan 2024 10:30:00 GMT</pubDate>
         </item>
     </channel>
 </rss>`,
 ];
 
 const randomJsonContent = [
-	() => ({
+	{
 		message: "Hello from MockHTTP",
-		timestamp: new Date().toISOString(),
+		timestamp: "2024-01-15T10:30:00.000Z",
 		status: "success",
 		code: 200,
-	}),
-	() => ({
+	},
+	{
 		user: {
 			id: 1,
 			name: "John Doe",
@@ -275,8 +309,8 @@ const randomJsonContent = [
 			createdAt: "2024-01-15T10:30:00Z",
 		},
 		permissions: ["read", "write", "delete"],
-	}),
-	() => ({
+	},
+	{
 		products: [
 			{
 				id: 101,
@@ -293,8 +327,8 @@ const randomJsonContent = [
 		],
 		total: 2,
 		page: 1,
-	}),
-	() => ({
+	},
+	{
 		config: {
 			theme: "dark",
 			language: "en",
@@ -308,8 +342,8 @@ const randomJsonContent = [
 				activity: "friends",
 			},
 		},
-	}),
-	() => ({
+	},
+	{
 		metrics: {
 			cpu: 45.2,
 			memory: 78.5,
@@ -325,83 +359,135 @@ const randomJsonContent = [
 				{ name: "cache", status: "warning" },
 			],
 		},
-	}),
+	},
 ];
+
+type TemplateRequest = FastifyRequest<{ Params: { index?: string } }>;
+
+// Resolves the optional 1-based index parameter to an array position.
+// Returns a random position when no index is given, or -1 when the index
+// is not an integer between 1 and length.
+const resolveTemplateIndex = (
+	index: string | undefined,
+	length: number,
+): number => {
+	if (index === undefined) {
+		return Math.floor(Math.random() * length);
+	}
+
+	const value = Number(index);
+	if (!Number.isInteger(value) || value < 1 || value > length) {
+		return -1;
+	}
+
+	return value - 1;
+};
+
+const templateNotFound = (reply: FastifyReply, length: number) =>
+	reply.code(404).send({
+		error: `Template index must be between 1 and ${length}`,
+	});
 
 export const responseFormatRoutes = (fastify: FastifyInstance) => {
 	const plainHandler = async (
-		_request: FastifyRequest,
+		request: TemplateRequest,
 		reply: FastifyReply,
 	) => {
-		const randomIndex = Math.floor(Math.random() * randomTexts.length);
-		const text = randomTexts[randomIndex];
+		const index = resolveTemplateIndex(
+			request.params.index,
+			randomTexts.length,
+		);
+		if (index === -1) {
+			return templateNotFound(reply, randomTexts.length);
+		}
 
 		reply.type("text/plain");
-		return text;
+		return randomTexts[index];
 	};
 
-	fastify.get("/plain", { schema: plainSchema }, plainHandler);
-	fastify.post("/plain", { schema: plainSchema }, plainHandler);
-	fastify.put("/plain", { schema: plainSchema }, plainHandler);
-	fastify.patch("/plain", { schema: plainSchema }, plainHandler);
-	fastify.delete("/plain", { schema: plainSchema }, plainHandler);
+	fastify.get("/plain/:index?", { schema: plainSchema }, plainHandler);
+	fastify.post("/plain/:index?", { schema: plainSchema }, plainHandler);
+	fastify.put("/plain/:index?", { schema: plainSchema }, plainHandler);
+	fastify.patch("/plain/:index?", { schema: plainSchema }, plainHandler);
+	fastify.delete("/plain/:index?", { schema: plainSchema }, plainHandler);
 
-	const textHandler = async (_request: FastifyRequest, reply: FastifyReply) => {
-		const randomIndex = Math.floor(Math.random() * randomTexts.length);
-		const text = randomTexts[randomIndex];
+	const textHandler = async (request: TemplateRequest, reply: FastifyReply) => {
+		const index = resolveTemplateIndex(
+			request.params.index,
+			randomTexts.length,
+		);
+		if (index === -1) {
+			return templateNotFound(reply, randomTexts.length);
+		}
 
 		reply.type("text/plain");
-		return text;
+		return randomTexts[index];
 	};
 
-	fastify.get("/text", { schema: textSchema }, textHandler);
-	fastify.post("/text", { schema: textSchema }, textHandler);
-	fastify.put("/text", { schema: textSchema }, textHandler);
-	fastify.patch("/text", { schema: textSchema }, textHandler);
-	fastify.delete("/text", { schema: textSchema }, textHandler);
+	fastify.get("/text/:index?", { schema: textSchema }, textHandler);
+	fastify.post("/text/:index?", { schema: textSchema }, textHandler);
+	fastify.put("/text/:index?", { schema: textSchema }, textHandler);
+	fastify.patch("/text/:index?", { schema: textSchema }, textHandler);
+	fastify.delete("/text/:index?", { schema: textSchema }, textHandler);
 
-	const htmlHandler = async (_request: FastifyRequest, reply: FastifyReply) => {
-		const randomIndex = Math.floor(Math.random() * randomHtmlContent.length);
-		const html = randomHtmlContent[randomIndex];
+	const htmlHandler = async (request: TemplateRequest, reply: FastifyReply) => {
+		const index = resolveTemplateIndex(
+			request.params.index,
+			randomHtmlContent.length,
+		);
+		if (index === -1) {
+			return templateNotFound(reply, randomHtmlContent.length);
+		}
 
 		reply.type("text/html");
-		return html;
+		return randomHtmlContent[index];
 	};
 
-	fastify.get("/html", { schema: htmlSchema }, htmlHandler);
-	fastify.post("/html", { schema: htmlSchema }, htmlHandler);
-	fastify.put("/html", { schema: htmlSchema }, htmlHandler);
-	fastify.patch("/html", { schema: htmlSchema }, htmlHandler);
-	fastify.delete("/html", { schema: htmlSchema }, htmlHandler);
+	fastify.get("/html/:index?", { schema: htmlSchema }, htmlHandler);
+	fastify.post("/html/:index?", { schema: htmlSchema }, htmlHandler);
+	fastify.put("/html/:index?", { schema: htmlSchema }, htmlHandler);
+	fastify.patch("/html/:index?", { schema: htmlSchema }, htmlHandler);
+	fastify.delete("/html/:index?", { schema: htmlSchema }, htmlHandler);
 
-	const xmlHandler = async (_request: FastifyRequest, reply: FastifyReply) => {
-		const randomIndex = Math.floor(Math.random() * randomXmlContent.length);
-		const xml = randomXmlContent[randomIndex];
+	const xmlHandler = async (request: TemplateRequest, reply: FastifyReply) => {
+		const index = resolveTemplateIndex(
+			request.params.index,
+			randomXmlContent.length,
+		);
+		if (index === -1) {
+			return templateNotFound(reply, randomXmlContent.length);
+		}
 
 		reply.type("application/xml");
-		return xml;
+		return randomXmlContent[index];
 	};
 
-	fastify.get("/xml", { schema: xmlSchema }, xmlHandler);
-	fastify.post("/xml", { schema: xmlSchema }, xmlHandler);
-	fastify.put("/xml", { schema: xmlSchema }, xmlHandler);
-	fastify.patch("/xml", { schema: xmlSchema }, xmlHandler);
-	fastify.delete("/xml", { schema: xmlSchema }, xmlHandler);
+	fastify.get("/xml/:index?", { schema: xmlSchema }, xmlHandler);
+	fastify.post("/xml/:index?", { schema: xmlSchema }, xmlHandler);
+	fastify.put("/xml/:index?", { schema: xmlSchema }, xmlHandler);
+	fastify.patch("/xml/:index?", { schema: xmlSchema }, xmlHandler);
+	fastify.delete("/xml/:index?", { schema: xmlSchema }, xmlHandler);
 
-	const jsonHandler = async (_request: FastifyRequest, reply: FastifyReply) => {
-		const randomIndex = Math.floor(Math.random() * randomJsonContent.length);
-		const jsonGenerator = randomJsonContent[randomIndex];
-		const json = jsonGenerator();
+	const jsonHandler = async (request: TemplateRequest, reply: FastifyReply) => {
+		const index = resolveTemplateIndex(
+			request.params.index,
+			randomJsonContent.length,
+		);
+		if (index === -1) {
+			return templateNotFound(reply, randomJsonContent.length);
+		}
 
 		reply.type("application/json");
-		return json;
+		// Clone so hooks that mutate the payload cannot contaminate the
+		// shared template and break the stable output guarantee.
+		return structuredClone(randomJsonContent[index]);
 	};
 
-	fastify.get("/json", { schema: jsonSchema }, jsonHandler);
-	fastify.post("/json", { schema: jsonSchema }, jsonHandler);
-	fastify.put("/json", { schema: jsonSchema }, jsonHandler);
-	fastify.patch("/json", { schema: jsonSchema }, jsonHandler);
-	fastify.delete("/json", { schema: jsonSchema }, jsonHandler);
+	fastify.get("/json/:index?", { schema: jsonSchema }, jsonHandler);
+	fastify.post("/json/:index?", { schema: jsonSchema }, jsonHandler);
+	fastify.put("/json/:index?", { schema: jsonSchema }, jsonHandler);
+	fastify.patch("/json/:index?", { schema: jsonSchema }, jsonHandler);
+	fastify.delete("/json/:index?", { schema: jsonSchema }, jsonHandler);
 
 	const denyHandler = async (_request: FastifyRequest, reply: FastifyReply) => {
 		const denyMessages = [

@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Install Socket Firewall
         uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
@@ -33,6 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Install Socket Firewall
         uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
@@ -59,6 +63,8 @@ jobs:
     environment: docker
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Install Socket Firewall
         uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
@@ -91,10 +97,10 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker Image
-        run: docker build -t jaredwray/mockhttp:${{ env.VERSION }} -t jaredwray/mockhttp:latest .
+        run: docker build -t "jaredwray/mockhttp:${VERSION}" -t jaredwray/mockhttp:latest .
 
       - name: Push Docker image (version)
-        run: docker push docker.io/jaredwray/mockhttp:${{ env.VERSION }}
+        run: docker push "docker.io/jaredwray/mockhttp:${VERSION}"
 
       - name: Push Docker image (latest)
         run: docker push docker.io/jaredwray/mockhttp:latest

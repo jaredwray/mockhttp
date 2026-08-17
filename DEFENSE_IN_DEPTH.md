@@ -19,7 +19,7 @@ Profile: npm library · public
 - [x] `blockExoticSubdeps: true` — verified on main
 - [x] Lockfile committed; CI installs with `pnpm install --frozen-lockfile` — verified on main
 - [x] No `.github/dependabot.yml`; other dependency-update tools (if any) open PRs only — never auto-merge — verified on main
-- [ ] New direct dependencies get human review; prefer `~` ranges over `^`
+- [ ] New direct dependencies get human review; prefer `~` ranges over `^` (PR pending)
 
 ## 4. GitHub Actions
 - [x] `permissions: contents: read` (or `{}` + per-job grants) on every workflow — verified on main
@@ -40,9 +40,9 @@ Profile: npm library · public
 - [x] `package.json` `repository.url` accurate so provenance maps to this repo — verified on main
 
 ## 6. Security tooling
-- [ ] Aikido runs on every build
+- [x] Aikido runs on every build — verified on PRs (GitHub app)
 - [ ] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release` (PR #191 pending)
-- [ ] Socket reviews every PR that changes dependencies
+- [x] Socket reviews every PR that changes dependencies — verified on PRs (GitHub app)
 
 ## 7. Repository lockdown
 - [ ] `lockdown-repo.sh` applied; `--check` with `--required-checks` and `--allowed-actions` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, fork-PR approval, read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting as applicable)
@@ -53,7 +53,7 @@ Profile: npm library · public
 
 Do this only after PRs #182–#191 are on `main`. This agent did not apply GitHub settings (`lockdown-repo.sh --check` on 2026-08-17: not a repo admin; CODEOWNERS is not on `main` yet; 10 settings not in the desired state).
 
-1. Install the **Aikido** and **Socket** GitHub apps on `jaredwray/mockhttp`. Add Actions secret `AIKIDO_CLIENT_API_KEY` from Aikido CI settings.
+1. The **Aikido** and **Socket** GitHub apps are already on this repo. Add Actions secret `AIKIDO_CLIENT_API_KEY` from Aikido CI settings (needed by the release-gate job in #191).
 2. On npmjs.com for `@jaredwray/mockhttp`: trusted publisher = this repo, workflow filename `release.yaml`, environment `npm`, **stage-only**. Connect [Drydock](https://drydock.org). Require 2FA and disallow tokens.
 3. Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts. Store recovery codes offline.
 4. Download [`lockdown-repo.sh`](https://github.com/jaredwray/agentic/blob/main/skills/security/defense-in-depth-nodejs/scripts/lockdown-repo.sh) (do not commit it here). Audit, then apply as a repo admin. Confirm check names from a green PR after this stack lands:

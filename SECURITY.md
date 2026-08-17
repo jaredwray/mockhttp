@@ -28,3 +28,4 @@ hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_D
 - Dependencies install through pnpm with a 7-day cooldown on new versions, and lifecycle scripts are blocked by default. CI installs with `--frozen-lockfile`.
 - High-risk paths (`.github/`, `.cursor/`, `.devcontainer/`, `scripts/`) are owned in `.github/CODEOWNERS`.
 - npm releases are packed and staged via OIDC trusted publishing. There are no npm tokens. Drydock review and stage-only registry settings are the remaining maintainer steps.
+- Aikido scans every build. Socket reviews every pull request that changes dependencies.

@@ -48,3 +48,24 @@ Profile: npm library · public
 - [ ] `lockdown-repo.sh` applied; `--check` with `--required-checks` and `--allowed-actions` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, fork-PR approval, read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting as applicable)
 - [ ] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts (manual)
 - [ ] Recovery codes stored offline in a password manager (manual)
+
+## Maintainer Stage 7 (last)
+
+Do this only after PRs #182–#191 are on `main`. This agent did not apply GitHub settings (`lockdown-repo.sh --check` on 2026-08-17: not a repo admin; CODEOWNERS is not on `main` yet; 10 settings not in the desired state).
+
+1. Install the **Aikido** and **Socket** GitHub apps on `jaredwray/mockhttp`. Add Actions secret `AIKIDO_CLIENT_API_KEY` from Aikido CI settings.
+2. On npmjs.com for `@jaredwray/mockhttp`: trusted publisher = this repo, workflow filename `release.yaml`, environment `npm`, **stage-only**. Connect [Drydock](https://drydock.org). Require 2FA and disallow tokens.
+3. Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts. Store recovery codes offline.
+4. Download [`lockdown-repo.sh`](https://github.com/jaredwray/agentic/blob/main/skills/security/defense-in-depth-nodejs/scripts/lockdown-repo.sh) (do not commit it here). Audit, then apply as a repo admin. Confirm check names from a green PR after this stack lands:
+
+```bash
+lockdown-repo.sh jaredwray/mockhttp --check \
+  --required-checks "build (22),build (24),build (26),Analyze,zizmor" \
+  --allowed-actions "codecov/*,peter-evans/*,google-github-actions/*,docker/*"
+
+lockdown-repo.sh jaredwray/mockhttp \
+  --required-checks "build (22),build (24),build (26),Analyze,zizmor" \
+  --allowed-actions "codecov/*,peter-evans/*,google-github-actions/*,docker/*"
+```
+
+5. Recording PR: tick the lockdown item in this file and expand the `SECURITY.md` summary to the full live end-state. Tick the `(manual)` boxes yourself.

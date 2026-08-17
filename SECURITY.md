@@ -23,6 +23,8 @@ We will acknowledge receipt, work with you on a coordinated disclosure timeline,
 This repository follows the [defense-in-depth](https://github.com/jaredwray/agentic/blob/main/skills/security/defense-in-depth-nodejs/SKILL.md)
 hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_DEPTH.md). Measures currently in place:
 
-- CI runs with read-only `contents: read` permissions (or equivalent per-job grants). Artifact-publishing workflows disable `actions/setup-node` default package-manager caching.
+- CI runs with read-only permissions; every action is pinned to a full commit SHA; Socket Firewall (`sfw`) wraps `pnpm install`; workflows are security-linted with zizmor on every PR.
+- Codespaces and Cursor Cloud Agents install through Aikido Safe Chain; package-manager shims must not be bypassed.
 - Dependencies install through pnpm with a 7-day cooldown on new versions, and lifecycle scripts are blocked by default. CI installs with `--frozen-lockfile`.
-- npm publishing authenticates with OIDC trusted publishing. There are no npm tokens in Actions secrets. Provenance is requested on publish.
+- High-risk paths (`.github/`, `.cursor/`, `.devcontainer/`, `scripts/`) are owned in `.github/CODEOWNERS`.
+- npm releases are packed and staged via OIDC trusted publishing. There are no npm tokens. Drydock review and stage-only registry settings are the remaining maintainer steps.

@@ -41,7 +41,7 @@ Profile: npm library · public
 
 ## 6. Security tooling
 - [ ] Aikido runs on every build
-- [ ] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release`
+- [ ] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release` (PR pending)
 - [ ] Socket reviews every PR that changes dependencies
 
 ## 7. Repository lockdown

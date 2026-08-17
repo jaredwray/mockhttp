@@ -21,16 +21,17 @@ jobs:
         with:
           mode: firewall-free
           firewall-version: "1.15.0"
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           package-manager-cache: false
+      - run: corepack enable
+      - run: corepack prepare
       - run: sfw pnpm install --frozen-lockfile
       - run: pnpm test:ci
 
   publish:
-    name: Publish to npm
+    name: Stage publish to npm
     needs: test
     runs-on: ubuntu-latest
     environment: npm
@@ -47,17 +48,31 @@ jobs:
           mode: firewall-free
           firewall-version: "1.15.0"
 
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
-      - run: sfw pnpm install --frozen-lockfile
+      - name: Enable Corepack
+        run: corepack enable
 
-      - run: pnpm build
+      - name: Prepare pnpm
+        run: corepack prepare
 
-      - name: Publish
-        run: pnpm publish --provenance --no-git-checks --ignore-scripts
+      - name: Install Dependencies
+        run: sfw pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Pack
+        run: |
+          mkdir -p packed
+          pnpm pack --pack-destination packed
+          ls -la packed
+
+      - name: Stage publish
+        # pnpm ≥ 11.3. --no-git-checks: git-checks run even for a tarball and
+        # fail on a detached release-tag checkout and on the untracked pack output.
+        run: pnpm stage publish ./packed/*.tgz --access public --provenance --no-git-checks

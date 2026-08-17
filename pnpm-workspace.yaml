@@ -8,9 +8,7 @@ trustPolicy: no-downgrade
 
 allowBuilds:
   '@swc/core': true
-  core-js: false
   esbuild: true
-  protobufjs: false
   vue-demi: true
 
 overrides:

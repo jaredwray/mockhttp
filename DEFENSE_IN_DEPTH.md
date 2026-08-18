@@ -19,7 +19,7 @@ Profile: npm library · public
 - [x] `blockExoticSubdeps: true` — verified on main
 - [x] Lockfile committed; CI installs with `sfw pnpm install --frozen-lockfile`
 - [x] No `.github/dependabot.yml`; other dependency-update tools (if any) open PRs only — never auto-merge — verified on main
-- [x] New direct dependencies get human review; prefer `^` ranges over `~` (PR # pending)
+- [x] New direct dependencies get human review; prefer `^` ranges over `~` (#204)
 
 ## 4. GitHub Actions
 - [x] `permissions: contents: read` (or `{}` + per-job grants) on every workflow — verified on main

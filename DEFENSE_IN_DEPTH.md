@@ -33,7 +33,7 @@ Profile: npm library · public
 
 ## 5. npm publishing — npm libraries only
 - [ ] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual)
-- [ ] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` (PR #190 pending)
+- [x] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` (#190)
 - [ ] Maintainer promotes staged versions with 2FA (manual)
 - [ ] Drydock connected — staged releases reviewed before promotion (manual)
 - [ ] No direct publish rights: package requires 2FA and disallows tokens (manual)
@@ -41,10 +41,31 @@ Profile: npm library · public
 
 ## 6. Security tooling
 - [x] Aikido runs on every build — GitHub app scans PRs
-- [ ] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release`
+- [ ] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release` (PR #191 pending)
 - [x] Socket reviews every PR that changes dependencies — GitHub app scans PRs
 
 ## 7. Repository lockdown
 - [ ] `lockdown-repo.sh` applied; `--check` with `--required-checks` and `--allowed-actions` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, fork-PR approval, read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting as applicable)
 - [ ] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts (manual)
 - [ ] Recovery codes stored offline in a password manager (manual)
+
+## Maintainer Stage 7 (last)
+
+Do this after #191 is on `main`. Do not run `lockdown-repo.sh` in apply mode until you have audited `--check` as a repo admin.
+
+1. Confirm the **Aikido** and **Socket** GitHub apps (they already scan PRs). Add Actions secret `AIKIDO_CLIENT_API_KEY` from Aikido CI settings — without it, a real release fails closed at `aikido-gate`.
+2. On npmjs.com for `@jaredwray/mockhttp`: trusted publisher = this repo, workflow filename `release.yaml`, environment `npm`, **stage-only**. Connect [Drydock](https://drydock.org). Require 2FA and disallow tokens.
+3. Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts. Store recovery codes offline.
+4. Download [`lockdown-repo.sh`](https://github.com/jaredwray/agentic/blob/main/skills/security/defense-in-depth-nodejs/scripts/lockdown-repo.sh) (do not commit it here). Audit, then apply as a repo admin. Confirm check names from a green PR:
+
+```bash
+lockdown-repo.sh jaredwray/mockhttp --check \
+  --required-checks "build (22),build (24),build (26),Analyze,zizmor" \
+  --allowed-actions "codecov/*,peter-evans/*,google-github-actions/*,docker/*"
+
+lockdown-repo.sh jaredwray/mockhttp \
+  --required-checks "build (22),build (24),build (26),Analyze,zizmor" \
+  --allowed-actions "codecov/*,peter-evans/*,google-github-actions/*,docker/*"
+```
+
+5. Recording PR: tick the lockdown item in this file and expand the `SECURITY.md` summary to the full live end-state. Tick the `(manual)` boxes yourself.

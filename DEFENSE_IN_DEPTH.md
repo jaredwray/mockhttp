@@ -14,15 +14,16 @@ Profile: npm library · public
 
 ## 3. Dependencies (pnpm)
 - [x] `packageManager: pnpm@11.21.0` pinned in `package.json` (#185)
-- [x] 7-day cooldown: `minimumReleaseAge: 10080`, `minimumReleaseAgeStrict: true`, `minimumReleaseAgeIgnoreMissingTime: false` — verified on main
+- [x] 7-day cooldown: `minimumReleaseAge: 10080`, `minimumReleaseAgeStrict: true`, `minimumReleaseAgeIgnoreMissingTime: false`; no first-party `minimumReleaseAgeExclude` — verified on main
+- [x] `trustPolicy: no-downgrade`; no first-party `trustPolicyExclude` — verified on main
 - [x] Lifecycle scripts blocked: `strictDepBuilds: true`, `dangerouslyAllowAllBuilds: false`; `allowBuilds` only `@swc/core`, `esbuild`, `vue-demi` (#186)
 - [x] `blockExoticSubdeps: true` — verified on main
 - [x] Lockfile committed; CI installs with `sfw pnpm install --frozen-lockfile`
 - [x] No `.github/dependabot.yml`; other dependency-update tools (if any) open PRs only — never auto-merge — verified on main
-- [x] New direct dependencies get human review; prefer `^` ranges over `~` (#204)
 
 ## 4. GitHub Actions
 - [x] `permissions: contents: read` (or `{}` + per-job grants) on every workflow — verified on main
+- [x] No `contents: write` except jobs whose purpose is mutating the repo (GitHub Release, Changesets version PR); generated output is a workflow artifact, never committed back from CI — verified on main
 - [x] Every action pinned to a full commit SHA (`npx actions-up`) (#187)
 - [x] Every job installs Socket Firewall (`SocketDev/action` SHA-pinned, `firewall-version` pinned); `pnpm install` / `npm install` run as `sfw pnpm install` / `sfw npm install` (#188)
 - [x] `.github/workflows/check-workflows.yaml` lints workflows with zizmor on every PR (#189)
@@ -45,11 +46,9 @@ Profile: npm library · public
 - [x] Socket reviews every PR that changes dependencies — GitHub app scans PRs
 
 ## 7. Repository lockdown
-- [x] `lockdown-repo.sh` applied; `--check` with `--required-checks "build (22),build (24),build (26),Analyze (javascript),zizmor"` and `--allowed-actions "codecov/*,peter-evans/*,google-github-actions/*,docker/*"` passes (#193)
-- [x] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub account (manual)
-- [x] Phishing-resistant 2FA (passkeys / hardware keys) on the npm account (manual)
-- [x] GitHub recovery codes stored offline in a password manager (manual)
-- [x] npm recovery codes stored offline in a password manager (manual)
+- [x] `lockdown-repo.sh` applied; `--check` with `--required-checks "build (22),build (24),build (26),Analyze (javascript),zizmor"` and `--allowed-actions "codecov/*,peter-evans/*,google-github-actions/*,docker/*"` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, immutable releases, fork-PR approval, read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting as applicable) (#193)
+- [x] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts (manual)
+- [x] Recovery codes stored offline in a password manager (manual)
 
 ## Release flow
 

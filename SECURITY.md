@@ -23,9 +23,12 @@ We will acknowledge receipt, work with you on a coordinated disclosure timeline,
 This repository follows the [defense-in-depth](https://github.com/jaredwray/agentic/blob/main/skills/security/defense-in-depth-nodejs/SKILL.md)
 hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_DEPTH.md). Measures currently in place:
 
-- CI runs with read-only permissions; every action is pinned to a full commit SHA; Socket Firewall (`sfw`) wraps `pnpm install`; workflows are security-linted with zizmor on every PR.
+- All changes land through pull requests — direct pushes to `main` are blocked, and merging requires passing status checks (`build (22)`, `build (24)`, `build (26)`, `Analyze (javascript)`, `zizmor`).
+- Tags (and therefore releases) can only be created by repository admins.
+- Workflow runs from outside collaborators always require maintainer approval, and only allowlisted GitHub Actions can run.
+- CI runs with read-only default workflow tokens; every action is pinned to a full commit SHA; Socket Firewall (`sfw`) wraps `pnpm install`; workflows are security-linted with zizmor on every PR.
 - Codespaces and Cursor Cloud Agents install through Aikido Safe Chain; package-manager shims must not be bypassed.
-- Dependencies install through pnpm with a 7-day cooldown on new versions, and lifecycle scripts are blocked by default. CI installs with `--frozen-lockfile`.
+- Dependencies install through pnpm with a 7-day cooldown on new versions, lifecycle scripts blocked by default, and `trustPolicy: no-downgrade`. CI installs with `--frozen-lockfile`. Socket reviews every dependency change; Aikido scans every build.
 - High-risk paths (`.github/`, `.cursor/`, `.devcontainer/`, `scripts/`) are owned in `.github/CODEOWNERS`.
-- npm releases are packed and staged via OIDC trusted publishing. There are no npm tokens. Drydock review and stage-only registry settings are the remaining maintainer steps.
-- Aikido scans every build. Socket reviews every pull request that changes dependencies.
+- npm releases are packed and staged via OIDC trusted publishing. There are no npm tokens. Drydock review and stage-only registry settings on npmjs.com are remaining maintainer steps.
+- Secret scanning and push protection are enabled. Private vulnerability reporting is enabled. Dependabot is off.

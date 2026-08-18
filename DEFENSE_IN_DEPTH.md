@@ -41,18 +41,19 @@ Profile: npm library · public
 
 ## 6. Security tooling
 - [x] Aikido runs on every build — GitHub app scans PRs
-- [x] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release` (#191)
+- [x] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release` (#191); Actions secret `AIKIDO_CLIENT_API_KEY` configured
 - [x] Socket reviews every PR that changes dependencies — GitHub app scans PRs
 
 ## 7. Repository lockdown
 - [x] `lockdown-repo.sh` applied; `--check` with `--required-checks "build (22),build (24),build (26),Analyze (javascript),zizmor"` and `--allowed-actions "codecov/*,peter-evans/*,google-github-actions/*,docker/*"` passes (#193)
-- [ ] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts (manual)
-- [ ] Recovery codes stored offline in a password manager (manual)
+- [x] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub account (manual)
+- [ ] Phishing-resistant 2FA (passkeys / hardware keys) on the npm account (manual)
+- [x] GitHub recovery codes stored offline in a password manager (manual)
+- [ ] npm recovery codes stored offline in a password manager (manual)
 
 ## Remaining maintainer steps (manual)
 
-GitHub lockdown `--check` passed 2026-08-18 as a repo admin. Tick the boxes in this file when you finish each item.
+GitHub lockdown `--check` passed 2026-08-18 as a repo admin. `AIKIDO_CLIENT_API_KEY` and GitHub passkeys / recovery codes are in place. Tick the boxes in this file when you finish each item.
 
-1. Add Actions secret `AIKIDO_CLIENT_API_KEY` from Aikido CI settings — without it, a real release fails closed at `aikido-gate`.
-2. On npmjs.com for `@jaredwray/mockhttp`: trusted publisher = this repo, workflow filename `release.yaml`, environment `npm`, **stage-only**. Connect [Drydock](https://drydock.org). Require 2FA and disallow tokens.
-3. Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts. Store recovery codes offline.
+1. On npmjs.com for `@jaredwray/mockhttp`: trusted publisher = this repo, workflow filename `release.yaml`, environment `npm`, **stage-only**. Connect [Drydock](https://drydock.org). Require 2FA and disallow tokens.
+2. Phishing-resistant 2FA (passkeys / hardware keys) on the npm account. Store npm recovery codes offline.

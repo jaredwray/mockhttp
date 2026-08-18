@@ -28,7 +28,7 @@ hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_D
 - Workflow runs from outside collaborators always require maintainer approval, and only allowlisted GitHub Actions can run.
 - CI runs with read-only default workflow tokens; every action is pinned to a full commit SHA; Socket Firewall (`sfw`) wraps `pnpm install`; workflows are security-linted with zizmor on every PR.
 - Codespaces and Cursor Cloud Agents install through Aikido Safe Chain; package-manager shims must not be bypassed.
-- Dependencies install through pnpm with a 7-day cooldown on new versions, lifecycle scripts blocked by default, and `trustPolicy: no-downgrade`. CI installs with `--frozen-lockfile`. Socket reviews every dependency change; Aikido scans every build.
+- Dependencies install through pnpm with a 7-day cooldown on new versions, lifecycle scripts blocked by default, and `trustPolicy: no-downgrade`. CI installs with `--frozen-lockfile`. Socket reviews every dependency change; Aikido scans every build. Releases are gated on Aikido `scan-release` (`AIKIDO_CLIENT_API_KEY`; scan only, no publish rights).
 - High-risk paths (`.github/`, `.cursor/`, `.devcontainer/`, `scripts/`) are owned in `.github/CODEOWNERS`.
 - npm releases are packed and staged via OIDC trusted publishing. There are no npm tokens. Drydock review and stage-only registry settings on npmjs.com are remaining maintainer steps.
 - Secret scanning and push protection are enabled. Private vulnerability reporting is enabled. Dependabot is off.

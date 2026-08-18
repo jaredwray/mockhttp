@@ -45,7 +45,7 @@ Profile: npm library · public
 - [x] Socket reviews every PR that changes dependencies — GitHub app scans PRs
 
 ## 7. Repository lockdown
-- [x] `lockdown-repo.sh` applied; `--check` with `--required-checks "build (22),build (24),build (26),Analyze (javascript),zizmor"` and `--allowed-actions "codecov/*,peter-evans/*,google-github-actions/*,docker/*"` passes (this PR)
+- [x] `lockdown-repo.sh` applied; `--check` with `--required-checks "build (22),build (24),build (26),Analyze (javascript),zizmor"` and `--allowed-actions "codecov/*,peter-evans/*,google-github-actions/*,docker/*"` passes (#193)
 - [ ] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts (manual)
 - [ ] Recovery codes stored offline in a password manager (manual)
 

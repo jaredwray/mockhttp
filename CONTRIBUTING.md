@@ -10,7 +10,7 @@ You can contribute changes to this repo by opening a pull request:
 
 1) After forking this repository to your Git account, make the proposed changes on your forked branch.
 2) Run tests and linting locally.
-	- Run `npm install -g pnpm` to install the package manager.
+	- Run `corepack enable` so the `packageManager` field in `package.json` provides pnpm.
 	- Run `pnpm install`.
 	- Run `pnpm test`.
 3) Commit your changes and push them to your forked repository.

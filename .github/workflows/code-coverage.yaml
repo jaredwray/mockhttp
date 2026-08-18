@@ -28,6 +28,7 @@ jobs:
           node-version: 24
           package-manager-cache: false
       - run: corepack enable
+      - run: corepack prepare
       - run: sfw pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm test

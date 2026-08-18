@@ -19,7 +19,7 @@ Profile: npm library · public
 - [x] `blockExoticSubdeps: true` — verified on main
 - [x] Lockfile committed; CI installs with `sfw pnpm install --frozen-lockfile`
 - [x] No `.github/dependabot.yml`; other dependency-update tools (if any) open PRs only — never auto-merge — verified on main
-- [ ] New direct dependencies get human review; prefer `~` ranges over `^`
+- [x] New direct dependencies get human review; prefer `~` ranges over `^` (this PR)
 
 ## 4. GitHub Actions
 - [x] `permissions: contents: read` (or `{}` + per-job grants) on every workflow — verified on main
@@ -41,7 +41,7 @@ Profile: npm library · public
 
 ## 6. Security tooling
 - [x] Aikido runs on every build — GitHub app scans PRs
-- [ ] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release` (PR #191 pending)
+- [x] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release` (#191)
 - [x] Socket reviews every PR that changes dependencies — GitHub app scans PRs
 
 ## 7. Repository lockdown
@@ -51,7 +51,7 @@ Profile: npm library · public
 
 ## Maintainer Stage 7 (last)
 
-Do this after #191 is on `main`. Do not run `lockdown-repo.sh` in apply mode until you have audited `--check` as a repo admin.
+Do this after #192 is on `main`. Do not run `lockdown-repo.sh` in apply mode until you have audited `--check` as a repo admin.
 
 1. Confirm the **Aikido** and **Socket** GitHub apps (they already scan PRs). Add Actions secret `AIKIDO_CLIENT_API_KEY` from Aikido CI settings — without it, a real release fails closed at `aikido-gate`.
 2. On npmjs.com for `@jaredwray/mockhttp`: trusted publisher = this repo, workflow filename `release.yaml`, environment `npm`, **stage-only**. Connect [Drydock](https://drydock.org). Require 2FA and disallow tokens.

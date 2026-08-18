@@ -32,11 +32,11 @@ Profile: npm library · public
 - [x] No npm tokens in Actions secrets — verified on main (Docker Hub and GCP deploy still use long-lived registry credentials)
 
 ## 5. npm publishing — npm libraries only
-- [ ] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual)
+- [x] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual)
 - [x] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` (#190)
-- [ ] Maintainer promotes staged versions with 2FA (manual)
-- [ ] Drydock connected — staged releases reviewed before promotion (manual)
-- [ ] No direct publish rights: package requires 2FA and disallows tokens (manual)
+- [x] Maintainer promotes staged versions with 2FA (manual)
+- [x] Drydock connected — staged releases reviewed before promotion (manual)
+- [x] No direct publish rights: package requires 2FA and disallows tokens (manual)
 - [x] `package.json` `repository.url` accurate so provenance maps to this repo — verified on main
 
 ## 6. Security tooling
@@ -47,13 +47,10 @@ Profile: npm library · public
 ## 7. Repository lockdown
 - [x] `lockdown-repo.sh` applied; `--check` with `--required-checks "build (22),build (24),build (26),Analyze (javascript),zizmor"` and `--allowed-actions "codecov/*,peter-evans/*,google-github-actions/*,docker/*"` passes (#193)
 - [x] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub account (manual)
-- [ ] Phishing-resistant 2FA (passkeys / hardware keys) on the npm account (manual)
+- [x] Phishing-resistant 2FA (passkeys / hardware keys) on the npm account (manual)
 - [x] GitHub recovery codes stored offline in a password manager (manual)
-- [ ] npm recovery codes stored offline in a password manager (manual)
+- [x] npm recovery codes stored offline in a password manager (manual)
 
-## Remaining maintainer steps (manual)
+## Release flow
 
-GitHub lockdown `--check` passed 2026-08-18 as a repo admin. `AIKIDO_CLIENT_API_KEY` and GitHub passkeys / recovery codes are in place. Tick the boxes in this file when you finish each item.
-
-1. On npmjs.com for `@jaredwray/mockhttp`: trusted publisher = this repo, workflow filename `release.yaml`, environment `npm`, **stage-only**. Connect [Drydock](https://drydock.org). Require 2FA and disallow tokens.
-2. Phishing-resistant 2FA (passkeys / hardware keys) on the npm account. Store npm recovery codes offline.
+Catalog complete. GitHub Releases can go live. `release.yaml` stages `@jaredwray/mockhttp` via OIDC; promote from [Drydock](https://drydock.org) with 2FA. Do not live-publish from CI.

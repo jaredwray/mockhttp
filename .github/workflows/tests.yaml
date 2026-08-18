@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         node-version: ['22', '24', '26']
 
@@ -32,7 +33,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           package-manager-cache: false
+      # Prepare pnpm outside sfw: Corepack+HTTP_PROXY crashes on Node 26 (undici 6 vs 8).
       - run: corepack enable
+      - run: corepack prepare
       - run: sfw pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm test:ci

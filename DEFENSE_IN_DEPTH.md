@@ -30,7 +30,8 @@ Profile: npm library · public
 - [x] `persist-credentials: false` on checkouts that don't push (#189)
 - [x] No `pull_request_target` on workflows that run untrusted PR code — verified on main
 - [x] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning — verified on main
-- [x] No npm tokens in Actions secrets — verified on main (Docker Hub and GCP deploy still use long-lived registry credentials)
+- [x] No npm tokens in Actions secrets — verified on main (Docker Hub still uses long-lived registry credentials)
+- [x] Site deploy (`deploy-site.yaml`) uses Cloudflare Containers via Wrangler. Production GitHub environment secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers edit, Containers, and the mockhttp.org zone (custom domain + DNS) permissions.
 
 ## 5. npm publishing — npm libraries only
 - [x] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual)
@@ -46,7 +47,7 @@ Profile: npm library · public
 - [x] Socket reviews every PR that changes dependencies — GitHub app scans PRs
 
 ## 7. Repository lockdown
-- [x] `lockdown-repo.sh` applied; `--check` with `--required-checks "build (22),build (24),build (26),Analyze (javascript),zizmor"` and `--allowed-actions "codecov/*,peter-evans/*,google-github-actions/*,docker/*"` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, immutable releases, fork-PR approval, read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting as applicable) (#193)
+- [x] `lockdown-repo.sh` applied; `--check` with `--required-checks "build (22),build (24),build (26),Analyze (javascript),zizmor"` and `--allowed-actions "codecov/*,peter-evans/*,google-github-actions/*,docker/*"` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, immutable releases, fork-PR approval, read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting as applicable) (#193). `google-github-actions/*` can be dropped from the allowlist now that site deploy no longer uses GCP.
 - [x] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts (manual)
 - [x] Recovery codes stored offline in a password manager (manual)
 

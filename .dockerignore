@@ -1,0 +1,14 @@
+.git
+.github
+.cursor
+.wrangler
+.claude
+coverage
+test
+worker
+src
+*.md
+.DS_Store
+.env*
+.dev.vars*
+wrangler.jsonc

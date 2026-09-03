@@ -8,10 +8,6 @@ on:
 permissions:
   contents: read
 
-env:
-  PROJECT_ID: jaredwray
-  SERVICE_NAME: mockhttp
-
 jobs:
   test:
     name: Test
@@ -92,43 +88,12 @@ jobs:
           name: dist
           path: dist/
 
-      - name: Authenticate with Google Cloud
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - name: Install Wrangler
+        # zizmor: ignore[adhoc-packages] pinned Wrangler for Cloudflare Containers deploy
+        run: sfw npm install --global wrangler@4.127.0
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
-
-      - name: Docker Auth
-        run: gcloud auth configure-docker
-
-      - name: Build Docker Image
-        run: docker build -t gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA .
-
-      - name: Docker Push to Google Cloud
-        run: docker push gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA
-
-      - name: Make deploy-region.sh executable
-        run: chmod +x ./scripts/deploy-region.sh
-
-      - name: Deploy to [us-central1]
-        run: ./scripts/deploy-region.sh us-central1
-
-      - name: Deploy to [us-west1]
-        run: ./scripts/deploy-region.sh us-west1
-
-      - name: Deploy to [us-east1]
-        run: ./scripts/deploy-region.sh us-east1
-
-      - name: Deploy to [europe-west1]
-        run: ./scripts/deploy-region.sh europe-west1
-
-      - name: Deploy to [europe-west3]
-        run: ./scripts/deploy-region.sh europe-west3
-
-      - name: Deploy to [asia-northeast1]
-        run: ./scripts/deploy-region.sh asia-northeast1
-
-      - name: Deploy to [asia-southeast1]
-        run: ./scripts/deploy-region.sh asia-southeast1
+      - name: Deploy to Cloudflare Containers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler deploy

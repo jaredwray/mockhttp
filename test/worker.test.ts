@@ -30,8 +30,8 @@ describe("cloudflare worker", () => {
 		getRandomMock.mockResolvedValue({ fetch: fetchMock });
 	});
 
-	it("caps load balancing at three container instances", () => {
-		expect(MAX_CONTAINERS).toBe(3);
+	it("caps load balancing at five container instances", () => {
+		expect(MAX_CONTAINERS).toBe(5);
 	});
 
 	it("listens on the Fastify port with a long idle timeout", () => {

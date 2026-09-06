@@ -4,3 +4,5 @@
 /.cursor/ @jaredwray
 /.devcontainer/ @jaredwray
 /scripts/ @jaredwray
+/worker/ @jaredwray
+/wrangler.jsonc @jaredwray

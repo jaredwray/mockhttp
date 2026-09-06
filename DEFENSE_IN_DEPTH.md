@@ -47,7 +47,7 @@ Profile: npm library · public
 - [x] Socket reviews every PR that changes dependencies — GitHub app scans PRs
 
 ## 7. Repository lockdown
-- [x] `lockdown-repo.sh` applied; `--check` with `--required-checks "build (22),build (24),build (26),Analyze (javascript),zizmor"` and `--allowed-actions "codecov/*,peter-evans/*,google-github-actions/*,docker/*"` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, immutable releases, fork-PR approval, read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting as applicable) (#193). `google-github-actions/*` can be dropped from the allowlist now that site deploy no longer uses GCP.
+- [x] `lockdown-repo.sh` applied; `--check` with `--required-checks "build (22),build (24),build (26),Analyze (javascript),zizmor"` and `--allowed-actions "codecov/*,peter-evans/*,google-github-actions/*,docker/*"` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, immutable releases, fork-PR approval, read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting as applicable) (#193). `google-github-actions/*` can be dropped from the allowlist now that production runs entirely on Cloudflare.
 - [x] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts (manual)
 - [x] Recovery codes stored offline in a password manager (manual)
 

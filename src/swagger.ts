@@ -9,9 +9,9 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 * [Docker Image](https://hub.docker.com/r/jaredwray/mockhttp)
 * [NPM Package](https://www.npmjs.com/package/@jaredwray/mockhttp)
 
-# About mockhttp.org 
+# About mockhttp.org
 
-[mockhttp.org](https://mockhttp.org) is a free service that runs this codebase and allows you to use it for testing purposes. It is a simple way to mock HTTP responses for testing purposes. Ran via [Cloudflare Containers](https://developers.cloudflare.com/containers/).
+[mockhttp.org](https://mockhttp.org) is a free hosted instance of this codebase for testing. It runs entirely on [Cloudflare](https://www.cloudflare.com/) using Workers and [Containers](https://developers.cloudflare.com/containers/). The service is globally available and rate-limited (1000 requests per minute per IP) to prevent abuse.
 `;
 
 export const fastifySwaggerConfig = {

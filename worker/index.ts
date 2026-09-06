@@ -1,6 +1,6 @@
 import { Container, getRandom } from "@cloudflare/containers";
 
-export const MAX_CONTAINERS = 5;
+export const MAX_CONTAINERS = 3;
 export const CONTAINER_PORT = 3000;
 export const CONTAINER_SLEEP_AFTER = "24h";
 

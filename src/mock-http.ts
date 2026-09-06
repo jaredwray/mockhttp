@@ -129,7 +129,7 @@ export type MockHttpOptions = {
 	 */
 	httpBin?: HttpBinOptions;
 	/**
-	 * Rate limiting options. Defaults to 1000 requests per second (localhost excluded).
+	 * Rate limiting options. Defaults to 500 requests per second (localhost excluded).
 	 * Set to undefined to disable rate limiting, or provide custom options to configure.
 	 */
 	rateLimit?: boolean | RateLimitPluginOptions;
@@ -183,7 +183,7 @@ export class MockHttp extends Hookified {
 	};
 
 	private _rateLimit?: RateLimitPluginOptions = {
-		max: 1000,
+		max: 500,
 		timeWindow: "1 second",
 		allowList: ["127.0.0.1", "::1"],
 	};
@@ -425,20 +425,20 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
-	 * Rate limiting options. Defaults to 1000 requests per second (localhost excluded).
+	 * Rate limiting options. Defaults to 500 requests per second (localhost excluded).
 	 * Set to undefined to disable rate limiting, or provide custom options to configure.
-	 * @default { max: 1000, timeWindow: "1 second", allowList: ["127.0.0.1", "::1"] }
+	 * @default { max: 500, timeWindow: "1 second", allowList: ["127.0.0.1", "::1"] }
 	 */
 	public get rateLimit(): RateLimitPluginOptions | undefined {
 		return this._rateLimit;
 	}
 
 	/**
-	 * Rate limiting options. Defaults to 1000 requests per second (localhost excluded).
+	 * Rate limiting options. Defaults to 500 requests per second (localhost excluded).
 	 * Set to undefined to disable rate limiting, or provide custom options to configure.
 	 *
 	 * Note: Changing this property requires restarting the server (close() then start()) for changes to take effect.
-	 * @default { max: 1000, timeWindow: "1 second", allowList: ["127.0.0.1", "::1"] }
+	 * @default { max: 500, timeWindow: "1 second", allowList: ["127.0.0.1", "::1"] }
 	 */
 	public set rateLimit(rateLimit: RateLimitPluginOptions | undefined) {
 		this._rateLimit = rateLimit;

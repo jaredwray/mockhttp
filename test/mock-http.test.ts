@@ -921,10 +921,10 @@ describe("MockHttp", () => {
 	});
 
 	describe("rate limiting", () => {
-		test("should be enabled by default with 1000 requests per second and localhost excluded", () => {
+		test("should be enabled by default with 500 requests per second and localhost excluded", () => {
 			const mock = new MockHttp();
 			expect(mock.rateLimit).toBeDefined();
-			expect(mock.rateLimit?.max).toBe(1000);
+			expect(mock.rateLimit?.max).toBe(500);
 			expect(mock.rateLimit?.timeWindow).toBe("1 second");
 			expect(mock.rateLimit?.allowList).toEqual(["127.0.0.1", "::1"]);
 		});

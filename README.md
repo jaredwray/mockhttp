@@ -791,12 +791,12 @@ mock.bins = new BinManager({ store: new RedisBinStore() });
 
 # Rate Limiting
 
-MockHttp supports rate limiting using [@fastify/rate-limit](https://github.com/fastify/fastify-rate-limit). Rate limiting is **enabled by default** at **1000 requests per second** with **localhost (127.0.0.1 and ::1) excluded** from rate limiting.
+MockHttp supports rate limiting using [@fastify/rate-limit](https://github.com/fastify/fastify-rate-limit). Rate limiting is **enabled by default** at **500 requests per second** with **localhost (127.0.0.1 and ::1) excluded** from rate limiting.
 
 ## Default Rate Limiting
 
 By default, MockHttp applies the following rate limit:
-- **1000 requests per second** per IP address
+- **500 requests per second** per IP address
 - **Localhost is excluded** - requests from 127.0.0.1 and ::1 bypass rate limiting (ideal for local development and testing)
 
 ```javascript
@@ -804,7 +804,7 @@ import { MockHttp } from '@jaredwray/mockhttp';
 
 const mock = new MockHttp();
 await mock.start();
-// Rate limiting is active (1000 req/s) except for localhost
+// Rate limiting is active (500 req/s) except for localhost
 ```
 
 ## Customizing Rate Limiting
@@ -934,7 +934,7 @@ await mock.start(); // Restarts with new settings
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `max` | number \| function | `1000` | Maximum requests per time window |
+| `max` | number \| function | `500` | Maximum requests per time window |
 | `timeWindow` | number \| string | `'1 second'` | Duration of rate limit window (milliseconds or string like '1 second') |
 | `cache` | number | `5000` | LRU cache size for tracking clients |
 | `allowList` | array \| function | `[]` | IPs or function to exclude from rate limiting |
@@ -999,7 +999,7 @@ new MockHttp(options?)
   - `autoDetectPort?`: boolean - Auto-detect next available port if in use (default: true)
   - `helmet?`: boolean - Use Helmet for security headers (default: true)
   - `apiDocs?`: boolean - Enable Swagger API documentation (default: true)
-  - `rateLimit?`: RateLimitPluginOptions - Configure rate limiting (default: 1000 req/s, localhost excluded)
+  - `rateLimit?`: RateLimitPluginOptions - Configure rate limiting (default: 500 req/s, localhost excluded)
   - `logging?`: boolean - Enable logging (default: true)
   - `httpBin?`: HttpBinOptions - Configure which httpbin routes to enable
     - `httpMethods?`: boolean - Enable HTTP method routes (default: true)

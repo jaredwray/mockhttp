@@ -18,7 +18,7 @@
 		{
 			"class_name": "MockHttpContainer",
 			"image": "./Dockerfile",
-			"max_instances": 5,
+			"max_instances": 3,
 			"instance_type": "basic",
 			"rollout_step_percentage": 100
 		}

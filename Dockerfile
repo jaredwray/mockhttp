@@ -9,6 +9,7 @@ COPY --chown=node:node node_modules/ ./node_modules/
 COPY --chown=node:node package.json ./package.json
 COPY --chown=node:node public/ ./public/
 COPY --chown=node:node dist/ ./dist/
+COPY --chown=node:node site/dist/ ./site/dist/
 
 # Switch to non-root user
 USER node

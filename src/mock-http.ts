@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import * as fsPromises from "node:fs/promises";
 import path from "node:path";
 import fastifyCookie from "@fastify/cookie";
@@ -46,7 +47,6 @@ import {
 	putRoute,
 } from "./routes/http-methods/index.js";
 import { imageRoutes } from "./routes/images/index.js";
-import { indexRoute } from "./routes/index.js";
 import {
 	absoluteRedirectRoute,
 	redirectToRoute,
@@ -63,9 +63,8 @@ import {
 	etagRoutes,
 	responseHeadersRoutes,
 } from "./routes/response-inspection/index.js";
-import { sitemapRoute } from "./routes/sitemap.js";
 import { statusCodeRoute } from "./routes/status-codes/index.js";
-import { fastifySwaggerConfig, registerSwaggerUi } from "./swagger.js";
+import { fastifySwaggerConfig, registerOpenApiJson } from "./swagger.js";
 import { TapManager } from "./tap-manager.js";
 
 export type HttpBinOptions = {
@@ -121,11 +120,15 @@ export type MockHttpOptions = {
 	 */
 	helmet?: boolean;
 	/**
-	 * Whether to use Swagger for API documentation. Defaults to true.
+	 * Whether to serve the Docula documentation site and OpenAPI spec. Defaults to true.
 	 */
 	apiDocs?: boolean;
 	/**
-	 * Whether to use Swagger UI. Defaults to true.
+	 * Path to the built Docula site (`site/dist`). Defaults to `./site/dist`.
+	 */
+	siteDistPath?: string;
+	/**
+	 * Configure which httpbin-style mock routes to enable. Defaults to all enabled.
 	 */
 	httpBin?: HttpBinOptions;
 	/**
@@ -166,6 +169,7 @@ export class MockHttp extends Hookified {
 	private _autoDetectPort = true;
 	private _helmet = true;
 	private _apiDocs = true;
+	private _siteDistPath = path.resolve("./site/dist");
 	private _logging = true;
 	private _httpBin: HttpBinOptions = {
 		httpMethods: true,
@@ -214,6 +218,10 @@ export class MockHttp extends Hookified {
 
 		if (options?.apiDocs !== undefined) {
 			this._apiDocs = options.apiDocs;
+		}
+
+		if (options?.siteDistPath !== undefined) {
+			this._siteDistPath = path.resolve(options.siteDistPath);
 		}
 
 		if (options?.httpBin !== undefined) {
@@ -316,21 +324,35 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
-	 * Whether to use Swagger for API documentation. Defaults to true.
+	 * Whether to serve the Docula documentation site and OpenAPI spec. Defaults to true.
 	 * @default true
 	 */
-
 	public get apiDocs(): boolean {
 		return this._apiDocs;
 	}
 
 	/**
-	 * Whether to use Swagger for API documentation. Defaults to true.
+	 * Whether to serve the Docula documentation site and OpenAPI spec. Defaults to true.
 	 * @default true
 	 */
-
 	public set apiDocs(apiDocs: boolean) {
 		this._apiDocs = apiDocs;
+	}
+
+	/**
+	 * Path to the built Docula site served when `apiDocs` is enabled.
+	 * @default ./site/dist
+	 */
+	public get siteDistPath(): string {
+		return this._siteDistPath;
+	}
+
+	/**
+	 * Path to the built Docula site served when `apiDocs` is enabled.
+	 * @default ./site/dist
+	 */
+	public set siteDistPath(siteDistPath: string) {
+		this._siteDistPath = path.resolve(siteDistPath);
 	}
 
 	/**
@@ -552,20 +574,12 @@ export class MockHttp extends Hookified {
 				}
 			});
 
-			// Register Scalar API client
-			await this._server.register(fastifyStatic, {
-				root: path.resolve("./node_modules/@scalar/api-reference/dist"),
-				prefix: "/scalar",
-			});
-
-			// Register the Public for favicon
+			// Register the Public for favicon and image fixtures
 			await this.server.register(fastifyStatic, {
 				root: path.resolve("./public"),
-				decorateReply: false,
+				wildcard: false,
+				index: false,
 			});
-
-			// Register the site map route
-			await this._server.register(sitemapRoute);
 
 			// Register the Helmet plugin for security headers
 			if (this._helmet) {
@@ -573,11 +587,11 @@ export class MockHttp extends Hookified {
 					contentSecurityPolicy: {
 						directives: {
 							defaultSrc: ["'self'"],
-							scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'"],
+							scriptSrc: ["'self'", "'unsafe-inline'"],
 							styleSrc: ["'self'", "'unsafe-inline'"],
 							imgSrc: ["'self'", "data:", "https:"],
 							fontSrc: ["'self'", "data:"],
-							connectSrc: ["'self'"],
+							connectSrc: ["'self'", "https:"],
 							frameSrc: ["'self'"],
 							objectSrc: ["'none'"],
 							upgradeInsecureRequests: [],
@@ -592,7 +606,7 @@ export class MockHttp extends Hookified {
 			}
 
 			if (this._apiDocs) {
-				await this.registerApiDocs();
+				await this.registerSwagger();
 			}
 
 			const {
@@ -659,6 +673,10 @@ export class MockHttp extends Hookified {
 				this._bins.start();
 			}
 
+			if (this._apiDocs) {
+				await this.registerSite();
+			}
+
 			if (this._autoDetectPort) {
 				const originalPort = this._port;
 				this._port = await this.detectPort();
@@ -695,22 +713,48 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
-	 * This will register the API documentation routes including openapi and swagger ui.
+	 * Register OpenAPI generation and the Docula documentation site.
 	 * @param fastifyInstance - the server instance to register the routes on.
 	 */
 	public async registerApiDocs(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
+		await this.registerSwagger(fastifyInstance);
+		await this.registerSite(fastifyInstance);
+	}
+
+	/**
+	 * Register `@fastify/swagger` and the live `/openapi.json` spec route.
+	 * @param fastifyInstance - the server instance to register the routes on.
+	 */
+	public async registerSwagger(
+		fastifyInstance?: FastifyInstance,
+	): Promise<void> {
 		const fastify = fastifyInstance ?? this._server;
-
-		// Set up Swagger for API documentation
 		await fastify.register(fastifySwagger, fastifySwaggerConfig);
+		await registerOpenApiJson(fastify);
+	}
 
-		// Register Swagger UI
-		await registerSwaggerUi(fastify);
+	/**
+	 * Serve the built Docula site from `siteDistPath` when the directory exists.
+	 * @param fastifyInstance - the server instance to register the routes on.
+	 */
+	public async registerSite(fastifyInstance?: FastifyInstance): Promise<void> {
+		const fastify = fastifyInstance ?? this._server;
+		if (!existsSync(this._siteDistPath)) {
+			fastify.log.warn(
+				`Docula site not found at ${this._siteDistPath}; skipping static docs`,
+			);
+			return;
+		}
 
-		// Register the index / home page route
-		await fastify.register(indexRoute);
+		await fastify.register(fastifyStatic, {
+			root: this._siteDistPath,
+			prefix: "/",
+			decorateReply: false,
+			index: ["index.html"],
+			wildcard: true,
+		});
 	}
 
 	/**

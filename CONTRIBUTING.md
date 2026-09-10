@@ -13,6 +13,7 @@ You can contribute changes to this repo by opening a pull request:
 	- Run `corepack enable` so the `packageManager` field in `package.json` provides pnpm.
 	- Run `pnpm install`.
 	- Run `pnpm test`.
+	- If you change documentation, run `pnpm website:build` to regenerate the OpenAPI spec and Docula site.
 3) Commit your changes and push them to your forked repository.
 4) Navigate to the main repository and select the *Pull Requests* tab.
 5) Click the *New pull request* button, then select the option "Compare across forks"

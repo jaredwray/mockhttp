@@ -12,6 +12,9 @@ package-lock.json
 DOCKER.md
 .wrangler
 .dev.vars
+site/dist
+site/.cache
+site/api/swagger.json
 
 # AI
 .claude

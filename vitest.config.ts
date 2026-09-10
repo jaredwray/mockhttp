@@ -5,11 +5,12 @@ export default defineConfig({
 		coverage: {
 			reporter: ["text", "lcov", "json"],
 			exclude: [
-				"scripts/**", 
+				"scripts/**",
 				"dist/**",
+				"site/**",
 				"*.json",
 				"src/routes/**/index.ts",
-				"vitest.config.ts"
+				"vitest.config.ts",
 			],
 		},
 	},

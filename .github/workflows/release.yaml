@@ -101,6 +101,8 @@ jobs:
         run: pnpm build
 
       - name: Pack
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p packed
           pnpm pack --pack-destination packed

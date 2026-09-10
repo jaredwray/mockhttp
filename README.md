@@ -18,7 +18,7 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 * Built with `nodejs`, `typescript`, and `fastify`
 * Deploy via `docker` or `nodejs`
 * Free hosted service at [mockhttp.org](https://mockhttp.org), running on Cloudflare
-* Better API documentation and examples
+* Documentation site and interactive OpenAPI reference (Docula)
 * Auto detect the port that is not in use
 * Maintained and updated regularly!
 
@@ -998,7 +998,8 @@ new MockHttp(options?)
   - `host?`: string - The host to listen on (default: '0.0.0.0')
   - `autoDetectPort?`: boolean - Auto-detect next available port if in use (default: true)
   - `helmet?`: boolean - Use Helmet for security headers (default: true)
-  - `apiDocs?`: boolean - Enable Swagger API documentation (default: true)
+  - `apiDocs?`: boolean - Serve the Docula documentation site and OpenAPI spec (default: true)
+  - `siteDistPath?`: string - Path to the built Docula site (default: `./site/dist`)
   - `rateLimit?`: RateLimitPluginOptions - Configure rate limiting (default: 1000 req/min, localhost excluded)
   - `logging?`: boolean - Enable logging (default: true)
   - `httpBin?`: HttpBinOptions - Configure which httpbin routes to enable
@@ -1024,7 +1025,8 @@ new MockHttp(options?)
 - `host`: string - Get/set the server host
 - `autoDetectPort`: boolean - Get/set auto-detect port behavior
 - `helmet`: boolean - Get/set Helmet security headers
-- `apiDocs`: boolean - Get/set API documentation
+- `apiDocs`: boolean - Get/set whether the documentation site and OpenAPI spec are served
+- `siteDistPath`: string - Get/set the path to the built Docula site
 - `logging`: boolean - Get/set logging enabled state
 - `rateLimit`: RateLimitPluginOptions | undefined - Get/set rate limiting options
 - `httpBin`: HttpBinOptions - Get/set httpbin route options
@@ -1054,7 +1056,15 @@ Detect the next available port.
 
 #### `async registerApiDocs(fastifyInstance?)`
 
-Register Swagger API documentation routes.
+Register OpenAPI generation and the Docula documentation site.
+
+#### `async registerSwagger(fastifyInstance?)`
+
+Register `@fastify/swagger` and the live `/openapi.json` spec route.
+
+#### `async registerSite(fastifyInstance?)`
+
+Serve the built Docula site from `siteDistPath` when the directory exists.
 
 #### `async registerHttpMethods(fastifyInstance?)`
 
@@ -1213,6 +1223,8 @@ A getter that returns whether there are any active injections.
 # About mockhttp.org
 
 [mockhttp.org](https://mockhttp.org) is a free hosted instance of this codebase for testing. It runs entirely on [Cloudflare](https://www.cloudflare.com/) using [Workers](https://developers.cloudflare.com/workers/) and [Containers](https://developers.cloudflare.com/containers/). The service is globally available and rate-limited (1000 requests per minute per IP) to prevent abuse.
+
+The documentation homepage is served at `/`, markdown guides at `/docs`, and the interactive HTTP API reference at `/api`. Mock endpoints such as `/get` and `/post` are unchanged.
 
 # Contributing
 

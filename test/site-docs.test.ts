@@ -1,10 +1,17 @@
+import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import Fastify from "fastify";
 import { afterEach, describe, expect, test } from "vitest";
 import { MockHttp } from "../src/mock-http.js";
 
 const fixtureSiteDist = path.resolve("./test/fixtures/site-dist");
 const missingSiteDist = path.resolve("./test/fixtures/missing-site-dist");
+const packageSiteDist = path.resolve(
+	path.dirname(fileURLToPath(import.meta.url)),
+	"../site/dist",
+);
 
 describe("Docula site docs", () => {
 	const servers: MockHttp[] = [];
@@ -13,11 +20,22 @@ describe("Docula site docs", () => {
 		await Promise.all(servers.splice(0).map((mock) => mock.close()));
 	});
 
-	test("should default siteDistPath to ./site/dist", () => {
+	test("should default siteDistPath to the package site/dist directory", () => {
 		const mock = new MockHttp();
-		expect(mock.siteDistPath).toBe(path.resolve("./site/dist"));
+		expect(mock.siteDistPath).toBe(packageSiteDist);
 		mock.siteDistPath = "./tmp-site-dist";
 		expect(mock.siteDistPath).toBe(path.resolve("./tmp-site-dist"));
+	});
+
+	test("should keep the default siteDistPath independent of cwd", () => {
+		const originalCwd = process.cwd();
+		process.chdir(os.tmpdir());
+		try {
+			expect(new MockHttp().siteDistPath).toBe(packageSiteDist);
+			expect(new MockHttp().siteDistPath).not.toBe(path.resolve("./site/dist"));
+		} finally {
+			process.chdir(originalCwd);
+		}
 	});
 
 	test("should accept siteDistPath in constructor options", () => {
@@ -53,7 +71,20 @@ describe("Docula site docs", () => {
 			url: "/sitemap.xml",
 		});
 		expect(sitemap.statusCode).toBe(200);
-		expect(sitemap.payload).toContain("https://mockhttp.org/");
+		expect(sitemap.headers["content-type"]).toContain("application/xml");
+		expect(sitemap.payload).toContain("http://localhost:80/");
+		expect(sitemap.payload).not.toContain("https://mockhttp.org");
+
+		const forwarded = await mock.server.inject({
+			method: "GET",
+			url: "/sitemap.xml",
+			headers: {
+				host: "docs.example.test",
+				"x-forwarded-proto": "https",
+			},
+		});
+		expect(forwarded.statusCode).toBe(200);
+		expect(forwarded.payload).toContain("https://docs.example.test/");
 
 		const get = await mock.server.inject({ method: "GET", url: "/get" });
 		expect(get.statusCode).toBe(200);
@@ -134,8 +165,11 @@ describe("Docula site docs", () => {
 
 	test("registerApiDocs should register swagger and the site on a custom instance", async () => {
 		const app = Fastify({ logger: false });
+		expect(app.hasReplyDecorator("sendFile")).toBe(false);
 		const mock = new MockHttp({ siteDistPath: fixtureSiteDist });
 		await mock.registerApiDocs(app);
+
+		expect(app.hasReplyDecorator("sendFile")).toBe(true);
 
 		const home = await app.inject({ method: "GET", url: "/" });
 		expect(home.statusCode).toBe(200);
@@ -143,8 +177,26 @@ describe("Docula site docs", () => {
 
 		const openapi = await app.inject({ method: "GET", url: "/openapi.json" });
 		expect(openapi.statusCode).toBe(200);
+		expect(openapi.json().paths["/sitemap.xml"]).toBeUndefined();
 
 		await app.close();
+	});
+
+	test("registerSite should skip sitemap rewrite when sitemap.xml is absent", async () => {
+		const dir = await fs.mkdtemp(path.join(os.tmpdir(), "mockhttp-site-"));
+		await fs.writeFile(path.join(dir, "index.html"), "<html>no sitemap</html>");
+		const app = Fastify({ logger: false });
+		const mock = new MockHttp({ siteDistPath: dir });
+		await mock.registerSite(app);
+
+		const home = await app.inject({ method: "GET", url: "/" });
+		expect(home.statusCode).toBe(200);
+
+		const sitemap = await app.inject({ method: "GET", url: "/sitemap.xml" });
+		expect(sitemap.statusCode).toBe(404);
+
+		await app.close();
+		await fs.rm(dir, { recursive: true, force: true });
 	});
 
 	test("registerSite should no-op when the directory does not exist", async () => {

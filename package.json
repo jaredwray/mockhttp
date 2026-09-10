@@ -29,7 +29,7 @@
 		"docker:readme": "tsx ./scripts/create-docker-readme.ts",
 		"docker:compose:up": "docker-compose up -d",
 		"docker:compose:down": "docker-compose down",
-		"prepublishOnly": "pnpm run build && pnpm website:build",
+		"prepack": "pnpm run build && pnpm website:build",
 		"start": "node dist/index.mjs"
 	},
 	"repository": {

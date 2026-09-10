@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import * as fsPromises from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import fastifyCookie from "@fastify/cookie";
 import fastifyHelmet from "@fastify/helmet";
 import fastifyRateLimit, {
@@ -9,7 +10,7 @@ import fastifyRateLimit, {
 import fastifyStatic from "@fastify/static";
 import { fastifySwagger } from "@fastify/swagger";
 import { detect } from "detect-port";
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { Hookified, type HookifiedOptions } from "hookified";
 import { BinManager } from "./bin-manager.js";
 import { type CertificateOptions, generateCertificate } from "./certificate.js";
@@ -66,6 +67,23 @@ import {
 import { statusCodeRoute } from "./routes/status-codes/index.js";
 import { fastifySwaggerConfig, registerOpenApiJson } from "./swagger.js";
 import { TapManager } from "./tap-manager.js";
+
+const packageRoot = path.resolve(
+	path.dirname(fileURLToPath(import.meta.url)),
+	"..",
+);
+const defaultSiteDistPath = path.join(packageRoot, "site", "dist");
+const defaultPublicPath = path.join(packageRoot, "public");
+
+const requestOrigin = (request: FastifyRequest): string => {
+	const host = request.headers.host || "mockhttp.org";
+	const forwarded = request.headers["x-forwarded-proto"];
+	const forwardedProto = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+	const protocol = (forwardedProto ?? request.protocol).includes("https")
+		? "https"
+		: "http";
+	return `${protocol}://${host}`;
+};
 
 export type HttpBinOptions = {
 	httpMethods?: boolean;
@@ -124,7 +142,8 @@ export type MockHttpOptions = {
 	 */
 	apiDocs?: boolean;
 	/**
-	 * Path to the built Docula site (`site/dist`). Defaults to `./site/dist`.
+	 * Path to the built Docula site (`site/dist`). Defaults to the package's
+	 * `site/dist` directory. Explicit paths are resolved from the current working directory.
 	 */
 	siteDistPath?: string;
 	/**
@@ -169,7 +188,7 @@ export class MockHttp extends Hookified {
 	private _autoDetectPort = true;
 	private _helmet = true;
 	private _apiDocs = true;
-	private _siteDistPath = path.resolve("./site/dist");
+	private _siteDistPath = defaultSiteDistPath;
 	private _logging = true;
 	private _httpBin: HttpBinOptions = {
 		httpMethods: true,
@@ -341,7 +360,7 @@ export class MockHttp extends Hookified {
 
 	/**
 	 * Path to the built Docula site served when `apiDocs` is enabled.
-	 * @default ./site/dist
+	 * @default the package `site/dist` directory
 	 */
 	public get siteDistPath(): string {
 		return this._siteDistPath;
@@ -349,7 +368,7 @@ export class MockHttp extends Hookified {
 
 	/**
 	 * Path to the built Docula site served when `apiDocs` is enabled.
-	 * @default ./site/dist
+	 * @default the package `site/dist` directory
 	 */
 	public set siteDistPath(siteDistPath: string) {
 		this._siteDistPath = path.resolve(siteDistPath);
@@ -576,7 +595,7 @@ export class MockHttp extends Hookified {
 
 			// Register the Public for favicon and image fixtures
 			await this.server.register(fastifyStatic, {
-				root: path.resolve("./public"),
+				root: defaultPublicPath,
 				wildcard: false,
 				index: false,
 			});
@@ -748,10 +767,26 @@ export class MockHttp extends Hookified {
 			return;
 		}
 
+		const sitemapPath = path.join(this._siteDistPath, "sitemap.xml");
+		if (existsSync(sitemapPath)) {
+			fastify.get(
+				"/sitemap.xml",
+				{ schema: { hide: true } },
+				async (request, reply) => {
+					const xml = await fsPromises.readFile(sitemapPath, "utf8");
+					return reply
+						.type("application/xml")
+						.send(
+							xml.replaceAll("https://mockhttp.org", requestOrigin(request)),
+						);
+				},
+			);
+		}
+
 		await fastify.register(fastifyStatic, {
 			root: this._siteDistPath,
 			prefix: "/",
-			decorateReply: false,
+			decorateReply: !fastify.hasReplyDecorator("sendFile"),
 			index: ["index.html"],
 			wildcard: true,
 		});

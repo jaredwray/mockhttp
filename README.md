@@ -999,7 +999,7 @@ new MockHttp(options?)
   - `autoDetectPort?`: boolean - Auto-detect next available port if in use (default: true)
   - `helmet?`: boolean - Use Helmet for security headers (default: true)
   - `apiDocs?`: boolean - Serve the Docula documentation site and OpenAPI spec (default: true)
-  - `siteDistPath?`: string - Path to the built Docula site (default: `./site/dist`)
+  - `siteDistPath?`: string - Path to the built Docula site (default: the package `site/dist` directory)
   - `rateLimit?`: RateLimitPluginOptions - Configure rate limiting (default: 1000 req/min, localhost excluded)
   - `logging?`: boolean - Enable logging (default: true)
   - `httpBin?`: HttpBinOptions - Configure which httpbin routes to enable

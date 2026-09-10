@@ -79,12 +79,9 @@ describe("Docula site docs", () => {
 		expect(spec.openapi).toMatch(/^3\./);
 		expect(spec.info.title).toBe("Mock HTTP API");
 		expect(spec.paths["/get"]).toBeDefined();
-		expect(spec.servers).toEqual(
-			expect.arrayContaining([
-				expect.objectContaining({ url: "/" }),
-				expect.objectContaining({ url: "https://mockhttp.org" }),
-			]),
-		);
+		expect(spec.servers).toEqual([
+			expect.objectContaining({ url: "", description: "This instance" }),
+		]);
 	});
 
 	test("should not serve the site when apiDocs is disabled", async () => {

@@ -20,15 +20,16 @@ export const fastifySwaggerConfig = {
 			description,
 			version: pkg.version,
 		},
-		servers: [
-			{ url: "/", description: "This instance" },
-			{ url: "https://mockhttp.org", description: "Hosted service" },
-		],
 	},
+};
+
+export const withLocalServer = (spec: Record<string, unknown>) => {
+	spec.servers = [{ url: "", description: "This instance" }];
+	return spec;
 };
 
 export const registerOpenApiJson = async (fastify: FastifyInstance) => {
 	fastify.get("/openapi.json", { schema: { hide: true } }, async () =>
-		fastify.swagger(),
+		withLocalServer(fastify.swagger() as Record<string, unknown>),
 	);
 };

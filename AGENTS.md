@@ -6,6 +6,8 @@ MockHTTP is an HTTP mock server for testing, built with Fastify and TypeScript.
 
 - `pnpm install` — install dependencies (always use pnpm, not npm)
 - `pnpm build` — build the project
+- `pnpm website:build` — generate OpenAPI and build the Docula site into `site/dist`
+- `pnpm website:dev` — generate OpenAPI and serve the Docula site locally
 - `pnpm test` — run linter and tests with coverage
 - `pnpm lint` — run Biome linter with auto-fixes
 

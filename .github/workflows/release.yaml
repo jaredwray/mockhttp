@@ -97,14 +97,14 @@ jobs:
       - name: Install Dependencies
         run: sfw pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build
-
       - name: Pack
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p packed
           pnpm pack --pack-destination packed
           ls -la packed
+          tar -tzf packed/*.tgz | grep -q '/site/dist/index.html'
 
       - name: Stage publish
         # pnpm ≥ 11.3. --no-git-checks: git-checks run even for a tarball and

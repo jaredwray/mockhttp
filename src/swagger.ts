@@ -1,4 +1,3 @@
-import { fastifySwaggerUi } from "@fastify/swagger-ui";
 import type { FastifyInstance } from "fastify";
 import pkg from "../package.json" with { type: "json" };
 
@@ -21,32 +20,16 @@ export const fastifySwaggerConfig = {
 			description,
 			version: pkg.version,
 		},
-		consumes: ["application/json"],
-		produces: ["application/json"],
 	},
 };
 
-export const registerSwaggerUi = async (fastify: FastifyInstance) => {
-	await fastify.register(fastifySwaggerUi, {
-		routePrefix: "/docs",
-		uiConfig: {
-			docExpansion: "none",
-			deepLinking: false,
-		},
-		uiHooks: {
-			/* v8 ignore next -- @preserve */
-			onRequest(_request, _reply, next) {
-				next();
-			},
-			/* v8 ignore next -- @preserve */
-			preHandler(_request, _reply, next) {
-				next();
-			},
-		},
+export const withLocalServer = (spec: Record<string, unknown>) => {
+	spec.servers = [{ url: "", description: "This instance" }];
+	return spec;
+};
 
-		staticCSP: true,
-		/* v8 ignore next -- @preserve */
-		transformSpecification: (swaggerObject, _request, _reply) => swaggerObject,
-		transformSpecificationClone: true,
-	});
+export const registerOpenApiJson = async (fastify: FastifyInstance) => {
+	fastify.get("/openapi.json", { schema: { hide: true } }, async () =>
+		withLocalServer(fastify.swagger() as Record<string, unknown>),
+	);
 };

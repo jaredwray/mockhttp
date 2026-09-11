@@ -1,0 +1,3 @@
+.cache
+dist
+api/swagger.json

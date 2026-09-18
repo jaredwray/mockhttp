@@ -9,7 +9,7 @@ Profile: npm library · public
 - [x] `DEFENSE_IN_DEPTH.md` present (this file) (#182)
 
 ## 2. CODEOWNERS and cloud bootstrap
-- [x] `.github/CODEOWNERS` covers `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, `/scripts/` with owners the maintainer names (#183)
+- [x] `.github/CODEOWNERS` covers `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, `/scripts/` with owners the maintainer names (#183; `/.vscode/` in #221)
 - [x] Codespaces and Cursor Cloud Agents bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile) (#184)
 - [x] Dev Container `image` pinned by digest (`name:<tag>@sha256:<digest>`; not a floating tag) (#214)
 
@@ -28,7 +28,7 @@ Profile: npm library · public
 - [x] Every action pinned to a full commit SHA (`npx actions-up`) (#187, #213)
 - [x] Every job installs Socket Firewall (`SocketDev/action` SHA-pinned, `firewall-version` pinned); `pnpm install` / `npm install` run as `sfw pnpm install` / `sfw npm install` (#188)
 - [x] `.github/workflows/check-workflows.yaml` lints workflows with zizmor on every PR (#189)
-- [x] Workflow `name:` and job `name:` contain no spaces (kebab-case) so they can be set as required status checks (PR # pending)
+- [x] Workflow `name:` and job `name:` contain no spaces (kebab-case) so they can be set as required status checks (#221)
 - [x] `persist-credentials: false` on checkouts that don't push (#189)
 - [x] No `pull_request_target` on workflows that run untrusted PR code — verified on main
 - [x] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning — verified on main

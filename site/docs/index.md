@@ -1,22 +1,50 @@
 ---
-title: Documentation
+title: Getting Started
 order: 1
 ---
 
-# Documentation
+# Getting Started
 
-MockHTTP is an HTTP mock server and [httpbin](https://httpbin.org/) replacement. Use the hosted instance at [mockhttp.org](https://mockhttp.org), run it with Docker, or embed it in Node.js tests.
+## Deploy via Docker
+```bash
+docker run -d -p 3000:3000 jaredwray/mockhttp
+```
 
-## Guides
+## Deploy via Docker Compose
+```yaml
+services:
+  mockhttp:
+    image: jaredwray/mockhttp:latest
+    ports:
+      - "3000:3000"
+```
 
-- [Getting Started](/docs/getting-started/) — Docker, Compose, and Node.js
-- [HTTPS and HTTP/2](/docs/https/) — TLS certificates and HTTP/2
-- [Taps](/docs/taps/) — inject custom responses
-- [Bins](/docs/bins/) — capture and inspect incoming requests
-- [Configuration](/docs/configuration/) — rate limiting, logging, and URL matching
-- [Library API](/docs/library/) — `MockHttp` class, options, and methods
-- [Hosted Service](/docs/hosted/) — the free mockhttp.org instance
+If you want to run it on a different port, just change the `3000` to whatever port you want and add in the environment variable `PORT` to the environment.
 
-## HTTP API
+```yaml
+services:
+  mockhttp:
+    image: jaredwray/mockhttp:latest
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+```
 
-The interactive HTTP API reference lives at [/api](/api/). Mock endpoints such as `/get`, `/post`, and `/status/:code` are unchanged.
+You can see an example of this in the [docker-compose.yaml](https://github.com/jaredwray/mockhttp/blob/main/docker-compose.yaml) file.
+
+## Deploy via Node.js
+```bash
+npm install @jaredwray/mockhttp --save
+```
+
+then run `mockhttp` in your code.
+
+```javascript
+import { MockHttp } from '@jaredwray/mockhttp';
+const mock = new MockHttp();
+await mock.start(); // start the server
+const response = await fetch('http://localhost:3000/get');
+console.log(response);
+await mock.close(); // stop the server
+```

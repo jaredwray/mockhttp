@@ -24,7 +24,7 @@ This repository follows the [defense-in-depth](https://github.com/jaredwray/agen
 hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_DEPTH.md). Measures currently in place:
 
 - All changes land through pull requests — direct pushes to `main` are blocked, and merging requires passing status checks (`build-22`, `build-24`, `build-26`, `analyze`, `zizmor`).
-- Tags can only be created by repository admins.
+- Tags can only be created by repository admins; published GitHub Releases are immutable (assets and tags cannot be changed after publish).
 - Workflow runs from outside collaborators always require maintainer approval, and only allowlisted GitHub Actions can run.
 - CI runs with read-only permissions (only jobs whose purpose is mutating the repo get `contents: write`); generated output is an artifact, never committed back; every action is pinned to a full commit SHA; Socket Firewall (`sfw`) wraps `pnpm install` / `npm install`; workflows are security-linted with zizmor on every PR.
 - Codespaces and Cursor Cloud Agents install through Aikido Safe Chain; package-manager shims must not be bypassed.

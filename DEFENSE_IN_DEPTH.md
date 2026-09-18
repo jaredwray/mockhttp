@@ -50,17 +50,12 @@ Profile: npm library · public
 ## 7. Repository lockdown
 - [x] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts (manual)
 - [x] Recovery codes stored offline in a password manager (manual)
-- [ ] `lockdown-repo.sh` applied by a repo admin (never committed to this repo); `--check` with `--required-checks` and `--allowed-actions` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, immutable releases, fork-PR approval (public repos), read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting (public repos)) — #193 applied an earlier config. Re-check fails: owner pull-request bypass is missing; required checks still use spaced names (`build (22)`, `Analyze (javascript)`). Re-apply after this PR merges:
-
-```bash
-lockdown-repo.sh jaredwray/mockhttp --required-checks "build-22,build-24,build-26,analyze,zizmor" --allowed-actions "codecov/*,peter-evans/*,docker/*"
-```
+- [x] `lockdown-repo.sh` applied by a repo admin (never committed to this repo); `--check` with `--required-checks "build-22,build-24,build-26,analyze,zizmor"` and `--allowed-actions "codecov/*,peter-evans/*,docker/*"` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, immutable releases, fork-PR approval (public repos), read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting (public repos)) (#221)
 
 ## Repo-specific notes
 
 - Extra CODEOWNERS paths: `/worker/`, `/wrangler.jsonc`.
 - Site deploy (`deploy-site.yaml`) uses a Cloudflare Worker via Wrangler. Production GitHub environment secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers edit and the mockhttp.org zone (custom domain + DNS) permissions.
-- `google-github-actions/*` is no longer used and can be dropped from the Actions allowlist on re-apply.
 
 ## Release flow
 

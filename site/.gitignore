@@ -1,3 +1,6 @@
+# Keep generated Docula output out of git via the repo-root `site/dist` rule.
+# Do not ignore `dist` here: nested .gitignore files still apply during
+# `pnpm pack`, which would drop site/dist from the npm tarball even though
+# package.json "files" lists it.
 .cache
-dist
 api/swagger.json

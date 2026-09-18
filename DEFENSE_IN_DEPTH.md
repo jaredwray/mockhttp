@@ -32,7 +32,7 @@ Profile: npm library · public
 - [x] `persist-credentials: false` on checkouts that don't push (#189)
 - [x] No `pull_request_target` on workflows that run untrusted PR code — verified on main
 - [x] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning — verified on main
-- [x] No npm tokens (or other registry credentials) in Actions secrets — npm is OIDC-only; container images publish to GHCR with the job's `GITHUB_TOKEN` (#221)
+- [x] No npm tokens (or other registry credentials) in Actions secrets — npm is OIDC-only; container images publish to GHCR with the job's `GITHUB_TOKEN` (#223)
 
 ## 5. npm publishing — npm libraries only
 - [x] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual)

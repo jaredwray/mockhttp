@@ -105,6 +105,23 @@ describe("MockHttp", () => {
 		expect(mock.server).toBeDefined();
 	});
 
+	test("start recreates a listening Fastify server", async () => {
+		const mock = new MockHttp({
+			logging: false,
+			rateLimit: false,
+			autoDetectPort: false,
+			port: 3456,
+		});
+		await mock.start();
+		await mock.start();
+		const response = await mock.server.inject({
+			method: "GET",
+			url: "/get",
+		});
+		expect(response.statusCode).toBe(200);
+		await mock.close();
+	});
+
 	test("should be able to auto detect the port if in use", async () => {
 		const mock1 = new MockHttp();
 		await mock1.start();
@@ -165,6 +182,11 @@ describe("MockHttp", () => {
 		});
 		expect(response.statusCode).toBe(200);
 		await mock.close();
+	});
+
+	test("close is safe before the Fastify server is created", async () => {
+		const mock = new MockHttp({ logging: false });
+		await expect(mock.close()).resolves.toBeUndefined();
 	});
 
 	test("should skip public static files when staticFiles is false", async () => {

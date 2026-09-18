@@ -1,4 +1,4 @@
-import type { HTTPMethods } from "fastify";
+import { handleAsNodeRequest } from "cloudflare:node";
 import { MockHttp, type MockHttpOptions } from "../src/mock-http.js";
 import { setPublicFileReader } from "../src/public-files.js";
 
@@ -29,17 +29,14 @@ export type WorkerEnv = {
 	RATE_LIMITER?: RateLimiter;
 };
 
-const hopByHopHeaders = new Set([
-	"connection",
-	"keep-alive",
-	"proxy-authenticate",
-	"proxy-authorization",
-	"te",
-	"trailer",
-	"transfer-encoding",
-	"upgrade",
-	"content-length",
-]);
+export type WorkerDispatch = (
+	port: number,
+	request: Request,
+) => Promise<Response>;
+
+export const workerRuntime: { dispatch: WorkerDispatch } = {
+	dispatch: handleAsNodeRequest,
+};
 
 export function clientIp(request: Request): string {
 	return (
@@ -99,86 +96,17 @@ export async function createWorkerApp(): Promise<MockHttp> {
 	return mockHttp;
 }
 
-export function headersFromInject(headers: Record<string, unknown>): Headers {
-	const result = new Headers();
-	for (const [key, value] of Object.entries(headers)) {
-		if (value === undefined || hopByHopHeaders.has(key.toLowerCase())) {
-			continue;
-		}
-
-		if (Array.isArray(value)) {
-			for (const item of value) {
-				result.append(key, String(item));
-			}
-			continue;
-		}
-
-		result.set(key, String(value));
-	}
-
-	return result;
-}
-
-export function responseFromInject(
-	method: string,
-	statusCode: number,
-	headers: Record<string, unknown>,
-	rawPayload: Uint8Array,
-): Response {
-	const responseHeaders = headersFromInject(headers);
-	const emptyBody =
-		method === "HEAD" ||
-		statusCode === 204 ||
-		statusCode === 205 ||
-		statusCode === 304;
-	const status = statusCode >= 200 && statusCode <= 599 ? statusCode : 200;
-	const body = emptyBody ? null : rawPayload;
-
-	return new Response(body, {
-		status,
-		headers: responseHeaders,
+export async function listenWorkerApp(mockHttp: MockHttp): Promise<unknown> {
+	return mockHttp.server.listen({
+		port: mockHttp.port,
+		host: mockHttp.host,
 	});
-}
-
-export async function injectWorkerRequest(
-	app: MockHttp,
-	request: Request,
-): Promise<Response> {
-	const url = new URL(request.url);
-	const headers: Record<string, string> = {};
-	request.headers.forEach((value, key) => {
-		headers[key] = value;
-	});
-	if (!headers.host) {
-		headers.host = url.host;
-	}
-
-	const method = request.method.toUpperCase();
-	const payload =
-		method === "GET" || method === "HEAD" || !request.body
-			? undefined
-			: Buffer.from(await request.arrayBuffer());
-
-	const result = await app.server.inject({
-		method: method as HTTPMethods,
-		url: `${url.pathname}${url.search}`,
-		headers,
-		payload,
-		remoteAddress: clientIp(request),
-	});
-
-	return responseFromInject(
-		method,
-		result.statusCode,
-		result.headers as Record<string, unknown>,
-		result.rawPayload,
-	);
 }
 
 export async function handleWorkerFetch(
 	request: Request,
 	env: WorkerEnv,
-	app: MockHttp,
+	dispatch: WorkerDispatch = workerRuntime.dispatch,
 ): Promise<Response> {
 	const limited = await applyRateLimit(request, env);
 	if (limited) {
@@ -186,5 +114,5 @@ export async function handleWorkerFetch(
 	}
 
 	bindPublicAssets(env.ASSETS);
-	return injectWorkerRequest(app, request);
+	return dispatch(WORKER_PORT, request);
 }

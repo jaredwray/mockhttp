@@ -1,40 +1,39 @@
-import {
-	afterAll,
-	afterEach,
-	beforeAll,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { readPublicFile, setPublicFileReader } from "../src/public-files.js";
-import {
+
+const { handleAsNodeRequestMock } = vi.hoisted(() => ({
+	handleAsNodeRequestMock: vi.fn(),
+}));
+
+vi.mock("cloudflare:node", () => ({
+	handleAsNodeRequest: handleAsNodeRequestMock,
+}));
+
+const {
+	WORKER_PORT,
 	applyRateLimit,
 	bindPublicAssets,
 	clientIp,
 	createWorkerApp,
 	handleWorkerFetch,
-	headersFromInject,
-	injectWorkerRequest,
-	responseFromInject,
-	WORKER_PORT,
+	listenWorkerApp,
 	workerMockHttpOptions,
-} from "../worker/app.js";
+	workerRuntime,
+} = await import("../worker/app.js");
 
-const { default: worker } = await import("../worker/index.js");
+const originalDispatch = workerRuntime.dispatch;
 
 describe("cloudflare worker", () => {
-	const appPromise = createWorkerApp();
-
-	beforeAll(async () => {
-		await appPromise;
-	});
-
-	afterAll(async () => {
-		await (await appPromise).close();
-	});
+	const dispatch = vi.fn();
 
 	afterEach(() => {
+		dispatch.mockReset();
+		dispatch.mockResolvedValue(new Response("ok", { status: 200 }));
+		handleAsNodeRequestMock.mockReset();
+		handleAsNodeRequestMock.mockResolvedValue(
+			new Response("dispatched", { status: 200 }),
+		);
+		workerRuntime.dispatch = originalDispatch;
 		setPublicFileReader();
 	});
 
@@ -84,18 +83,16 @@ describe("cloudflare worker", () => {
 
 	it("returns 429 when the Cloudflare rate limiter rejects the client", async () => {
 		const limit = vi.fn().mockResolvedValue({ success: false });
-		const app = await appPromise;
-		const inject = vi.spyOn(app.server, "inject");
 		const response = await handleWorkerFetch(
 			new Request("https://mockhttp.org/get", {
 				headers: { "cf-connecting-ip": "203.0.113.10" },
 			}),
 			{ RATE_LIMITER: { limit } },
-			app,
+			dispatch,
 		);
 
 		expect(limit).toHaveBeenCalledWith({ key: "203.0.113.10" });
-		expect(inject).not.toHaveBeenCalled();
+		expect(dispatch).not.toHaveBeenCalled();
 		expect(response.status).toBe(429);
 		expect(response.headers.get("retry-after")).toBe("60");
 		expect(await response.json()).toEqual({
@@ -103,25 +100,23 @@ describe("cloudflare worker", () => {
 			error: "Too Many Requests",
 			message: "Rate limit exceeded, retry in 1 minute",
 		});
-		inject.mockRestore();
 	});
 
-	it("injects allowed requests into Fastify", async () => {
-		const app = await appPromise;
+	it("dispatches allowed requests to the Node HTTP server handler", async () => {
+		const request = new Request("https://mockhttp.org/uuid");
+		const expected = new Response("ok");
+		dispatch.mockResolvedValue(expected);
 		const limit = vi.fn().mockResolvedValue({ success: true });
+
 		const response = await handleWorkerFetch(
-			new Request("https://mockhttp.org/uuid", {
-				headers: { "cf-connecting-ip": "203.0.113.10" },
-			}),
+			request,
 			{ RATE_LIMITER: { limit } },
-			app,
+			dispatch,
 		);
 
-		expect(limit).toHaveBeenCalledWith({ key: "203.0.113.10" });
-		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({
-			uuid: expect.any(String),
-		});
+		expect(limit).toHaveBeenCalledWith({ key: "unknown" });
+		expect(dispatch).toHaveBeenCalledWith(WORKER_PORT, request);
+		expect(response).toBe(expected);
 	});
 
 	it("binds public image fixtures from the Worker env", async () => {
@@ -130,12 +125,11 @@ describe("cloudflare worker", () => {
 			.mockResolvedValue(
 				new Response(new Uint8Array([9, 8, 7]), { status: 200 }),
 			);
-		const app = await appPromise;
 
 		await handleWorkerFetch(
 			new Request("https://mockhttp.org/get"),
 			{ ASSETS: { fetch: fetchAsset } },
-			app,
+			dispatch,
 		);
 
 		const bytes = await readPublicFile("logo.png");
@@ -174,13 +168,13 @@ describe("cloudflare worker", () => {
 		expect(svg.toString("utf8")).toContain("<svg");
 	});
 
-	it("uses the Worker fetch handler against the startup Fastify app", async () => {
-		const response = await worker.fetch(
-			new Request("https://mockhttp.org/get"),
-			{},
-		);
+	it("uses the default worker runtime dispatcher", async () => {
+		handleAsNodeRequestMock.mockResolvedValue(new Response("ok"));
+		const request = new Request("https://mockhttp.org/ip");
+		const response = await handleWorkerFetch(request, {});
+		expect(handleAsNodeRequestMock).toHaveBeenCalledWith(WORKER_PORT, request);
 		expect(response.status).toBe(200);
-		expect(await response.json()).toMatchObject({ method: "GET" });
+		expect(await response.text()).toBe("ok");
 	});
 });
 
@@ -217,123 +211,18 @@ describe("worker Fastify app", () => {
 		expect(image.headers["content-type"]).toBe("image/png");
 		await mockHttp.close();
 	});
-});
 
-describe("injectWorkerRequest", () => {
-	it("dispatches GET, POST, HEAD, and empty-body statuses", async () => {
+	it("listenWorkerApp binds the configured worker address", async () => {
 		const mockHttp = await createWorkerApp();
-
-		const getResponse = await injectWorkerRequest(
-			mockHttp,
-			new Request("https://mockhttp.org/get?foo=bar"),
-		);
-		expect(getResponse.status).toBe(200);
-		expect(await getResponse.json()).toMatchObject({
-			method: "GET",
-			queryParams: { foo: "bar" },
+		const spy = vi
+			.spyOn(mockHttp.server, "listen")
+			.mockResolvedValue("http://127.0.0.1:3000" as never);
+		await listenWorkerApp(mockHttp);
+		expect(spy).toHaveBeenCalledWith({
+			port: WORKER_PORT,
+			host: "127.0.0.1",
 		});
-
-		const postResponse = await injectWorkerRequest(
-			mockHttp,
-			new Request("https://mockhttp.org/post", {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ hello: "world" }),
-			}),
-		);
-		expect(postResponse.status).toBe(200);
-		expect(await postResponse.json()).toMatchObject({
-			method: "POST",
-			body: { hello: "world" },
-		});
-
-		const headResponse = await injectWorkerRequest(
-			mockHttp,
-			new Request("https://mockhttp.org/get", { method: "HEAD" }),
-		);
-		expect(headResponse.status).toBe(200);
-		expect(await headResponse.text()).toBe("");
-
-		const noContent = await injectWorkerRequest(
-			mockHttp,
-			new Request("https://mockhttp.org/status/204"),
-		);
-		expect(noContent.status).toBe(204);
-		expect(await noContent.text()).toBe("");
-
-		await mockHttp.close();
-	});
-
-	it("sets Host from the request URL when the header is missing", async () => {
-		const mockHttp = await createWorkerApp();
-		const spy = vi.spyOn(mockHttp.server, "inject").mockResolvedValue({
-			statusCode: 200,
-			headers: { "content-type": "application/json" },
-			rawPayload: Buffer.from("{}"),
-			payload: "{}",
-		} as never);
-
-		await injectWorkerRequest(mockHttp, {
-			url: "https://mockhttp.org/headers",
-			method: "GET",
-			headers: {
-				forEach(callback: (value: string, key: string) => void) {
-					callback("gzip", "accept-encoding");
-				},
-			},
-			body: null,
-		} as Request);
-
-		expect(spy).toHaveBeenCalledWith(
-			expect.objectContaining({
-				headers: {
-					"accept-encoding": "gzip",
-					host: "mockhttp.org",
-				},
-			}),
-		);
 		spy.mockRestore();
 		await mockHttp.close();
-	});
-});
-
-describe("inject response conversion", () => {
-	it("omits hop-by-hop headers and flattens arrays", () => {
-		const headers = headersFromInject({
-			"x-empty": undefined,
-			"set-cookie": ["a=1", "b=2"],
-			"x-count": 3,
-			"content-length": 12,
-			"transfer-encoding": "chunked",
-			connection: "keep-alive",
-		});
-		expect(headers.get("x-empty")).toBeNull();
-		expect(headers.getSetCookie()).toEqual(["a=1", "b=2"]);
-		expect(headers.get("x-count")).toBe("3");
-		expect(headers.get("content-length")).toBeNull();
-		expect(headers.get("transfer-encoding")).toBeNull();
-		expect(headers.get("connection")).toBeNull();
-	});
-
-	it("maps informational statuses to 200 for the Fetch API", () => {
-		const response = responseFromInject(
-			"GET",
-			100,
-			{ "content-type": "application/json" },
-			new Uint8Array([123, 125]),
-		);
-		expect(response.status).toBe(200);
-		expect(responseFromInject("GET", 600, {}, new Uint8Array()).status).toBe(
-			200,
-		);
-	});
-
-	it("keeps 205 and 304 bodies empty", () => {
-		expect(
-			responseFromInject("GET", 205, {}, new Uint8Array([1])).body,
-		).toBeNull();
-		expect(
-			responseFromInject("GET", 304, {}, new Uint8Array([1])).body,
-		).toBeNull();
 	});
 });

@@ -31,7 +31,7 @@ Profile: npm library · public
 - [x] No `pull_request_target` on workflows that run untrusted PR code — verified on main
 - [x] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning — verified on main
 - [x] No npm tokens in Actions secrets — verified on main (Docker Hub still uses long-lived registry credentials)
-- [x] Site deploy (`deploy-site.yaml`) uses Cloudflare Containers via Wrangler. Production GitHub environment secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers edit, Containers, and the mockhttp.org zone (custom domain + DNS) permissions.
+- [x] Site deploy (`deploy-site.yaml`) uses a Cloudflare Worker via Wrangler (no Containers). Production GitHub environment secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers edit and the mockhttp.org zone (custom domain + DNS) permissions.
 
 ## 5. npm publishing — npm libraries only
 - [x] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual)

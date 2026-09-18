@@ -21,6 +21,7 @@
 		"generate:openapi": "tsx scripts/generate-openapi.ts",
 		"website:build": "pnpm generate:openapi && docula build",
 		"website:dev": "pnpm generate:openapi && docula dev",
+		"prepare:worker-assets": "tsx scripts/prepare-worker-assets.ts",
 		"clean": "rimraf ./node_modules ./dist ./coverage .wrangler DOCKER.md ./site/dist ./site/.cache ./site/api/swagger.json",
 		"docker:build": "docker build -t jaredwray/mockhttp .",
 		"docker:run": "docker run -p 3000:3000 jaredwray/mockhttp",
@@ -72,7 +73,6 @@
 		"vitest": "^5.0.0"
 	},
 	"dependencies": {
-		"@cloudflare/containers": "^0.3.7",
 		"@fastify/cookie": "^11.1.2",
 		"@fastify/helmet": "^13.1.0",
 		"@fastify/rate-limit": "^11.2.0",

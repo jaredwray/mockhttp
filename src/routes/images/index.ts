@@ -1,11 +1,10 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type {
 	FastifyInstance,
 	FastifyReply,
 	FastifyRequest,
 	FastifySchema,
 } from "fastify";
+import { readPublicFile } from "../../public-files.js";
 
 const imageSchema: FastifySchema = {
 	description:
@@ -77,9 +76,24 @@ const webpSchema: FastifySchema = {
 	},
 };
 
-export const imageRoutes = (fastify: FastifyInstance) => {
-	const publicPath = join(process.cwd(), "public");
+async function sendImage(
+	reply: FastifyReply,
+	file: string,
+	contentType: string,
+) {
+	try {
+		const imageBuffer = await readPublicFile(file);
+		reply.type(contentType);
+		return imageBuffer;
+	} catch (error) {
+		/* v8 ignore next -- @preserve */
+		reply.code(500);
+		/* v8 ignore next -- @preserve */
+		return { error: `${error}` };
+	}
+}
 
+export const imageRoutes = (fastify: FastifyInstance) => {
 	// Content negotiation route
 	fastify.get(
 		"/image",
@@ -107,18 +121,7 @@ export const imageRoutes = (fastify: FastifyInstance) => {
 				contentType = "image/png";
 			}
 
-			try {
-				const imagePath = join(publicPath, file);
-				const imageBuffer = readFileSync(imagePath);
-
-				reply.type(contentType);
-				return imageBuffer;
-			} catch (error) {
-				/* v8 ignore next -- @preserve */
-				reply.code(500);
-				/* v8 ignore next -- @preserve */
-				return { error: `${error}` };
-			}
+			return sendImage(reply, file, contentType);
 		},
 	);
 
@@ -127,17 +130,7 @@ export const imageRoutes = (fastify: FastifyInstance) => {
 		"/image/jpeg",
 		{ schema: jpegSchema },
 		async (_request: FastifyRequest, reply: FastifyReply) => {
-			try {
-				const imagePath = join(publicPath, "logo.jpg");
-				const imageBuffer = readFileSync(imagePath);
-				reply.type("image/jpeg");
-				return imageBuffer;
-			} catch (error) {
-				/* v8 ignore next -- @preserve */
-				reply.code(500);
-				/* v8 ignore next -- @preserve */
-				return { error: `${error}` };
-			}
+			return sendImage(reply, "logo.jpg", "image/jpeg");
 		},
 	);
 
@@ -146,17 +139,7 @@ export const imageRoutes = (fastify: FastifyInstance) => {
 		"/image/png",
 		{ schema: pngSchema },
 		async (_request: FastifyRequest, reply: FastifyReply) => {
-			try {
-				const imagePath = join(publicPath, "logo.png");
-				const imageBuffer = readFileSync(imagePath);
-				reply.type("image/png");
-				return imageBuffer;
-			} catch (error) {
-				/* v8 ignore next -- @preserve */
-				reply.code(500);
-				/* v8 ignore next -- @preserve */
-				return { error: `${error}` };
-			}
+			return sendImage(reply, "logo.png", "image/png");
 		},
 	);
 
@@ -165,17 +148,7 @@ export const imageRoutes = (fastify: FastifyInstance) => {
 		"/image/svg",
 		{ schema: svgSchema },
 		async (_request: FastifyRequest, reply: FastifyReply) => {
-			try {
-				const imagePath = join(publicPath, "logo.svg");
-				const imageBuffer = readFileSync(imagePath);
-				reply.type("image/svg+xml");
-				return imageBuffer;
-			} catch (error) {
-				/* v8 ignore next -- @preserve */
-				reply.code(500);
-				/* v8 ignore next -- @preserve */
-				return { error: `${error}` };
-			}
+			return sendImage(reply, "logo.svg", "image/svg+xml");
 		},
 	);
 
@@ -184,17 +157,7 @@ export const imageRoutes = (fastify: FastifyInstance) => {
 		"/image/webp",
 		{ schema: webpSchema },
 		async (_request: FastifyRequest, reply: FastifyReply) => {
-			try {
-				const imagePath = join(publicPath, "logo.webp");
-				const imageBuffer = readFileSync(imagePath);
-				reply.type("image/webp");
-				return imageBuffer;
-			} catch (error) {
-				/* v8 ignore next -- @preserve */
-				reply.code(500);
-				/* v8 ignore next -- @preserve */
-				return { error: `${error}` };
-			}
+			return sendImage(reply, "logo.webp", "image/webp");
 		},
 	);
 };

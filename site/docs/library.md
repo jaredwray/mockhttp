@@ -23,6 +23,9 @@ new MockHttp(options?)
   - `siteDistPath?`: string - Path to the built Docula site (default: the package `site/dist` directory)
   - `rateLimit?`: RateLimitPluginOptions - Configure rate limiting (default: 1000 req/min, localhost excluded)
   - `logging?`: boolean - Enable logging (default: true)
+  - `staticFiles?`: boolean - Serve files from the package `public/` directory (default: true)
+  - `pluginTimeout?`: number - Fastify plugin boot timeout in milliseconds; `0` disables it (default: Fastify's timeout)
+  - `startBins?`: boolean - Start the request-bin cleanup timer during `initialize()` (default: true)
   - `httpBin?`: HttpBinOptions - Configure which httpbin routes to enable
     - `httpMethods?`: boolean - Enable HTTP method routes (default: true)
     - `redirects?`: boolean - Enable redirect routes (default: true)
@@ -49,6 +52,9 @@ new MockHttp(options?)
 - `apiDocs`: boolean - Get/set whether the documentation site and OpenAPI spec are served
 - `siteDistPath`: string - Get/set the path to the built Docula site
 - `logging`: boolean - Get/set logging enabled state
+- `staticFiles`: boolean - Get/set whether files from `public/` are served
+- `pluginTimeout`: number | undefined - Get/set Fastify plugin boot timeout
+- `startBins`: boolean - Get/set whether bin cleanup starts during `initialize()`
 - `rateLimit`: RateLimitPluginOptions | undefined - Get/set rate limiting options
 - `httpBin`: HttpBinOptions - Get/set httpbin route options
 - `https`: HttpsOptions | undefined - Get/set HTTPS configuration
@@ -60,6 +66,10 @@ new MockHttp(options?)
 - `bins`: BinManager - Get/set the BinManager instance for request bins
 
 ### Methods
+
+#### `async initialize()`
+
+Register plugins and routes without listening. Use `server.inject()` afterwards, or call `start()` to bind a port.
 
 #### `async start()`
 

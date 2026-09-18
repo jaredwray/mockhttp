@@ -9,11 +9,6 @@ export const options: Partial<DoculaOptions> = {
 	themeMode: "light",
 	enableLlmsTxt: true,
 	enableReleaseChangelog: true,
+	autoReadme: false,
 	editPageUrl: "https://github.com/jaredwray/mockhttp/edit/main/site/docs",
 };
-
-export const onAutoReadme = async (content: string) =>
-	content.replace(
-		"[![public/logo.svg](public/logo.svg)](https://mockhttp.org)\n\n",
-		"",
-	);

@@ -9,4 +9,3 @@ trustPolicy: no-downgrade
 allowBuilds:
   '@swc/core': true
   esbuild: true
-  vue-demi: true

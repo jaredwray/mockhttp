@@ -23,12 +23,13 @@ We will acknowledge receipt, work with you on a coordinated disclosure timeline,
 This repository follows the [defense-in-depth](https://github.com/jaredwray/agentic/blob/main/skills/security/defense-in-depth-nodejs/SKILL.md)
 hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_DEPTH.md). Measures currently in place:
 
-- All changes land through pull requests — direct pushes to `main` are blocked, and merging requires passing status checks (`build (22)`, `build (24)`, `build (26)`, `Analyze (javascript)`, `zizmor`).
-- Tags (and therefore releases) can only be created by repository admins.
+- All changes land through pull requests — direct pushes to `main` are blocked, and merging requires passing status checks (`build-22`, `build-24`, `build-26`, `analyze`, `zizmor`).
+- Tags can only be created by repository admins.
 - Workflow runs from outside collaborators always require maintainer approval, and only allowlisted GitHub Actions can run.
-- CI runs with read-only default workflow tokens; every action is pinned to a full commit SHA; Socket Firewall (`sfw`) wraps `pnpm install`; workflows are security-linted with zizmor on every PR.
+- CI runs with read-only permissions (only jobs whose purpose is mutating the repo get `contents: write`); generated output is an artifact, never committed back; every action is pinned to a full commit SHA; Socket Firewall (`sfw`) wraps `pnpm install` / `npm install`; workflows are security-linted with zizmor on every PR.
 - Codespaces and Cursor Cloud Agents install through Aikido Safe Chain; package-manager shims must not be bypassed.
-- Dependencies install through pnpm with a 7-day cooldown on new versions, lifecycle scripts blocked by default, and `trustPolicy: no-downgrade`. CI installs with `--frozen-lockfile`. Socket reviews every dependency change; Aikido scans every build. Releases are gated on Aikido `scan-release` (`AIKIDO_CLIENT_API_KEY`; scan only, no publish rights).
-- High-risk paths (`.github/`, `.cursor/`, `.devcontainer/`, `scripts/`) are owned in `.github/CODEOWNERS`.
-- npm releases are packed and staged via OIDC trusted publishing (**stage-only** on npmjs.com; workflow `release.yaml`, environment `npm`). There are no npm tokens. Staged versions are reviewed in Drydock and promoted with 2FA; the package disallows tokens.
+- The Codespaces Dev Container image is pinned by digest (`name:<tag>@sha256:<digest>`), not a floating tag.
+- Dependencies install through pnpm with a 7-day cooldown on new versions, lifecycle scripts blocked by default, and `trustPolicy: no-downgrade`. Socket reviews every dependency change; Aikido scans every build.
+- High-risk paths (`.github/`, `.vscode/`, `.cursor/`, `.devcontainer/`, `scripts/`) are owned in `.github/CODEOWNERS`.
+- npm releases are staged, never published directly: CI publishes via stage-only OIDC trusted publishing, Drydock reviews the exact staged artifact, and a maintainer promotes it with 2FA. There are no npm publish tokens.
 - Secret scanning and push protection are enabled. Private vulnerability reporting is enabled. Dependabot is off.

@@ -32,4 +32,5 @@ hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_D
 - Dependencies install through pnpm with a 7-day cooldown on new versions, lifecycle scripts blocked by default, and `trustPolicy: no-downgrade`. Socket reviews every dependency change; Aikido scans every build.
 - High-risk paths (`.github/`, `.vscode/`, `.cursor/`, `.devcontainer/`, `scripts/`) are owned in `.github/CODEOWNERS`.
 - npm releases are staged, never published directly: CI publishes via stage-only OIDC trusted publishing, Drydock reviews the exact staged artifact, and a maintainer promotes it with 2FA. There are no npm publish tokens.
+- Container images publish to GitHub Container Registry (`ghcr.io/jaredwray/mockhttp`) with the job's short-lived `GITHUB_TOKEN` and a provenance attestation. There are no Docker Hub credentials.
 - Secret scanning and push protection are enabled. Private vulnerability reporting is enabled. Dependabot is off.

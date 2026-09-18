@@ -10,10 +10,10 @@ order: 1
 [![codecov](https://codecov.io/gh/jaredwray/mockhttp/graph/badge.svg?token=eqtqoA3olU)](https://codecov.io/gh/jaredwray/mockhttp)
 [![npm](https://img.shields.io/npm/dm/@jaredwray/mockhttp)](https://npmjs.com/package/@jaredwray/mockhttp)
 [![npm](https://img.shields.io/npm/v/@jaredwray/mockhttp)](https://npmjs.com/package/@jaredwray/mockhttp)
-[![Docker Pulls](https://img.shields.io/docker/pulls/jaredwray/mockhttp)](https://hub.docker.com/r/jaredwray/mockhttp)
+[![GHCR](https://img.shields.io/badge/GHCR-mockhttp-blue)](https://github.com/jaredwray/mockhttp/pkgs/container/mockhttp)
 [![mockhttp.org](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fjaredwray.com%2Fapi%2Fmockhttp-traffic&query=%24.message&label=mockhttp.org)](https://mockhttp.org)
 
-A simple HTTP server for mocking responses in tests. Inspired by [httpbin](https://httpbin.org/) and built with Node.js and Fastify. Run it at [mockhttp.org](https://mockhttp.org), with Docker (`jaredwray/mockhttp`), or in Node.js (`npm install @jaredwray/mockhttp`).
+A simple HTTP server for mocking responses in tests. Inspired by [httpbin](https://httpbin.org/) and built with Node.js and Fastify. Run it at [mockhttp.org](https://mockhttp.org), with Docker (`ghcr.io/jaredwray/mockhttp`), or in Node.js (`npm install @jaredwray/mockhttp`).
 
 ## Features
 
@@ -30,14 +30,14 @@ A simple HTTP server for mocking responses in tests. Inspired by [httpbin](https
 
 ## Deploy via Docker
 ```bash
-docker run -d -p 3000:3000 jaredwray/mockhttp
+docker run -d -p 3000:3000 ghcr.io/jaredwray/mockhttp
 ```
 
 ## Deploy via Docker Compose
 ```yaml
 services:
   mockhttp:
-    image: jaredwray/mockhttp:latest
+    image: ghcr.io/jaredwray/mockhttp:latest
     ports:
       - "3000:3000"
 ```
@@ -47,7 +47,7 @@ If you want to run it on a different port, just change the `3000` to whatever po
 ```yaml
 services:
   mockhttp:
-    image: jaredwray/mockhttp:latest
+    image: ghcr.io/jaredwray/mockhttp:latest
     ports:
       - "3001:3001"
     environment:

@@ -2,10 +2,10 @@ import type { FastifyInstance } from "fastify";
 import pkg from "../package.json" with { type: "json" };
 
 const description = `
-A simple HTTP server that can be used to mock HTTP responses for testing purposes. Inspired by [httpbin](https://httpbin.org/) and built using \`nodejs\` and \`fastify\` with the idea of running it via https://mockhttp.org, via docker \`jaredwray/mockhttp\`, or nodejs \`npm install @jaredwray/mockhttp\`.
+A simple HTTP server that can be used to mock HTTP responses for testing purposes. Inspired by [httpbin](https://httpbin.org/) and built using \`nodejs\` and \`fastify\` with the idea of running it via https://mockhttp.org, via docker \`ghcr.io/jaredwray/mockhttp\`, or nodejs \`npm install @jaredwray/mockhttp\`.
 
 * [GitHub Repository](https://github.com/jaredwray/mockhttp)
-* [Docker Image](https://hub.docker.com/r/jaredwray/mockhttp)
+* [Container Image](https://github.com/jaredwray/mockhttp/pkgs/container/mockhttp)
 * [NPM Package](https://www.npmjs.com/package/@jaredwray/mockhttp)
 
 # About mockhttp.org

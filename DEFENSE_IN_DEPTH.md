@@ -32,7 +32,7 @@ Profile: npm library · public
 - [x] `persist-credentials: false` on checkouts that don't push (#189)
 - [x] No `pull_request_target` on workflows that run untrusted PR code — verified on main
 - [x] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning — verified on main
-- [ ] No npm tokens (or other registry credentials) in Actions secrets — npm is OIDC-only; Docker Hub still uses long-lived `DOCKER_USERNAME` / `DOCKER_PASSWORD` (personal `jaredwray/mockhttp` namespace; Docker Hub OIDC is organization-only)
+- [x] No npm tokens (or other registry credentials) in Actions secrets — npm is OIDC-only; container images publish to GHCR with the job's `GITHUB_TOKEN` (#221)
 
 ## 5. npm publishing — npm libraries only
 - [x] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual)
@@ -56,7 +56,8 @@ Profile: npm library · public
 
 - Extra CODEOWNERS paths: `/worker/`, `/wrangler.jsonc`.
 - Site deploy (`deploy-site.yaml`) uses a Cloudflare Worker via Wrangler. Production GitHub environment secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers edit and the mockhttp.org zone (custom domain + DNS) permissions.
+- Container images publish to `ghcr.io/jaredwray/mockhttp`. Delete leftover `DOCKER_USERNAME` / `DOCKER_PASSWORD` secrets and drop `peter-evans/*` from the Actions allowlist (`--allowed-actions "codecov/*,docker/*"`).
 
 ## Release flow
 
-GitHub Releases can go live. `release.yaml` stages `@jaredwray/mockhttp` via OIDC; promote from [Drydock](https://drydock.org) with 2FA. Do not live-publish from CI.
+GitHub Releases can go live. `release.yaml` stages `@jaredwray/mockhttp` via OIDC; promote from [Drydock](https://drydock.org) with 2FA. Do not live-publish from CI. `docker-publish.yaml` pushes `ghcr.io/jaredwray/mockhttp` with the workflow `GITHUB_TOKEN` and a provenance attestation.

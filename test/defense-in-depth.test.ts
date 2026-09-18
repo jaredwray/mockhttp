@@ -92,4 +92,20 @@ describe("defense in depth catalog", () => {
 			}
 		}
 	});
+
+	test("workflows do not store registry credentials", () => {
+		for (const file of workflowFiles) {
+			const source = readFileSync(path.join(workflowsDir, file), "utf8");
+			expect(source, file).not.toMatch(
+				/DOCKER_USERNAME|DOCKER_PASSWORD|NPM_TOKEN|NODE_AUTH_TOKEN/,
+			);
+		}
+		const dockerPublish = readFileSync(
+			path.join(workflowsDir, "docker-publish.yaml"),
+			"utf8",
+		);
+		expect(dockerPublish).toContain("registry: ghcr.io");
+		expect(dockerPublish).toContain("secrets.GITHUB_TOKEN");
+		expect(dockerPublish).not.toContain("peter-evans/dockerhub-description");
+	});
 });

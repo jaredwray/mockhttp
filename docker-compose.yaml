@@ -1,6 +1,6 @@
 services:
   mockhttp:
-    image: jaredwray/mockhttp:latest
+    image: ghcr.io/jaredwray/mockhttp:latest
     ports:
       - "3001:3001"
     environment:

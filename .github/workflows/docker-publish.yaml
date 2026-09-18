@@ -70,6 +70,16 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment: docker
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+      SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}
+      GIT_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -79,16 +89,6 @@ jobs:
         with:
           mode: firewall-free
           firewall-version: "1.15.2"
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          package-manager-cache: false
-
-      - run: corepack enable
-      - run: corepack prepare
-
-      - run: sfw pnpm install --frozen-lockfile
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -103,31 +103,37 @@ jobs:
       - name: Set version variable
         run: |
           VERSION=$(node -p 'require("./package.json").version')
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
-      - name: Log in to Docker Hub
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker Image
-        run: docker build -t "jaredwray/mockhttp:${VERSION}" -t jaredwray/mockhttp:latest .
+      - name: Build and push image
+        id: image
+        run: |
+          set -euo pipefail
+          IMAGE="${REGISTRY}/${IMAGE_NAME}"
+          docker build \
+            --label "org.opencontainers.image.source=${SOURCE_URL}" \
+            --label "org.opencontainers.image.revision=${GIT_SHA}" \
+            --label "org.opencontainers.image.version=${VERSION}" \
+            -t "${IMAGE}:${VERSION}" \
+            -t "${IMAGE}:latest" \
+            .
+          docker push "${IMAGE}:${VERSION}"
+          docker push "${IMAGE}:latest"
+          DIGEST=$(docker image inspect "${IMAGE}:${VERSION}" --format='{{index .RepoDigests 0}}')
+          DIGEST="${DIGEST##*@}"
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
 
-      - name: Push Docker image (version)
-        run: docker push "docker.io/jaredwray/mockhttp:${VERSION}"
-
-      - name: Push Docker image (latest)
-        run: docker push docker.io/jaredwray/mockhttp:latest
-
-      - name: Build Docker Markdown
-        run: pnpm docker:readme
-
-      - name: Update Docker Hub description
-        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
+      - name: Attest image provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          repository: jaredwray/mockhttp
-          short-description: ${{ github.event.repository.description }}
-          readme-filepath: ./DOCKER.md
+          subject-name: ${{ steps.image.outputs.image }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          push-to-registry: true

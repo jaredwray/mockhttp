@@ -5,10 +5,10 @@
 [![codecov](https://codecov.io/gh/jaredwray/mockhttp/graph/badge.svg?token=eqtqoA3olU)](https://codecov.io/gh/jaredwray/mockhttp)
 [![npm](https://img.shields.io/npm/dm/@jaredwray/mockhttp)](https://npmjs.com/package/@jaredwray/mockhttp)
 [![npm](https://img.shields.io/npm/v/@jaredwray/mockhttp)](https://npmjs.com/package/@jaredwray/mockhttp)
-[![Docker Pulls](https://img.shields.io/docker/pulls/jaredwray/mockhttp)](https://hub.docker.com/r/jaredwray/mockhttp)
+[![GHCR](https://img.shields.io/badge/GHCR-mockhttp-blue)](https://github.com/jaredwray/mockhttp/pkgs/container/mockhttp)
 [![mockhttp.org](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fjaredwray.com%2Fapi%2Fmockhttp-traffic&query=%24.message&label=mockhttp.org)](https://mockhttp.org)
 
-A simple HTTP server that can be used to mock HTTP responses for testing purposes. Inspired by [httpbin](https://httpbin.org/) and built using `nodejs` and `fastify` with the idea of running it via https://mockhttp.org, via docker `jaredwray/mockhttp`, or nodejs `npm install @jaredwray/mockhttp`.
+A simple HTTP server that can be used to mock HTTP responses for testing purposes. Inspired by [httpbin](https://httpbin.org/) and built using `nodejs` and `fastify` with the idea of running it via https://mockhttp.org, via docker `ghcr.io/jaredwray/mockhttp`, or nodejs `npm install @jaredwray/mockhttp`.
 
 # Features
 * All the features of [httpbin](https://httpbin.org/)
@@ -40,14 +40,14 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 
 # Deploy via Docker
 ```bash
-docker run -d -p 3000:3000 jaredwray/mockhttp
+docker run -d -p 3000:3000 ghcr.io/jaredwray/mockhttp
 ```
 
 # Deploy via Docker Compose
 ```yaml
 services:
   mockhttp:
-    image: jaredwray/mockhttp:latest
+    image: ghcr.io/jaredwray/mockhttp:latest
     ports:
       - "3000:3000"
 ```
@@ -57,7 +57,7 @@ If you want to run it on a different port, just change the `3000` to whatever po
 ```yaml
 services:
   mockhttp:
-    image: jaredwray/mockhttp:latest
+    image: ghcr.io/jaredwray/mockhttp:latest
     ports:
       - "3001:3001"
     environment:

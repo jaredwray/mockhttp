@@ -2,15 +2,25 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import Fastify from "fastify";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { BinManager } from "../src/bin-manager.js";
 import { generateCertificate } from "../src/certificate.js";
-import { MockHttp, type MockHttpOptions, mockhttp } from "../src/mock-http.js";
+import {
+	MockHttp,
+	type MockHttpOptions,
+	mockhttp,
+	resolvePackageRoot,
+} from "../src/mock-http.js";
 import { TapManager } from "../src/tap-manager.js";
 
 describe("MockHttp", () => {
 	test("should be a class", () => {
 		expect(new MockHttp()).toBeInstanceOf(MockHttp);
+	});
+
+	test("resolvePackageRoot falls back to cwd when import.meta.url is missing", () => {
+		expect(resolvePackageRoot()).toBe(process.cwd());
+		expect(resolvePackageRoot("")).toBe(process.cwd());
 	});
 
 	test("mockhttp should be an instance of MockHttp", () => {
@@ -29,15 +39,23 @@ describe("MockHttp", () => {
 		const options: MockHttpOptions = {
 			port: 8080,
 			host: "localhost",
+			autoDetectPort: false,
 			helmet: true,
+			staticFiles: false,
 			apiDocs: true,
+			pluginTimeout: 0,
+			startBins: false,
 			httpBin: { httpMethods: false },
 		};
 		const mock = new MockHttp(options);
 
 		expect(mock.host).toBe("localhost");
+		expect(mock.autoDetectPort).toBe(false);
 		expect(mock.helmet).toBe(true);
+		expect(mock.staticFiles).toBe(false);
 		expect(mock.apiDocs).toBe(true);
+		expect(mock.pluginTimeout).toBe(0);
+		expect(mock.startBins).toBe(false);
 		expect(mock.httpBin).toBe(options.httpBin);
 	});
 
@@ -48,14 +66,20 @@ describe("MockHttp", () => {
 		expect(mock.host).toBe("0.0.0.0");
 		expect(mock.autoDetectPort).toBe(true);
 		expect(mock.helmet).toBe(true);
+		expect(mock.staticFiles).toBe(true);
 		expect(mock.apiDocs).toBe(true);
 		expect(mock.httpBin.httpMethods).toBe(true);
+		expect(mock.pluginTimeout).toBeUndefined();
+		expect(mock.startBins).toBe(true);
 
 		mock.port = 3001;
 		mock.host = "localhost";
 		mock.autoDetectPort = false;
 		mock.helmet = false;
+		mock.staticFiles = false;
 		mock.apiDocs = false;
+		mock.pluginTimeout = 0;
+		mock.startBins = false;
 		mock.httpBin = {
 			httpMethods: false,
 			redirects: false,
@@ -68,7 +92,10 @@ describe("MockHttp", () => {
 		expect(mock.host).toBe("localhost");
 		expect(mock.autoDetectPort).toBe(false);
 		expect(mock.helmet).toBe(false);
+		expect(mock.staticFiles).toBe(false);
 		expect(mock.apiDocs).toBe(false);
+		expect(mock.pluginTimeout).toBe(0);
+		expect(mock.startBins).toBe(false);
 		expect(mock.httpBin.httpMethods).toBe(false);
 	});
 
@@ -76,6 +103,23 @@ describe("MockHttp", () => {
 		const mock = new MockHttp();
 
 		expect(mock.server).toBeDefined();
+	});
+
+	test("start recreates a listening Fastify server", async () => {
+		const mock = new MockHttp({
+			logging: false,
+			rateLimit: false,
+			autoDetectPort: false,
+			port: 3456,
+		});
+		await mock.start();
+		await mock.start();
+		const response = await mock.server.inject({
+			method: "GET",
+			url: "/get",
+		});
+		expect(response.statusCode).toBe(200);
+		await mock.close();
 	});
 
 	test("should be able to auto detect the port if in use", async () => {
@@ -89,6 +133,96 @@ describe("MockHttp", () => {
 
 		await mock1.close();
 		await mock2.close();
+	});
+
+	test("should initialize routes without listening", async () => {
+		const mock = new MockHttp({ logging: false, rateLimit: false });
+		await mock.initialize();
+
+		const response = await mock.server.inject({
+			method: "GET",
+			url: "/get",
+		});
+		expect(response.statusCode).toBe(200);
+		expect(mock.server.server.listening).toBe(false);
+
+		await mock.close();
+	});
+
+	test("should initialize with a disabled plugin timeout", async () => {
+		const mock = new MockHttp({
+			logging: false,
+			rateLimit: false,
+			pluginTimeout: 0,
+		});
+		expect(mock.pluginTimeout).toBe(0);
+		await mock.initialize();
+
+		const response = await mock.server.inject({
+			method: "GET",
+			url: "/get",
+		});
+		expect(response.statusCode).toBe(200);
+
+		await mock.close();
+	});
+
+	test("should skip bin cleanup when startBins is false", async () => {
+		const mock = new MockHttp({
+			logging: false,
+			rateLimit: false,
+			startBins: false,
+		});
+		const spy = vi.spyOn(mock.bins, "start");
+		await mock.initialize();
+		expect(spy).not.toHaveBeenCalled();
+		const response = await mock.server.inject({
+			method: "POST",
+			url: "/bins",
+		});
+		expect(response.statusCode).toBe(200);
+		await mock.close();
+	});
+
+	test("close is safe before the Fastify server is created", async () => {
+		const mock = new MockHttp({ logging: false });
+		await expect(mock.close()).resolves.toBeUndefined();
+	});
+
+	test("should skip public static files when staticFiles is false", async () => {
+		const mock = new MockHttp({
+			logging: false,
+			rateLimit: false,
+			staticFiles: false,
+			apiDocs: false,
+		});
+		await mock.initialize();
+
+		const response = await mock.server.inject({
+			method: "GET",
+			url: "/logo.svg",
+		});
+		expect(response.statusCode).toBe(404);
+
+		await mock.close();
+	});
+
+	test("should serve public static files when staticFiles is true", async () => {
+		const mock = new MockHttp({
+			logging: false,
+			rateLimit: false,
+			apiDocs: false,
+		});
+		await mock.initialize();
+
+		const response = await mock.server.inject({
+			method: "GET",
+			url: "/logo.svg",
+		});
+		expect(response.statusCode).toBe(200);
+		expect(response.headers["content-type"]).toContain("image/svg+xml");
+
+		await mock.close();
 	});
 
 	test("should ignore trailing path segments after the parsable portion", async () => {

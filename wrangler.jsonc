@@ -3,6 +3,7 @@
 	"name": "mockhttp",
 	"main": "worker/index.ts",
 	"compatibility_date": "2026-08-27",
+	"compatibility_flags": ["nodejs_compat"],
 	"workers_dev": true,
 	"preview_urls": false,
 	"observability": {
@@ -14,27 +15,29 @@
 			"custom_domain": true
 		}
 	],
-	"containers": [
+	"assets": {
+		"directory": "./site/dist",
+		"binding": "ASSETS",
+		"html_handling": "auto-trailing-slash"
+	},
+	"ratelimits": [
 		{
-			"class_name": "MockHttpContainer",
-			"image": "./Dockerfile",
-			"max_instances": 3,
-			"instance_type": "basic",
-			"rollout_step_percentage": 100
+			"name": "RATE_LIMITER",
+			"namespace_id": "1001",
+			"simple": {
+				"limit": 1000,
+				"period": 60
+			}
 		}
 	],
-	"durable_objects": {
-		"bindings": [
-			{
-				"name": "MOCKHTTP_CONTAINER",
-				"class_name": "MockHttpContainer"
-			}
-		]
-	},
 	"migrations": [
 		{
 			"tag": "v1",
 			"new_sqlite_classes": ["MockHttpContainer"]
+		},
+		{
+			"tag": "v2",
+			"deleted_classes": ["MockHttpContainer"]
 		}
 	]
 }

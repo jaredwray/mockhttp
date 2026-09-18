@@ -173,7 +173,7 @@ export class BinManager {
 		this._cleanupTimer = setInterval(() => {
 			this._store.cleanupExpired(Date.now());
 		}, this._cleanupIntervalMs);
-		this._cleanupTimer.unref();
+		this._cleanupTimer.unref?.();
 	}
 
 	/** Stop the periodic cleanup. Idempotent. */

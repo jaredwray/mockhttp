@@ -68,10 +68,15 @@ import { statusCodeRoute } from "./routes/status-codes/index.js";
 import { fastifySwaggerConfig, registerOpenApiJson } from "./swagger.js";
 import { TapManager } from "./tap-manager.js";
 
-const packageRoot = path.resolve(
-	path.dirname(fileURLToPath(import.meta.url)),
-	"..",
-);
+export function resolvePackageRoot(metaUrl?: string): string {
+	if (!metaUrl) {
+		return process.cwd();
+	}
+
+	return path.resolve(path.dirname(fileURLToPath(metaUrl)), "..");
+}
+
+const packageRoot = resolvePackageRoot(import.meta.url);
 const defaultSiteDistPath = path.join(packageRoot, "site", "dist");
 const defaultPublicPath = path.join(packageRoot, "public");
 
@@ -138,6 +143,12 @@ export type MockHttpOptions = {
 	 */
 	helmet?: boolean;
 	/**
+	 * Whether to serve files from the package `public/` directory (favicon, logos).
+	 * Defaults to true. Disable this when those files are served by another layer
+	 * such as Cloudflare Workers Assets.
+	 */
+	staticFiles?: boolean;
+	/**
 	 * Whether to serve the Docula documentation site and OpenAPI spec. Defaults to true.
 	 */
 	apiDocs?: boolean;
@@ -164,6 +175,17 @@ export type MockHttpOptions = {
 	 */
 	logging?: boolean;
 	/**
+	 * Fastify plugin boot timeout in milliseconds. Set to `0` to disable the
+	 * timeout (needed on Cloudflare Workers, where avvio timers are unreliable).
+	 */
+	pluginTimeout?: number;
+	/**
+	 * Whether to start the request-bin cleanup timer during `initialize()`.
+	 * Defaults to true. Disable this on Cloudflare Workers, where `setInterval`
+	 * during startup can hang the isolate.
+	 */
+	startBins?: boolean;
+	/**
 	 * HTTPS configuration. Set to true to auto-generate a self-signed certificate,
 	 * or provide an object with cert/key strings/paths or auto-generation options.
 	 */
@@ -187,9 +209,12 @@ export class MockHttp extends Hookified {
 	private _host = "0.0.0.0";
 	private _autoDetectPort = true;
 	private _helmet = true;
+	private _staticFiles = true;
 	private _apiDocs = true;
 	private _siteDistPath = defaultSiteDistPath;
 	private _logging = true;
+	private _pluginTimeout?: number;
+	private _startBins = true;
 	private _httpBin: HttpBinOptions = {
 		httpMethods: true,
 		redirects: true,
@@ -216,7 +241,7 @@ export class MockHttp extends Hookified {
 	private _https: HttpsOptions | undefined;
 	private _httpsCredentials: { cert: string; key: string } | undefined;
 
-	private _server: FastifyInstance = Fastify();
+	private _server: FastifyInstance | undefined;
 	private _taps: TapManager = new TapManager();
 	private _bins: BinManager = new BinManager();
 
@@ -231,8 +256,16 @@ export class MockHttp extends Hookified {
 			this._host = options.host;
 		}
 
+		if (options?.autoDetectPort !== undefined) {
+			this._autoDetectPort = options.autoDetectPort;
+		}
+
 		if (options?.helmet !== undefined) {
 			this._helmet = options.helmet;
+		}
+
+		if (options?.staticFiles !== undefined) {
+			this._staticFiles = options.staticFiles;
 		}
 
 		if (options?.apiDocs !== undefined) {
@@ -257,6 +290,14 @@ export class MockHttp extends Hookified {
 
 		if (options?.logging !== undefined) {
 			this._logging = options.logging;
+		}
+
+		if (options?.pluginTimeout !== undefined) {
+			this._pluginTimeout = options.pluginTimeout;
+		}
+
+		if (options?.startBins !== undefined) {
+			this._startBins = options.startBins;
 		}
 
 		if (options?.http2 !== undefined) {
@@ -343,6 +384,22 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
+	 * Whether to serve files from the package `public/` directory. Defaults to true.
+	 * @default true
+	 */
+	public get staticFiles(): boolean {
+		return this._staticFiles;
+	}
+
+	/**
+	 * Whether to serve files from the package `public/` directory. Defaults to true.
+	 * @default true
+	 */
+	public set staticFiles(staticFiles: boolean) {
+		this._staticFiles = staticFiles;
+	}
+
+	/**
 	 * Whether to serve the Docula documentation site and OpenAPI spec. Defaults to true.
 	 * @default true
 	 */
@@ -388,6 +445,36 @@ export class MockHttp extends Hookified {
 	 */
 	public set logging(logging: boolean) {
 		this._logging = logging;
+	}
+
+	/**
+	 * Fastify plugin boot timeout in milliseconds. `undefined` uses Fastify's default.
+	 */
+	public get pluginTimeout(): number | undefined {
+		return this._pluginTimeout;
+	}
+
+	/**
+	 * Fastify plugin boot timeout in milliseconds. `undefined` uses Fastify's default.
+	 */
+	public set pluginTimeout(pluginTimeout: number | undefined) {
+		this._pluginTimeout = pluginTimeout;
+	}
+
+	/**
+	 * Whether to start the request-bin cleanup timer during `initialize()`.
+	 * @default true
+	 */
+	public get startBins(): boolean {
+		return this._startBins;
+	}
+
+	/**
+	 * Whether to start the request-bin cleanup timer during `initialize()`.
+	 * @default true
+	 */
+	public set startBins(startBins: boolean) {
+		this._startBins = startBins;
 	}
 
 	/**
@@ -489,6 +576,7 @@ export class MockHttp extends Hookified {
 	 * The Fastify server instance.
 	 */
 	public get server(): FastifyInstance {
+		this._server ??= Fastify();
 		return this._server;
 	}
 
@@ -528,9 +616,10 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
-	 * Start the Fastify server. If the server is already running, it will be closed and restarted.
+	 * Register plugins and routes without listening. Use `inject()` against
+	 * `server`, or call `start()` to bind a port.
 	 */
-	public async start(): Promise<void> {
+	public async initialize(): Promise<void> {
 		// Resolve HTTPS credentials before try/catch so config errors propagate
 		this._httpsCredentials = undefined;
 		if (this._https) {
@@ -539,7 +628,7 @@ export class MockHttp extends Hookified {
 
 		try {
 			/* v8 ignore next -- @preserve */
-			if (this._server) {
+			if (this._server?.server.listening) {
 				await this._server.close();
 			}
 
@@ -547,6 +636,10 @@ export class MockHttp extends Hookified {
 			const fastifyOptions: Record<string, unknown> = {
 				...getFastifyConfig(this._logging),
 			};
+
+			if (this._pluginTimeout !== undefined) {
+				fastifyOptions.pluginTimeout = this._pluginTimeout;
+			}
 
 			if (this._http2) {
 				fastifyOptions.http2 = true;
@@ -593,12 +686,13 @@ export class MockHttp extends Hookified {
 				}
 			});
 
-			// Register the Public for favicon and image fixtures
-			await this.server.register(fastifyStatic, {
-				root: defaultPublicPath,
-				wildcard: false,
-				index: false,
-			});
+			if (this._staticFiles) {
+				await this.server.register(fastifyStatic, {
+					root: defaultPublicPath,
+					wildcard: false,
+					index: false,
+				});
+			}
 
 			// Register the Helmet plugin for security headers
 			if (this._helmet) {
@@ -689,28 +783,42 @@ export class MockHttp extends Hookified {
 
 			if (bins) {
 				await this.registerBinRoutes();
-				this._bins.start();
+				if (this._startBins) {
+					this._bins.start();
+				}
 			}
 
 			if (this._apiDocs) {
 				await this.registerSite();
 			}
+		} catch (error) {
+			/* v8 ignore next -- @preserve */
+			this.server.log.error(error);
+		}
+	}
 
+	/**
+	 * Start the Fastify server. If the server is already running, it will be closed and restarted.
+	 */
+	public async start(): Promise<void> {
+		await this.initialize();
+
+		try {
 			if (this._autoDetectPort) {
 				const originalPort = this._port;
 				this._port = await this.detectPort();
 
 				if (originalPort !== this._port) {
-					this._server.log.info(
+					this.server.log.info(
 						`Port ${originalPort} is in use, detected next available port: ${this._port}`,
 					);
 				}
 			}
 
-			await this._server.listen({ port: this._port, host: this._host });
+			await this.server.listen({ port: this._port, host: this._host });
 		} catch (error) {
 			/* v8 ignore next -- @preserve */
-			this._server.log.error(error);
+			this.server.log.error(error);
 		}
 	}
 
@@ -719,7 +827,9 @@ export class MockHttp extends Hookified {
 	 */
 	public async close(): Promise<void> {
 		this._bins.stop();
-		await this._server.close();
+		if (this._server) {
+			await this._server.close();
+		}
 	}
 
 	/**
@@ -749,7 +859,7 @@ export class MockHttp extends Hookified {
 	public async registerSwagger(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
-		const fastify = fastifyInstance ?? this._server;
+		const fastify = fastifyInstance ?? this.server;
 		await fastify.register(fastifySwagger, fastifySwaggerConfig);
 		await registerOpenApiJson(fastify);
 	}
@@ -759,7 +869,7 @@ export class MockHttp extends Hookified {
 	 * @param fastifyInstance - the server instance to register the routes on.
 	 */
 	public async registerSite(fastifyInstance?: FastifyInstance): Promise<void> {
-		const fastify = fastifyInstance ?? this._server;
+		const fastify = fastifyInstance ?? this.server;
 		if (!existsSync(this._siteDistPath)) {
 			fastify.log.warn(
 				`Docula site not found at ${this._siteDistPath}; skipping static docs`,
@@ -799,7 +909,7 @@ export class MockHttp extends Hookified {
 	public async registerHttpMethods(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
-		const fastify = fastifyInstance ?? this._server;
+		const fastify = fastifyInstance ?? this.server;
 		await fastify.register(getRoute);
 		await fastify.register(postRoute);
 		await fastify.register(deleteRoute);
@@ -814,7 +924,7 @@ export class MockHttp extends Hookified {
 	public async registerStatusCodeRoutes(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
-		const fastify = fastifyInstance ?? this._server;
+		const fastify = fastifyInstance ?? this.server;
 		await fastify.register(statusCodeRoute);
 	}
 
@@ -825,7 +935,7 @@ export class MockHttp extends Hookified {
 	public async registerRequestInspectionRoutes(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
-		const fastify = fastifyInstance ?? this._server;
+		const fastify = fastifyInstance ?? this.server;
 		await fastify.register(ipRoute);
 		await fastify.register(headersRoute);
 		await fastify.register(userAgentRoute);
@@ -838,7 +948,7 @@ export class MockHttp extends Hookified {
 	public async registerResponseInspectionRoutes(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
-		const fastify = fastifyInstance ?? this._server;
+		const fastify = fastifyInstance ?? this.server;
 		await fastify.register(cacheRoutes);
 		await fastify.register(etagRoutes);
 		await fastify.register(responseHeadersRoutes);
@@ -847,7 +957,7 @@ export class MockHttp extends Hookified {
 	public async registerResponseFormatRoutes(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
-		const fastify = fastifyInstance ?? this._server;
+		const fastify = fastifyInstance ?? this.server;
 		await fastify.register(responseFormatRoutes);
 	}
 
@@ -858,7 +968,7 @@ export class MockHttp extends Hookified {
 	public async registerRedirectRoutes(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
-		const fastify = fastifyInstance ?? this._server;
+		const fastify = fastifyInstance ?? this.server;
 		await fastify.register(absoluteRedirectRoute);
 		await fastify.register(relativeRedirectRoute);
 		await fastify.register(redirectToRoute);
@@ -871,7 +981,7 @@ export class MockHttp extends Hookified {
 	public async registerCookieRoutes(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
-		const fastify = fastifyInstance ?? this._server;
+		const fastify = fastifyInstance ?? this.server;
 		await fastify.register(fastifyCookie);
 		await fastify.register(getCookiesRoute);
 		await fastify.register(postCookieRoute);
@@ -885,7 +995,7 @@ export class MockHttp extends Hookified {
 	public async registerAnythingRoutes(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
-		const fastify = fastifyInstance ?? this._server;
+		const fastify = fastifyInstance ?? this.server;
 		await fastify.register(anythingRoute);
 	}
 
@@ -896,7 +1006,7 @@ export class MockHttp extends Hookified {
 	public async registerAuthRoutes(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
-		const fastify = fastifyInstance ?? this._server;
+		const fastify = fastifyInstance ?? this.server;
 		await fastify.register(basicAuthRoute);
 		await fastify.register(hiddenBasicAuthRoute);
 		await fastify.register(bearerAuthRoute);
@@ -910,7 +1020,7 @@ export class MockHttp extends Hookified {
 	public async registerImageRoutes(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
-		const fastify = fastifyInstance ?? this._server;
+		const fastify = fastifyInstance ?? this.server;
 		await fastify.register(imageRoutes);
 	}
 
@@ -921,7 +1031,7 @@ export class MockHttp extends Hookified {
 	public async registerDynamicDataRoutes(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
-		const fastify = fastifyInstance ?? this._server;
+		const fastify = fastifyInstance ?? this.server;
 		await fastify.register(uuidRoute);
 		await fastify.register(bytesRoute);
 		await fastify.register(streamBytesRoute);
@@ -940,7 +1050,7 @@ export class MockHttp extends Hookified {
 	public async registerBinRoutes(
 		fastifyInstance?: FastifyInstance,
 	): Promise<void> {
-		const fastify = fastifyInstance ?? this._server;
+		const fastify = fastifyInstance ?? this.server;
 		await fastify.register(binsManagementRoute(this._bins));
 		await fastify.register(binsCaptureRoute(this._bins));
 	}

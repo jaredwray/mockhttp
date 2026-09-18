@@ -226,5 +226,13 @@ describe("BinManager", () => {
 			manager.stop();
 			expect(() => manager.stop()).not.toThrow();
 		});
+
+		it("starts when the timer cannot be unref'd", () => {
+			vi.stubGlobal("setInterval", () => 123);
+			const m = new BinManager();
+			expect(() => m.start()).not.toThrow();
+			m.stop();
+			vi.unstubAllGlobals();
+		});
 	});
 });

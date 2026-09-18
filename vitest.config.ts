@@ -11,6 +11,7 @@ export default defineConfig({
 				"*.json",
 				"src/routes/**/index.ts",
 				"vitest.config.ts",
+				"worker/index.ts",
 			],
 		},
 	},

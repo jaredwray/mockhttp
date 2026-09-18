@@ -17,7 +17,7 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 * `@fastify/helmet` built in by default
 * Built with `nodejs`, `typescript`, and `fastify`
 * Deploy via `docker` or `nodejs`
-* Free hosted service at [mockhttp.org](https://mockhttp.org), running on Cloudflare
+* Free hosted service at [mockhttp.org](https://mockhttp.org), running on a Cloudflare Worker
 * Documentation site and interactive OpenAPI reference (Docula)
 * Auto detect the port that is not in use
 * Maintained and updated regularly!
@@ -1002,6 +1002,9 @@ new MockHttp(options?)
   - `siteDistPath?`: string - Path to the built Docula site (default: the package `site/dist` directory)
   - `rateLimit?`: RateLimitPluginOptions - Configure rate limiting (default: 1000 req/min, localhost excluded)
   - `logging?`: boolean - Enable logging (default: true)
+  - `staticFiles?`: boolean - Serve files from the package `public/` directory (default: true)
+  - `pluginTimeout?`: number - Fastify plugin boot timeout in milliseconds; `0` disables it (default: Fastify's timeout)
+  - `startBins?`: boolean - Start the request-bin cleanup timer during `initialize()` (default: true)
   - `httpBin?`: HttpBinOptions - Configure which httpbin routes to enable
     - `httpMethods?`: boolean - Enable HTTP method routes (default: true)
     - `redirects?`: boolean - Enable redirect routes (default: true)
@@ -1028,6 +1031,9 @@ new MockHttp(options?)
 - `apiDocs`: boolean - Get/set whether the documentation site and OpenAPI spec are served
 - `siteDistPath`: string - Get/set the path to the built Docula site
 - `logging`: boolean - Get/set logging enabled state
+- `staticFiles`: boolean - Get/set whether files from `public/` are served
+- `pluginTimeout`: number | undefined - Get/set Fastify plugin boot timeout
+- `startBins`: boolean - Get/set whether bin cleanup starts during `initialize()`
 - `rateLimit`: RateLimitPluginOptions | undefined - Get/set rate limiting options
 - `httpBin`: HttpBinOptions - Get/set httpbin route options
 - `https`: HttpsOptions | undefined - Get/set HTTPS configuration
@@ -1039,6 +1045,10 @@ new MockHttp(options?)
 - `bins`: BinManager - Get/set the BinManager instance for request bins
 
 ### Methods
+
+#### `async initialize()`
+
+Register plugins and routes without listening. Use `server.inject()` afterwards, or call `start()` to bind a port.
 
 #### `async start()`
 
@@ -1222,7 +1232,7 @@ A getter that returns whether there are any active injections.
 
 # About mockhttp.org
 
-[mockhttp.org](https://mockhttp.org) is a free hosted instance of this codebase for testing. It runs entirely on [Cloudflare](https://www.cloudflare.com/) using [Workers](https://developers.cloudflare.com/workers/) and [Containers](https://developers.cloudflare.com/containers/). The service is globally available and rate-limited (1000 requests per minute per IP) to prevent abuse.
+[mockhttp.org](https://mockhttp.org) is a free hosted instance of this codebase for testing. It runs on a [Cloudflare Worker](https://developers.cloudflare.com/workers/) (no containers): documentation is served from Workers Assets, and mock APIs such as `/get` and `/post` run in the Worker. The service is globally available and rate-limited (1000 requests per minute per IP) to prevent abuse.
 
 The documentation homepage is served at `/`, markdown guides at `/docs`, and the interactive HTTP API reference at `/api`. Mock endpoints such as `/get` and `/post` are unchanged.
 

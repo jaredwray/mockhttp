@@ -15,7 +15,7 @@ export const options: Partial<DoculaOptions> = {
 		{
 			name: "How to Deploy",
 			path: "how-to-deploy",
-			order: 2,
+			order: 9,
 		},
 	],
 };

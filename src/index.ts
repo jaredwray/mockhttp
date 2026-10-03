@@ -25,6 +25,10 @@ export const start = async () => {
 		mockHttp.http2 = true;
 	}
 
+	if (process.env.AUTO_DETECT_PORT === "false") {
+		mockHttp.autoDetectPort = false;
+	}
+
 	await mockHttp.start();
 
 	return mockHttp;

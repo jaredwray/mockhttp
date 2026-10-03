@@ -1,0 +1,8 @@
+kind: wasmer.io/App.v0
+name: mockhttp
+owner: jaredwray
+package: .
+env:
+  HOST: "0.0.0.0"
+  LOGGING: "false"
+  AUTO_DETECT_PORT: "false"

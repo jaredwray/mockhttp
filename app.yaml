@@ -6,3 +6,13 @@ env:
   HOST: "0.0.0.0"
   LOGGING: "false"
   AUTO_DETECT_PORT: "false"
+health_checks:
+  - http:
+      method: get
+      path: /get
+      interval: 30s
+      timeout: 10s
+      unhealthy_threshold: 2
+      healthy_threshold: 1
+      expected_status_codes:
+        - 200

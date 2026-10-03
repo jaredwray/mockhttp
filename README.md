@@ -86,7 +86,7 @@ await mock.close(); // stop the server
 
 # Deploy via Wasmer
 
-Wasmer Edge runs the same Node server as Docker. Start [deploy-wasmer.yaml](.github/workflows/deploy-wasmer.yaml) by hand to publish a test app at [mockhttp-jaredwray.wasmer.app](https://mockhttp-jaredwray.wasmer.app). That workflow does not run on release, and it does not deploy the Cloudflare Worker.
+Wasmer Edge runs the same Node server as Docker. [deploy-wasmer.yaml](.github/workflows/deploy-wasmer.yaml) builds the server and the docs site in GitHub Actions, then publishes that bundle. It runs when you start it by hand and when a GitHub Release is published. It does not deploy the Cloudflare Worker. The test app is [mockhttp.wasmer.app](https://mockhttp.wasmer.app).
 
 Bins, taps, and `@fastify/rate-limit` are per instance on Wasmer. All [mockhttp.org](https://mockhttp.org) traffic stays on Cloudflare, where the rate limiter is shared across requests.
 
@@ -1242,7 +1242,7 @@ A getter that returns whether there are any active injections.
 
 [mockhttp.org](https://mockhttp.org) is a free hosted instance of this codebase for testing. It runs on a [Cloudflare Worker](https://developers.cloudflare.com/workers/) (no containers): documentation is served from Workers Assets, and mock APIs such as `/get` and `/post` run in the Worker. The service is globally available and rate-limited (1000 requests per minute per IP) to prevent abuse.
 
-All [mockhttp.org](https://mockhttp.org) traffic stays on Cloudflare. A separate test app runs the Node server on Wasmer Edge at [mockhttp-jaredwray.wasmer.app](https://mockhttp-jaredwray.wasmer.app).
+All [mockhttp.org](https://mockhttp.org) traffic stays on Cloudflare. A separate test app runs the Node server on Wasmer Edge at [mockhttp.wasmer.app](https://mockhttp.wasmer.app).
 
 Getting Started is served at `/` and `/docs`, other guides at `/docs/...`, and the interactive HTTP API reference at `/api`. Mock endpoints such as `/get` and `/post` are unchanged.
 

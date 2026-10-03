@@ -2,6 +2,8 @@ name: deploy-wasmer
 
 on:
   workflow_dispatch:
+  release:
+    types: [released]
 
 permissions:
   contents: read

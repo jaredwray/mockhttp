@@ -86,7 +86,7 @@ await mock.close(); // stop the server
 
 # Deploy via Wasmer
 
-Wasmer Edge runs the same Node server as Docker. [deploy-wasmer.yaml](.github/workflows/deploy-wasmer.yaml) builds the server and the docs site in GitHub Actions, then publishes that bundle. Start it by hand. It does not run on release, and it does not deploy the Cloudflare Worker. The test app is [mockhttp.wasmer.app](https://mockhttp.wasmer.app).
+Wasmer Edge runs the same Node server as Docker. [deploy-wasmer.yaml](.github/workflows/deploy-wasmer.yaml) builds the server and the docs site in GitHub Actions, then publishes that bundle. It runs when you start it by hand and when a GitHub Release is published. It does not deploy the Cloudflare Worker. The test app is [mockhttp.wasmer.app](https://mockhttp.wasmer.app).
 
 Bins, taps, and `@fastify/rate-limit` are per instance on Wasmer. All [mockhttp.org](https://mockhttp.org) traffic stays on Cloudflare, where the rate limiter is shared across requests.
 

@@ -1,27 +1,8 @@
-import * as fsPromises from "node:fs/promises";
-import path from "node:path";
 import process from "node:process";
 import { MockHttp } from "./mock-http.js";
 
-// `@vercel/nft` keeps directories referenced by `path.join(process.cwd(), ...)`.
-// Serving still uses the package-root paths inside MockHttp.
-const wasmerAssetDirectories = [
-	path.join(process.cwd(), "public"),
-	path.join(process.cwd(), "site/dist"),
-];
-
-async function includeWasmerAssetDirectories(): Promise<void> {
-	await Promise.all(
-		wasmerAssetDirectories.map((directory) =>
-			fsPromises.access(directory).catch(() => undefined),
-		),
-	);
-}
-
 // Start the Fastify server
 export const start = async () => {
-	await includeWasmerAssetDirectories();
-
 	const mockHttp = new MockHttp();
 
 	/* v8 ignore next -- @preserve */

@@ -1,21 +1,6 @@
 import process from "node:process";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { start } from "../src/index.js";
-
-vi.mock("node:fs/promises", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("node:fs/promises")>();
-	return {
-		...actual,
-		access(directory: Parameters<typeof actual.access>[0]) {
-			// site/dist is a build artifact. Reject it so the trace catch is covered
-			// whether or not that directory exists on disk.
-			if (String(directory).endsWith("site/dist")) {
-				return Promise.reject(new Error("missing"));
-			}
-			return actual.access(directory);
-		},
-	};
-});
 
 describe("start", () => {
 	afterEach(() => {

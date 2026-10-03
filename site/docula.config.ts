@@ -11,4 +11,11 @@ export const options: Partial<DoculaOptions> = {
 	enableReleaseChangelog: true,
 	autoReadme: false,
 	editPageUrl: "https://github.com/jaredwray/mockhttp/edit/main/site/docs",
+	sections: [
+		{
+			name: "How to Deploy",
+			path: "how-to-deploy",
+			order: 9,
+		},
+	],
 };

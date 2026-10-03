@@ -1,11 +1,24 @@
-import * as fsPromises from "node:fs/promises";
 import process from "node:process";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { start } from "../src/index.js";
 
+vi.mock("node:fs/promises", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("node:fs/promises")>();
+	return {
+		...actual,
+		access(directory: Parameters<typeof actual.access>[0]) {
+			// site/dist is a build artifact. Reject it so the trace catch is covered
+			// whether or not that directory exists on disk.
+			if (String(directory).endsWith("site/dist")) {
+				return Promise.reject(new Error("missing"));
+			}
+			return actual.access(directory);
+		},
+	};
+});
+
 describe("start", () => {
 	afterEach(() => {
-		vi.restoreAllMocks();
 		delete process.env.AUTO_DETECT_PORT;
 	});
 
@@ -26,15 +39,6 @@ describe("start", () => {
 		const mockHttp = await start();
 		expect(mockHttp.autoDetectPort).toBe(false);
 		expect(mockHttp.port).toBe(8081);
-		await mockHttp.close();
-	});
-
-	it("should ignore missing wasmer asset directories", async () => {
-		vi.spyOn(fsPromises, "access").mockRejectedValue(new Error("missing"));
-		process.env.PORT = "8082";
-		process.env.HOST = "localhost";
-		const mockHttp = await start();
-		expect(mockHttp.port).toBe(8082);
 		await mockHttp.close();
 	});
 });

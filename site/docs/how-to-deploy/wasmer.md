@@ -25,7 +25,7 @@ env:
   AUTO_DETECT_PORT: "false"
 ```
 
-`package: .` deploys the repository directory. `HOST` binds the server on all interfaces. Logging is off, and the process keeps its assigned port instead of scanning for another one.
+`package: .` deploys the repository directory. `HOST` binds the server on all interfaces. Logging is off. Wasmer injects `PORT`. `AUTO_DETECT_PORT=false` keeps that port instead of scanning for another one.
 
 Change `name` and `owner` before you deploy your own app. The environment variables are the same ones the Docker image reads (`PORT`, `HOST`, `LOGGING`, `HTTP2`, and `AUTO_DETECT_PORT`). See [Docker](/docs/how-to-deploy/docker/) for what each one does.
 
@@ -51,7 +51,7 @@ wasmer deploy --build-remote
 
 ## Deploy from GitHub Actions
 
-[`.github/workflows/deploy-wasmer.yaml`](https://github.com/jaredwray/mockhttp/blob/main/.github/workflows/deploy-wasmer.yaml) runs when a GitHub Release is published and when the workflow is started by hand. The `wasmer` environment provides `WASMER_TOKEN`. The deploy step runs:
+[`.github/workflows/deploy-wasmer.yaml`](https://github.com/jaredwray/mockhttp/blob/main/.github/workflows/deploy-wasmer.yaml) runs on the `released` event (a published release, not a prerelease) and when the workflow is started by hand. The `wasmer` environment provides `WASMER_TOKEN`. The deploy step runs:
 
 ```bash
 wasmer deploy --non-interactive --build-remote
@@ -59,6 +59,8 @@ wasmer deploy --non-interactive --build-remote
 
 ## Runtime behavior
 
-Bins, taps, and `@fastify/rate-limit` are in memory on each instance. A request that lands on another instance does not see them. On [mockhttp.org](https://mockhttp.org) the Cloudflare rate limiter is shared across requests. That limiter is not used on Wasmer.
+Bins use the default in-memory store, so a bin exists only on the instance that created it. Taps are a library API (`mock.taps.inject`) and have no HTTP routes, so a deployed app cannot inject one.
 
-The container listens with HTTP. Wasmer terminates TLS for the `*.wasmer.app` hostname.
+`@fastify/rate-limit` is on at 1000 requests per minute. It keys on the address that connects to the process. The server does not trust proxy headers, and the allow list is only `127.0.0.1` and `::1`. On the test app, `/ip` reports `127.0.0.100`, which is the edge proxy rather than the caller, and the response includes `x-ratelimit-limit: 1000`. Clients that share that proxy address share one limit on that instance. This is not the Cloudflare limiter used by [mockhttp.org](https://mockhttp.org).
+
+The process listens with HTTP. Wasmer terminates TLS for the `*.wasmer.app` hostname.

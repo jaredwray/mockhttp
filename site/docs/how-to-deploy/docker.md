@@ -6,7 +6,7 @@ description: Run MockHTTP from the jaredwray/mockhttp image, with Docker Compose
 
 # Deploy with Docker
 
-The published image is [`jaredwray/mockhttp`](https://hub.docker.com/r/jaredwray/mockhttp) on Docker Hub. It runs the Node.js server and the documentation site in one container.
+The published image is [`jaredwray/mockhttp`](https://hub.docker.com/r/jaredwray/mockhttp) on Docker Hub. It runs the Node.js server and the documentation site in one container. The `latest` tag is `linux/amd64` only. Apple Silicon runs it under emulation. On arm64 Linux, build the image from this repository instead.
 
 ## Run the image
 
@@ -16,7 +16,9 @@ docker run -d -p 3000:3000 jaredwray/mockhttp
 
 The server listens on port 3000. Open `http://localhost:3000/get` for a mock response, `http://localhost:3000/docs` for these guides, and `http://localhost:3000/api` for the OpenAPI reference.
 
-`pnpm docker:run` runs the same command against a local image named `jaredwray/mockhttp`.
+`pnpm docker:run` is `docker run -p 3000:3000 jaredwray/mockhttp`. It stays in the foreground. Docker pulls the Hub image when it is not already local.
+
+Rate limiting is on: 1000 requests per minute. The allow list is only `127.0.0.1` and `::1`. A published port delivers traffic from the Docker bridge address, not from loopback inside the container, so those requests count against the limit. None of the environment variables below turn it off. Change or disable it with the library [`rateLimit` option](/docs/configuration/). A test suite that sends more than 1000 requests a minute to the published port will get `429` responses.
 
 ## Docker Compose
 
@@ -40,7 +42,7 @@ services:
       - PORT=3001
 ```
 
-`pnpm docker:compose:up` starts that file. `pnpm docker:compose:down` stops it.
+`pnpm docker:compose:up` and `pnpm docker:compose:down` call the `docker-compose` binary. Current Docker installs often provide `docker compose` instead, which you can run against the same file.
 
 ## Environment variables
 
@@ -54,7 +56,7 @@ The container starts `node dist/index.mjs`. That process reads these variables:
 | `HTTP2` | off | Set to `true` to enable HTTP/2 cleartext (h2c). The image does not load a TLS certificate. |
 | `AUTO_DETECT_PORT` | `true` | Set to `false` to keep `PORT` even when that port is already in use. |
 
-HTTPS certificates are configured in the [library](/docs/library/), not through container environment variables. Put a TLS proxy in front of the container when you need HTTPS.
+HTTPS certificates are configured in the [library](/docs/https/), not through container environment variables. Put a TLS proxy in front of the container when you need HTTPS.
 
 ## Build the image
 
@@ -72,6 +74,6 @@ docker run -d -p 3000:3000 jaredwray/mockhttp
 
 ## Publish to Docker Hub
 
-[`.github/workflows/docker-publish.yaml`](https://github.com/jaredwray/mockhttp/blob/main/.github/workflows/docker-publish.yaml) runs when a GitHub Release is published and when the workflow is started by hand. It builds `jaredwray/mockhttp:<version>` and `jaredwray/mockhttp:latest`, pushes both tags, and updates the Docker Hub description from `DOCKER.md`.
+[`.github/workflows/docker-publish.yaml`](https://github.com/jaredwray/mockhttp/blob/main/.github/workflows/docker-publish.yaml) runs on the `released` event (a published release, not a prerelease) and when the workflow is started by hand. It builds `jaredwray/mockhttp:<version>` and `jaredwray/mockhttp:latest` with `docker build` on `ubuntu-latest`, pushes both tags, and updates the Docker Hub description from `DOCKER.md`. That build is `linux/amd64`.
 
 The same Node server can run on [Wasmer Edge](/docs/how-to-deploy/wasmer/). The public site at [mockhttp.org](https://mockhttp.org) is the [Cloudflare Worker](/docs/how-to-deploy/cloudflare/), not this image.

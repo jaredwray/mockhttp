@@ -19,12 +19,14 @@ The Worker starts the same MockHTTP app as Node.js, with a few options set for t
 | `rateLimit` | `false` | [`@fastify/rate-limit`](https://github.com/fastify/fastify-rate-limit) is off. A Cloudflare rate limiting binding allows 1000 requests per 60 seconds per IP. |
 | `siteDistPath` | unused path | Fastify does not serve the docs. Workers Assets serve `site/dist`. |
 | `staticFiles` | `false` | Logos and other `public/` files are copied into `site/dist` and read through the `ASSETS` binding. |
-| `startBins` | `false` | The bin cleanup timer uses `setInterval`, which can hang a Worker isolate during startup. Bin routes still register. |
+| `startBins` | `false` | The bin cleanup timer uses `setInterval`, which can hang a Worker isolate during startup. Bin routes still register. Expired bins are removed when that bin is read, not by a sweep of every bin. |
 | `pluginTimeout` | `0` | Disables Fastify's plugin boot timeout. Those timers are unreliable on Workers. |
 | `logging` | `false` | Request logging is off. |
 | `autoDetectPort` | `false` | The app always listens on port 3000 inside the isolate. |
 
-The rate limiter key is the `cf-connecting-ip` header, then the first address in `x-forwarded-for`, then `unknown`. A limited request returns `429` with `retry-after: 60`.
+The rate limiter key is the `cf-connecting-ip` header, then the first address in `x-forwarded-for`, then `unknown`. A limited request returns `429` with `retry-after: 60`. That limiter is shared across isolates. Bins are not. The default store is in memory inside the isolate that handled the request, so a bin created on one request can be missing when another isolate or location handles the next one.
+
+Taps are a library API (`mock.taps.inject`). They have no HTTP routes, so a deployed Worker has no way to inject one.
 
 Assets are checked before the Worker. A file under `site/dist` (the docs site, favicon, logos) is served as a static asset. A path that is not a file, such as `/get` or `/post`, is handled by the Worker.
 
@@ -34,9 +36,12 @@ You need a Cloudflare account and permission to deploy Workers. This repository 
 
 Change `name` and `routes` in `wrangler.jsonc` before you deploy a fork. The route in this repo attaches the custom domain `mockhttp.org`. `workers_dev` is enabled, so a `*.workers.dev` hostname is available as well. Adjust the `RATE_LIMITER` binding if you want a different limit than 1000 requests per 60 seconds.
 
+Also change `siteUrl` in `site/docula.config.ts`. The sitemap is a static file, and this repo sets it to `https://mockhttp.org`. The `migrations` block records a container class that this Worker no longer uses. A brand-new Worker can omit that block.
+
+Wrangler bundles `worker/index.ts` from source, so you do not need `pnpm build` for this deploy. `pnpm website:build` produces `site/dist`.
+
 ```bash
 pnpm install
-pnpm build
 pnpm website:build
 pnpm prepare:worker-assets
 npx wrangler@4.127.0 deploy
@@ -48,6 +53,6 @@ After deploy, open the workers.dev hostname or your custom domain and request `/
 
 ## Deploy from GitHub Actions
 
-[`.github/workflows/deploy-site.yaml`](https://github.com/jaredwray/mockhttp/blob/main/.github/workflows/deploy-site.yaml) deploys this Worker when a GitHub Release is published and when the workflow is started by hand. The `production` environment provides `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The deploy job installs production dependencies, downloads the built site, copies `public/` into `site/dist`, installs Wrangler `4.127.0`, and runs `wrangler deploy`.
+[`.github/workflows/deploy-site.yaml`](https://github.com/jaredwray/mockhttp/blob/main/.github/workflows/deploy-site.yaml) deploys this Worker on the `released` event (a published release, not a prerelease) and when the workflow is started by hand. The `production` environment provides `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The deploy job installs production dependencies, downloads the built site, copies `public/` into `site/dist`, installs Wrangler `4.127.0`, and runs `wrangler deploy`.
 
 That workflow does not deploy the [Wasmer](/docs/how-to-deploy/wasmer/) app. Docker image publishing is a separate workflow, documented in [Docker](/docs/how-to-deploy/docker/).

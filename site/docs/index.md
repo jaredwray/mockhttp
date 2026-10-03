@@ -22,7 +22,7 @@ A simple HTTP server for mocking responses in tests. Inspired by [httpbin](https
 - [Bins](/docs/bins/) — capture and inspect incoming HTTP requests (great for webhook debugging)
 - `@fastify/helmet` built in by default
 - Built with Node.js, TypeScript, and Fastify
-- Deploy with [Docker](/docs/how-to-deploy/docker/), [Cloudflare Workers](/docs/how-to-deploy/cloudflare/), or [Wasmer Edge](/docs/how-to-deploy/wasmer/)
+- Run it in Node.js, or deploy with [Docker](/docs/how-to-deploy/docker/), [Cloudflare Workers](/docs/how-to-deploy/cloudflare/), or [Wasmer Edge](/docs/how-to-deploy/wasmer/)
 - Free hosted service at [mockhttp.org](https://mockhttp.org), running on Cloudflare
 - Documentation site and interactive [OpenAPI reference](/api/)
 - Auto-detect the next port that is not in use

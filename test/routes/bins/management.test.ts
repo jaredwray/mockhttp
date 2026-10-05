@@ -20,6 +20,20 @@ describe("Bin management routes", () => {
 		await fastify.close();
 	});
 
+	it("POST /bins uses an allowlisted forwarded host", async () => {
+		const res = await fastify.inject({
+			method: "POST",
+			url: "/bins",
+			headers: {
+				host: "mockhttp.wasmer.app",
+				"x-forwarded-host": "mockhttp.org",
+				"x-forwarded-proto": "https",
+			},
+		});
+		expect(res.statusCode).toBe(200);
+		expect(res.json().url).toBe(`https://mockhttp.org/b/${res.json().id}`);
+	});
+
 	it("POST /bins returns id, url, and timestamps", async () => {
 		const res = await fastify.inject({ method: "POST", url: "/bins" });
 		expect(res.statusCode).toBe(200);

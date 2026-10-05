@@ -9,6 +9,10 @@
 	"observability": {
 		"enabled": true
 	},
+	"vars": {
+		"WASMER_ORIGIN": "https://mockhttp.wasmer.app",
+		"WASMER_TRAFFIC_PERCENT": "10"
+	},
 	"routes": [
 		{
 			"pattern": "mockhttp.org",

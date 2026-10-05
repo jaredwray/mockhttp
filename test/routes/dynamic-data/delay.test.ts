@@ -30,6 +30,21 @@ describe("GET /delay/:delay route", () => {
 		expect(endTime - startTime).toBeLessThan(11000);
 	});
 
+	it("should echo an allowlisted forwarded host", async () => {
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/delay/0?x=1",
+			headers: {
+				host: "mockhttp.wasmer.app",
+				"x-forwarded-host": "www.mockhttp.org",
+				"x-forwarded-proto": "https",
+			},
+		});
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().url).toBe("https://www.mockhttp.org/delay/0?x=1");
+	});
+
 	it("should return request information", async () => {
 		const response = await fastify.inject({
 			method: "GET",

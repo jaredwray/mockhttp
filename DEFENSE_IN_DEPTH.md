@@ -56,6 +56,7 @@ Profile: npm library · public
 
 - Extra CODEOWNERS paths: `/worker/`, `/wrangler.jsonc`.
 - Site deploy (`deploy-site.yaml`) uses a Cloudflare Worker via Wrangler. Production GitHub environment secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers edit and the mockhttp.org zone (custom domain + DNS) permissions.
+- Worker canary: `WASMER_TRAFFIC_PERCENT` in `wrangler.jsonc` is `10`. Wrangler secret `WASMER_EDGE_TOKEN` and Wasmer secret `EDGE_PROXY_TOKEN` must be the same value so proxied clients keep a per-IP rate limit.
 - Wasmer deploy (`deploy-wasmer.yaml`) runs on `workflow_dispatch` and on a published GitHub Release. It deploys the Node server to the test app and does not use the production environment. GitHub environment `wasmer` secret: `WASMER_TOKEN` (passed through the environment, not the command line). The Actions allowlist pattern is `wasmerio/setup-wasmer@*` so the SHA pin matches. Keep the existing extras in the same apply: `--allowed-actions "codecov/*,peter-evans/*,docker/*,google-github-actions/*,wasmerio/setup-wasmer@*"`. `lockdown-repo.sh` is applied by a repo admin and is not in this repo.
 
 ## Release flow

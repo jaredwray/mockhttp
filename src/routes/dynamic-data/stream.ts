@@ -4,6 +4,7 @@ import type {
 	FastifyRequest,
 	FastifySchema,
 } from "fastify";
+import { publicOrigin } from "../../public-origin.js";
 
 type StreamRequest = FastifyRequest<{
 	Params: { n: string };
@@ -52,9 +53,7 @@ export const streamRoute = (fastify: FastifyInstance) => {
 			}
 
 			const lines = Math.min(n, MAX_LINES);
-			const { protocol } = request;
-			/* v8 ignore next -- @preserve */
-			const host = request.headers.host || "localhost";
+			const origin = publicOrigin(request, "localhost");
 
 			// Set headers for streaming JSON
 			reply.raw.writeHead(200, {
@@ -70,7 +69,7 @@ export const streamRoute = (fastify: FastifyInstance) => {
 					args: request.query || {},
 					headers: request.headers,
 					origin: request.ip,
-					url: `${protocol}://${host}${request.url}`,
+					url: `${origin}${request.url}`,
 				};
 				reply.raw.write(`${JSON.stringify(data)}\n`);
 			}

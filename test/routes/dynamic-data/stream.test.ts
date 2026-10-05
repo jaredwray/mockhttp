@@ -57,6 +57,21 @@ describe("GET /stream/:n route", () => {
 		expect(response.statusCode).toBe(400);
 	});
 
+	it("should echo an allowlisted forwarded host", async () => {
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/stream/1",
+			headers: {
+				host: "mockhttp.wasmer.app",
+				"x-forwarded-host": "mockhttp.org",
+				"x-forwarded-proto": "https",
+			},
+		});
+
+		const data = JSON.parse(response.payload.trim());
+		expect(data.url).toBe("https://mockhttp.org/stream/1");
+	});
+
 	it("should include query args in response", async () => {
 		const response = await fastify.inject({
 			method: "GET",

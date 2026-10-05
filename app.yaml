@@ -6,3 +6,5 @@ env:
   HOST: "0.0.0.0"
   LOGGING: "false"
   AUTO_DETECT_PORT: "false"
+  # EDGE_PROXY_TOKEN is a Wasmer secret. It must match the Worker secret
+  # WASMER_EDGE_TOKEN so proxied clients are rate-limited by their own IP.

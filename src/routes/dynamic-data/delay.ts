@@ -4,6 +4,7 @@ import type {
 	FastifyRequest,
 	FastifySchema,
 } from "fastify";
+import { publicOrigin } from "../../public-origin.js";
 
 type DelayRequest = FastifyRequest<{
 	Params: { delay: string };
@@ -69,10 +70,6 @@ export const delayRoute = (fastify: FastifyInstance) => {
 		const actualDelay = Math.min(delay, MAX_DELAY);
 		await sleep(actualDelay * 1000);
 
-		const { protocol } = request;
-		/* v8 ignore next -- @preserve */
-		const host = request.headers.host || "localhost";
-
 		return {
 			/* v8 ignore next -- @preserve */
 			args: request.query || {},
@@ -81,7 +78,7 @@ export const delayRoute = (fastify: FastifyInstance) => {
 			form: {},
 			headers: request.headers,
 			origin: request.ip,
-			url: `${protocol}://${host}${request.url}`,
+			url: `${publicOrigin(request, "localhost")}${request.url}`,
 		};
 	};
 

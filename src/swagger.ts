@@ -10,7 +10,7 @@ A simple HTTP server that can be used to mock HTTP responses for testing purpose
 
 # About mockhttp.org
 
-[mockhttp.org](https://mockhttp.org) is a free hosted instance of this codebase for testing. It runs on a Cloudflare Worker (no containers): documentation is served from Workers Assets, and mock APIs such as \`/get\` and \`/post\` run in the Worker. The service is globally available and rate-limited (1000 requests per minute per IP) to prevent abuse.
+[mockhttp.org](https://mockhttp.org) is a free hosted instance of this codebase for testing. It runs on a Cloudflare Worker (no containers): documentation is served from Workers Assets, and mock APIs such as \`/get\` and \`/post\` run in the Worker. The service is globally available and rate-limited (1000 requests per minute per IP) to prevent abuse. The Worker proxies 10% of dynamic requests to the Node server at [mockhttp.wasmer.app](https://mockhttp.wasmer.app). A hash of the client IP keeps each client on one backend.
 `;
 
 export const fastifySwaggerConfig = {

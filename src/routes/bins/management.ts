@@ -5,6 +5,7 @@ import type {
 	FastifySchema,
 } from "fastify";
 import type { BinManager } from "../../bin-manager.js";
+import { publicOrigin } from "../../public-origin.js";
 
 const binSchema = {
 	type: "object",
@@ -199,11 +200,10 @@ export const binsManagementRoute = (binManager: BinManager) => {
 			{ schema: createBinSchema },
 			async (request: FastifyRequest, _reply: FastifyReply) => {
 				const bin = binManager.createBin();
-				/* v8 ignore next -- @preserve */
-				const host = request.headers.host ?? request.hostname;
+				const origin = publicOrigin(request, request.hostname);
 				return {
 					...bin,
-					url: `${request.protocol}://${host}/b/${bin.id}`,
+					url: `${origin}/b/${bin.id}`,
 				};
 			},
 		);

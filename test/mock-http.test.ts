@@ -1204,5 +1204,66 @@ describe("MockHttp", () => {
 
 			await mock.close();
 		});
+
+		test("should rate limit proxied clients by their edge client ip", async () => {
+			const mock = new MockHttp({
+				edgeProxyToken: "secret",
+				rateLimit: {
+					max: 1,
+					timeWindow: 60000,
+				},
+			});
+			expect(mock.edgeProxyToken).toBe("secret");
+			mock.edgeProxyToken = "secret";
+
+			await mock.start();
+
+			const headers = {
+				"x-mockhttp-edge-token": "secret",
+				"x-mockhttp-client-ip": "203.0.113.10",
+			};
+			const first = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+				headers,
+			});
+			const second = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+				headers,
+			});
+			const other = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+				headers: {
+					...headers,
+					"x-mockhttp-client-ip": "203.0.113.11",
+				},
+			});
+			const spoofed = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+				headers: {
+					"x-mockhttp-edge-token": "nope",
+					"x-mockhttp-client-ip": "203.0.113.12",
+				},
+			});
+			const spoofedAgain = await mock.server.inject({
+				method: "GET",
+				url: "/get",
+				headers: {
+					"x-mockhttp-edge-token": "nope",
+					"x-mockhttp-client-ip": "203.0.113.13",
+				},
+			});
+
+			expect(first.statusCode).toBe(200);
+			expect(second.statusCode).toBe(429);
+			expect(other.statusCode).toBe(200);
+			expect(spoofed.statusCode).toBe(200);
+			expect(spoofedAgain.statusCode).toBe(429);
+
+			await mock.close();
+		});
 	});
 });

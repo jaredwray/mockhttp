@@ -10,11 +10,13 @@ import fastifyRateLimit, {
 import fastifyStatic from "@fastify/static";
 import { fastifySwagger } from "@fastify/swagger";
 import { detect } from "detect-port";
-import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
+import Fastify, { type FastifyInstance } from "fastify";
 import { Hookified, type HookifiedOptions } from "hookified";
 import { BinManager } from "./bin-manager.js";
 import { type CertificateOptions, generateCertificate } from "./certificate.js";
+import { withEdgeRateLimitKey } from "./edge-client.js";
 import { getFastifyConfig } from "./fastify-config.js";
+import { publicOrigin } from "./public-origin.js";
 import { anythingRoute } from "./routes/anything/index.js";
 import {
 	basicAuthRoute,
@@ -79,16 +81,6 @@ export function resolvePackageRoot(metaUrl?: string): string {
 const packageRoot = resolvePackageRoot(import.meta.url);
 const defaultSiteDistPath = path.join(packageRoot, "site", "dist");
 const defaultPublicPath = path.join(packageRoot, "public");
-
-const requestOrigin = (request: FastifyRequest): string => {
-	const host = request.headers.host || "mockhttp.org";
-	const forwarded = request.headers["x-forwarded-proto"];
-	const forwardedProto = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-	const protocol = (forwardedProto ?? request.protocol).includes("https")
-		? "https"
-		: "http";
-	return `${protocol}://${host}`;
-};
 
 export type HttpBinOptions = {
 	httpMethods?: boolean;
@@ -167,6 +159,12 @@ export type MockHttpOptions = {
 	 */
 	rateLimit?: boolean | RateLimitPluginOptions;
 	/**
+	 * Shared secret presented by the Cloudflare Worker when it proxies a client.
+	 * A matching `x-mockhttp-edge-token` makes the rate limiter use
+	 * `x-mockhttp-client-ip` instead of the connecting address.
+	 */
+	edgeProxyToken?: string;
+	/**
 	 * Hookified options.
 	 */
 	hookOptions?: HookifiedOptions;
@@ -236,6 +234,8 @@ export class MockHttp extends Hookified {
 		allowList: ["127.0.0.1", "::1"],
 	};
 
+	private _edgeProxyToken?: string;
+
 	private _http2 = false;
 	private _http1 = true;
 	private _https: HttpsOptions | undefined;
@@ -286,6 +286,10 @@ export class MockHttp extends Hookified {
 			} else {
 				this._rateLimit = options.rateLimit as RateLimitPluginOptions;
 			}
+		}
+
+		if (options?.edgeProxyToken) {
+			this._edgeProxyToken = options.edgeProxyToken;
 		}
 
 		if (options?.logging !== undefined) {
@@ -573,6 +577,22 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
+	 * Shared secret for Worker-proxied clients. Unset until `EDGE_PROXY_TOKEN`
+	 * or the constructor option provides one.
+	 */
+	public get edgeProxyToken(): string | undefined {
+		return this._edgeProxyToken;
+	}
+
+	/**
+	 * Shared secret for Worker-proxied clients. Changing this property requires
+	 * restarting the server before the rate limiter picks it up.
+	 */
+	public set edgeProxyToken(edgeProxyToken: string | undefined) {
+		this._edgeProxyToken = edgeProxyToken;
+	}
+
+	/**
 	 * The Fastify server instance.
 	 */
 	public get server(): FastifyInstance {
@@ -715,7 +735,10 @@ export class MockHttp extends Hookified {
 
 			// Register the rate limit plugin if configured
 			if (this._rateLimit) {
-				await this._server.register(fastifyRateLimit, this._rateLimit);
+				await this._server.register(
+					fastifyRateLimit,
+					withEdgeRateLimitKey(this._rateLimit, this._edgeProxyToken),
+				);
 			}
 
 			if (this._apiDocs) {
@@ -887,7 +910,7 @@ export class MockHttp extends Hookified {
 					return reply
 						.type("application/xml")
 						.send(
-							xml.replaceAll("https://mockhttp.org", requestOrigin(request)),
+							xml.replaceAll("https://mockhttp.org", publicOrigin(request)),
 						);
 				},
 			);

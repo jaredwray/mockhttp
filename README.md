@@ -88,7 +88,7 @@ await mock.close(); // stop the server
 
 Wasmer Edge runs the same Node server as Docker. [deploy-wasmer.yaml](.github/workflows/deploy-wasmer.yaml) publishes the source with `wasmer deploy --build-remote`, and the `Anybuild` file builds the server and the docs site. It runs when you start it by hand and when a GitHub Release is published. It does not deploy the Cloudflare Worker. The test app is [mockhttp.wasmer.app](https://mockhttp.wasmer.app).
 
-Bins, taps, and `@fastify/rate-limit` are per instance on Wasmer. All [mockhttp.org](https://mockhttp.org) traffic stays on Cloudflare, where the rate limiter is shared across requests.
+mockhttp.org stays on the Cloudflare Worker. Workers Assets serve the documentation, and the Worker rate-limits dynamic requests at 1000 per minute per IP. `WASMER_TRAFFIC_PERCENT` sends 10% of those dynamic requests to [mockhttp.wasmer.app](https://mockhttp.wasmer.app). The Worker hashes the client IP so a client stays on the same backend. Set the Wrangler secret `WASMER_EDGE_TOKEN` and the Wasmer secret `EDGE_PROXY_TOKEN` to the same value so Wasmer counts those proxied clients separately. Bins and taps on Wasmer stay on the instance that received the request.
 
 # HTTPS Support
 
@@ -1242,7 +1242,7 @@ A getter that returns whether there are any active injections.
 
 [mockhttp.org](https://mockhttp.org) is a free hosted instance of this codebase for testing. It runs on a [Cloudflare Worker](https://developers.cloudflare.com/workers/) (no containers): documentation is served from Workers Assets, and mock APIs such as `/get` and `/post` run in the Worker. The service is globally available and rate-limited (1000 requests per minute per IP) to prevent abuse.
 
-All [mockhttp.org](https://mockhttp.org) traffic stays on Cloudflare. A separate test app runs the Node server on Wasmer Edge at [mockhttp.wasmer.app](https://mockhttp.wasmer.app).
+The Worker proxies 10% of dynamic [mockhttp.org](https://mockhttp.org) requests to the Node server on Wasmer Edge at [mockhttp.wasmer.app](https://mockhttp.wasmer.app). A hash of the client IP keeps each client on one backend. Documentation requests stay on Workers Assets.
 
 Getting Started is served at `/` and `/docs`, other guides at `/docs/...`, and the interactive HTTP API reference at `/api`. Mock endpoints such as `/get` and `/post` are unchanged.
 

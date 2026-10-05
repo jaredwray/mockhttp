@@ -86,6 +86,29 @@ describe("Docula site docs", () => {
 		expect(forwarded.statusCode).toBe(200);
 		expect(forwarded.payload).toContain("https://docs.example.test/");
 
+		const canary = await mock.server.inject({
+			method: "GET",
+			url: "/sitemap.xml",
+			headers: {
+				host: "mockhttp.wasmer.app",
+				"x-forwarded-host": "mockhttp.org",
+				"x-forwarded-proto": "https",
+			},
+		});
+		expect(canary.statusCode).toBe(200);
+		expect(canary.payload).toContain("https://mockhttp.org/");
+
+		const ignored = await mock.server.inject({
+			method: "GET",
+			url: "/sitemap.xml",
+			headers: {
+				host: "docs.example.test",
+				"x-forwarded-host": "evil.example",
+				"x-forwarded-proto": "https",
+			},
+		});
+		expect(ignored.payload).toContain("https://docs.example.test/");
+
 		const get = await mock.server.inject({ method: "GET", url: "/get" });
 		expect(get.statusCode).toBe(200);
 		expect(get.json()).toMatchObject({ method: "GET" });

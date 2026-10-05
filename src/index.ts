@@ -29,6 +29,10 @@ export const start = async () => {
 		mockHttp.autoDetectPort = false;
 	}
 
+	if (process.env.EDGE_PROXY_TOKEN) {
+		mockHttp.edgeProxyToken = process.env.EDGE_PROXY_TOKEN;
+	}
+
 	await mockHttp.start();
 
 	return mockHttp;

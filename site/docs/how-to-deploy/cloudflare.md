@@ -8,7 +8,7 @@ description: Deploy MockHTTP as a Cloudflare Worker. Workers Assets serve the do
 
 MockHTTP runs on Cloudflare as a Worker, not a container. [mockhttp.org](https://mockhttp.org) is this deployment: [Workers Assets](https://developers.cloudflare.com/workers/static-assets/) serve the documentation site, and the Worker handles mock APIs such as `/get` and `/post`.
 
-The Worker entry is [`worker/index.ts`](https://github.com/jaredwray/mockhttp/blob/main/worker/index.ts). It listens with the Node.js compatibility layer and forwards each request into the Fastify app. Configuration lives in [`wrangler.jsonc`](https://github.com/jaredwray/mockhttp/blob/main/wrangler.jsonc).
+The Worker entry is [`worker/index.ts`](https://github.com/jaredwray/mockhttp/blob/main/worker/index.ts). It listens with the Node.js compatibility layer and forwards requests into the Fastify app. Configuration lives in [`wrangler.jsonc`](https://github.com/jaredwray/mockhttp/blob/main/wrangler.jsonc).
 
 ## What the Worker does differently
 
@@ -30,11 +30,13 @@ Taps are a library API (`mock.taps.inject`). They have no HTTP routes, so a depl
 
 Assets are checked before the Worker. A file under `site/dist` (the docs site, favicon, logos) is served as a static asset. A path that is not a file, such as `/get` or `/post`, is handled by the Worker.
 
+After the rate limiter, the Worker proxies a share of those requests to the [Wasmer](/docs/how-to-deploy/wasmer/) app instead of the Fastify app. `WASMER_TRAFFIC_PERCENT` in `wrangler.jsonc` sets the share (`10` in this repo), and `WASMER_ORIGIN` sets the target (`https://mockhttp.wasmer.app`). A hash of the client IP picks the backend, so each client stays on one. Set the Wrangler secret `WASMER_EDGE_TOKEN` to the same value as the Wasmer secret `EDGE_PROXY_TOKEN` so Wasmer rate-limits proxied clients by their own IP.
+
 ## Deploy your own Worker
 
 You need a Cloudflare account and permission to deploy Workers. This repository pins Wrangler to `4.127.0`.
 
-Change `name` and `routes` in `wrangler.jsonc` before you deploy a fork. The route in this repo attaches the custom domain `mockhttp.org`. `workers_dev` is enabled, so a `*.workers.dev` hostname is available as well. Adjust the `RATE_LIMITER` binding if you want a different limit than 1000 requests per 60 seconds.
+Change `name` and `routes` in `wrangler.jsonc` before you deploy a fork. The route in this repo attaches the custom domain `mockhttp.org`. `workers_dev` is enabled, so a `*.workers.dev` hostname is available as well. Adjust the `RATE_LIMITER` binding if you want a different limit than 1000 requests per 60 seconds. This repo's `WASMER_TRAFFIC_PERCENT` sends 10% of dynamic requests to `https://mockhttp.wasmer.app`. Set it to `0` to keep every request in your Worker, or point `WASMER_ORIGIN` at your own Wasmer app.
 
 Also change `siteUrl` in `site/docula.config.ts`. The sitemap is a static file, and this repo sets it to `https://mockhttp.org`. The `migrations` block records a container class that this Worker no longer uses. A brand-new Worker can omit that block.
 

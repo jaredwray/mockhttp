@@ -8,7 +8,7 @@ description: Deploy the MockHTTP Node.js server to Wasmer Edge with app.yaml, An
 
 Wasmer Edge runs the same Node.js server as [Docker](/docs/how-to-deploy/docker/). The test app for this repository is [mockhttp.wasmer.app](https://mockhttp.wasmer.app).
 
-This deploy does not publish the [Cloudflare Worker](/docs/how-to-deploy/cloudflare/). [mockhttp.org](https://mockhttp.org) stays on Cloudflare.
+This deploy does not publish the [Cloudflare Worker](/docs/how-to-deploy/cloudflare/). [mockhttp.org](https://mockhttp.org) stays on Cloudflare, and the Worker proxies 10% of its dynamic requests to [mockhttp.wasmer.app](https://mockhttp.wasmer.app). A hash of the client IP keeps each client on one backend.
 
 ## App configuration
 
@@ -62,5 +62,7 @@ wasmer deploy --non-interactive --build-remote
 Bins use the default in-memory store, so a bin exists only on the instance that created it. Taps are a library API (`mock.taps.inject`) and have no HTTP routes, so a deployed app cannot inject one.
 
 `@fastify/rate-limit` is on at 1000 requests per minute. It keys on the address that connects to the process. The server does not trust proxy headers, and the allow list is only `127.0.0.1` and `::1`. On the test app, `/ip` reports `127.0.0.100`, which is the edge proxy rather than the caller, and the response includes `x-ratelimit-limit: 1000`. Clients that share that proxy address share one limit on that instance. This is not the Cloudflare limiter used by [mockhttp.org](https://mockhttp.org).
+
+Requests proxied by the [mockhttp.org](https://mockhttp.org) Worker can keep a per-client limit. Set the Wasmer secret `EDGE_PROXY_TOKEN` to the same value as the Worker secret `WASMER_EDGE_TOKEN`. When a request's `x-mockhttp-edge-token` header matches, the limiter keys on `x-mockhttp-client-ip` instead of the connecting address.
 
 The process listens with HTTP. Wasmer terminates TLS for the `*.wasmer.app` hostname.

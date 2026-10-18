@@ -13,7 +13,7 @@ config = node_config(
     node_package_manager = "pnpm",
     node_server = "fastify",
     node_version = "24",
-    pnpm_version = "12.4.1",
+    pnpm_version = "12.12.1",
 )
 
 build = node_build(config)

@@ -63,7 +63,7 @@ new MockHttp(options?)
 - `http1`: boolean - Get/set HTTP/1.1 fallback for HTTP/2 with HTTPS
 - `server`: FastifyInstance - Get/set the Fastify server instance
 - `taps`: TapManager - Get/set the TapManager instance
-- `bins`: BinManager - Get/set the BinManager instance for request bins
+- `bins`: MockHttpBins - Get or set the request bins
 
 ### Methods
 
@@ -143,43 +143,43 @@ Register the request bin routes — management at `/bins` and capture at `/b/:id
 
 ## Bins (Request Capture)
 
-Access the BinManager via `mockHttp.bins` to manage request bins programmatically. See [Request Bins](#request-bins) for usage examples.
+Use `mockHttp.bins` to control request bins. See [Request Bins](#request-bins) for usage examples.
 
 ### `bins.createBin()`
 
 Create a new bin with the configured TTL.
 
-**Returns:** `Bin` — `{ id, createdAt, expiresAt, requestCount }`
+**Returns:** `Promise<Bin>` — `{ id, createdAt, expiresAt, requestCount }`
 
 ### `bins.getBin(id)`
 
 Look up a bin by id. Returns `undefined` if the bin does not exist or has expired (and lazily removes the expired entry).
 
-**Returns:** `Bin | undefined`
+**Returns:** `Promise<Bin | undefined>`
 
 ### `bins.listBins()`
 
 List all non-expired bins.
 
-**Returns:** `Bin[]`
+**Returns:** `Promise<Bin[]>`
 
 ### `bins.deleteBin(id)`
 
 Delete a bin and all its captured requests.
 
-**Returns:** `boolean` — `true` if the bin existed
+**Returns:** `Promise<boolean>` — `true` when the bin existed
 
 ### `bins.getRequests(binId)`
 
 List captured requests for a bin, newest first.
 
-**Returns:** `CapturedRequest[]`
+**Returns:** `Promise<CapturedRequest[]>`
 
 ### `bins.getRequest(binId, reqId)`
 
 Look up a single captured request.
 
-**Returns:** `CapturedRequest | undefined`
+**Returns:** `Promise<CapturedRequest | undefined>`
 
 ### `bins.clearRequests(binId)`
 
@@ -189,7 +189,7 @@ Clear all captured requests in a bin (the bin itself is preserved).
 
 Manually record a captured request. Returns `undefined` if the bin does not exist or is expired. Normally invoked by the capture route, but available for programmatic use.
 
-**Returns:** `CapturedRequest | undefined`
+**Returns:** `Promise<CapturedRequest | undefined>`
 
 ### `bins.start()` / `bins.stop()`
 

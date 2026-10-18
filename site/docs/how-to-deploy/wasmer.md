@@ -33,7 +33,7 @@ Change `name` and `owner` before you deploy your own app. The environment variab
 
 [`Anybuild`](https://github.com/jaredwray/mockhttp/blob/main/Anybuild) tells Wasmer how to build the package on a remote builder:
 
-- Node.js 24 and pnpm `12.4.1`
+- Node.js 24 and pnpm `12.12.1`
 - Build command: `pnpm run build && pnpm website:build`
 - Start command: `node dist/index.mjs`
 

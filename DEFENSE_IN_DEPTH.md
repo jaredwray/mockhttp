@@ -14,7 +14,7 @@ Profile: npm library · public
 - [x] Dev Container `image` pinned by digest (`name:<tag>@sha256:<digest>`; not a floating tag) (#214)
 
 ## 3. Dependencies (pnpm)
-- [x] `packageManager: pnpm@11.3+` pinned in `package.json` (#185; currently `pnpm@12.4.1`)
+- [x] `packageManager: pnpm@11.3+` pinned in `package.json` (#185; currently `pnpm@12.12.1`)
 - [x] 7-day cooldown: `minimumReleaseAge: 10080`, `minimumReleaseAgeStrict: true`, `minimumReleaseAgeIgnoreMissingTime: false`; no first-party `minimumReleaseAgeExclude` — verified on main
 - [x] `trustPolicy: no-downgrade`; no first-party `trustPolicyExclude` — verified on main
 - [x] Lifecycle scripts blocked: `strictDepBuilds: true`, `dangerouslyAllowAllBuilds: false`, `allowBuilds: {}` baseline (#186; exceptions `@swc/core`, `esbuild`)

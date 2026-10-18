@@ -12,9 +12,9 @@ import { fastifySwagger } from "@fastify/swagger";
 import { detect } from "detect-port";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { Hookified, type HookifiedOptions } from "hookified";
-import { BinManager } from "./bin-manager.js";
 import { type CertificateOptions, generateCertificate } from "./certificate.js";
 import { getFastifyConfig } from "./fastify-config.js";
+import { MockHttpBins } from "./mock-http-bins.js";
 import { anythingRoute } from "./routes/anything/index.js";
 import {
 	basicAuthRoute,
@@ -243,7 +243,7 @@ export class MockHttp extends Hookified {
 
 	private _server: FastifyInstance | undefined;
 	private _taps: TapManager = new TapManager();
-	private _bins: BinManager = new BinManager();
+	private _bins: MockHttpBins = new MockHttpBins();
 
 	constructor(options?: MockHttpOptions) {
 		super(options?.hookOptions);
@@ -602,16 +602,16 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
-	 * The BinManager instance for managing request bins.
+	 * The MockHttpBins instance for request bins.
 	 */
-	public get bins(): BinManager {
+	public get bins(): MockHttpBins {
 		return this._bins;
 	}
 
 	/**
-	 * The BinManager instance for managing request bins.
+	 * The MockHttpBins instance for request bins.
 	 */
-	public set bins(bins: BinManager) {
+	public set bins(bins: MockHttpBins) {
 		this._bins = bins;
 	}
 

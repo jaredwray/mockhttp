@@ -1,16 +1,16 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { BinManager } from "../../../src/bin-manager.js";
+import { MockHttpBins } from "../../../src/mock-http-bins.js";
 import { binsCaptureRoute } from "../../../src/routes/bins/capture.js";
 import { binsManagementRoute } from "../../../src/routes/bins/management.js";
 
 describe("Bin management routes", () => {
 	let fastify: FastifyInstance;
-	let manager: BinManager;
+	let manager: MockHttpBins;
 
 	beforeEach(async () => {
 		fastify = Fastify();
-		manager = new BinManager();
+		manager = new MockHttpBins();
 		await fastify.register(binsManagementRoute(manager));
 		await fastify.register(binsCaptureRoute(manager));
 	});

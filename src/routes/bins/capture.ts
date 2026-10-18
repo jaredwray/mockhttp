@@ -4,7 +4,7 @@ import type {
 	FastifyRequest,
 	FastifySchema,
 } from "fastify";
-import type { BinManager } from "../../bin-manager.js";
+import type { MockHttpBins } from "../../mock-http-bins.js";
 
 const captureSchema: FastifySchema = {
 	description:
@@ -48,9 +48,9 @@ type CaptureRequest = FastifyRequest<{
 
 /**
  * Create a Fastify plugin that registers the catch-all bin capture endpoint
- * at `/b/:id` and `/b/:id/*`, with the provided {@link BinManager} injected.
+ * at `/b/:id` and `/b/:id/*`, with the provided {@link MockHttpBins} injected.
  */
-export const binsCaptureRoute = (binManager: BinManager) => {
+export const binsCaptureRoute = (bins: MockHttpBins) => {
 	return (fastify: FastifyInstance) => {
 		// Capture every request body as a raw Buffer regardless of content type.
 		// Default Fastify parsers (json, text, urlencoded) would otherwise pre-parse
@@ -68,14 +68,14 @@ export const binsCaptureRoute = (binManager: BinManager) => {
 			const { id } = request.params;
 			const rest = request.params["*"] ?? "";
 
-			const bin = binManager.getBin(id);
+			const bin = await bins.getBin(id);
 			if (!bin) {
 				return reply.code(404).send({ error: "bin_not_found" });
 			}
 
 			const raw = request.body as Buffer | undefined;
 			const bodySize = raw?.length ?? 0;
-			const max = binManager.maxBodySize;
+			const max = bins.maxBodySize;
 			const truncated = bodySize > max;
 			const slice = raw && raw.length > 0 ? raw.subarray(0, max) : undefined;
 			const contentTypeHeader = request.headers["content-type"];
@@ -102,7 +102,7 @@ export const binsCaptureRoute = (binManager: BinManager) => {
 			const url = request.url.slice(prefix.length) || "/";
 			const path = rest ? `/${rest}` : "/";
 
-			const captured = binManager.recordRequest(id, {
+			const captured = await bins.recordRequest(id, {
 				method: request.method,
 				url,
 				path,

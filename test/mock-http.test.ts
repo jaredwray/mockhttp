@@ -3,7 +3,6 @@ import * as os from "node:os";
 import * as path from "node:path";
 import Fastify from "fastify";
 import { describe, expect, test, vi } from "vitest";
-import { BinManager } from "../src/bin-manager.js";
 import { generateCertificate } from "../src/certificate.js";
 import {
 	MockHttp,
@@ -11,6 +10,7 @@ import {
 	mockhttp,
 	resolvePackageRoot,
 } from "../src/mock-http.js";
+import { MockHttpBins } from "../src/mock-http-bins.js";
 import { TapManager } from "../src/tap-manager.js";
 
 describe("MockHttp", () => {
@@ -249,14 +249,14 @@ describe("MockHttp", () => {
 	});
 
 	describe("request bin feature", () => {
-		test("exposes the BinManager via the bins getter", () => {
+		test("exposes MockHttpBins via the bins getter", () => {
 			const mock = new MockHttp();
-			expect(mock.bins).toBeInstanceOf(BinManager);
+			expect(mock.bins).toBeInstanceOf(MockHttpBins);
 		});
 
-		test("allows replacing the BinManager via the bins setter", () => {
+		test("allows replacing MockHttpBins via the bins setter", () => {
 			const mock = new MockHttp();
-			const replacement = new BinManager({ defaultTtlMs: 1000 });
+			const replacement = new MockHttpBins({ defaultTtlMs: 1000 });
 			mock.bins = replacement;
 			expect(mock.bins).toBe(replacement);
 		});

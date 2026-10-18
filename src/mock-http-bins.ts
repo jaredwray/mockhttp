@@ -124,10 +124,10 @@ export class MockHttpBins {
 
 	/**
 	 * List bins whose lifetime is not over.
-	 * Throws when the Keyv adapter has no iterator.
+	 * Throws when the Keyv store has no iterator.
 	 */
 	public async listBins(): Promise<Bin[]> {
-		if (typeof this._keyv.iterator !== "function") {
+		if (!this.canIterate()) {
 			throw new Error(
 				"MockHttpBins: the configured Keyv store does not support iteration; listBins() is unavailable",
 			);
@@ -227,17 +227,22 @@ export class MockHttpBins {
 	}
 
 	private async *documents(): AsyncGenerator<[string, BinDocument]> {
-		const iterator = this._keyv.iterator;
-		if (typeof iterator !== "function") {
+		if (!this.canIterate()) {
 			return;
 		}
-		for await (const entry of iterator()) {
+		// Keyv 6 reads `this` inside iterator(). Keep the call on the instance.
+		for await (const entry of this._keyv.iterator()) {
 			const [key, value] = entry as [string, BinDocument];
 			if (!key.startsWith(BIN_KEY_PREFIX)) {
 				continue;
 			}
 			yield [key, value];
 		}
+	}
+
+	/** Keyv 6 yields nothing when the store has no iterator. Listing must fail instead. */
+	private canIterate(): boolean {
+		return typeof this._keyv.store.iterator === "function";
 	}
 
 	private async appendRequest(

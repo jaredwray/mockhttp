@@ -767,9 +767,9 @@ await mock.start();
 
 ### Storage
 
-`MockHttpBins` stores each bin in [Keyv](https://github.com/jaredwray/keyv). The default is `new Keyv()`. That store keeps the data in memory for this process.
+`MockHttpBins` stores each bin in [Keyv](https://github.com/jaredwray/keyv) 6. The default is `new Keyv()`. That store keeps the data in memory for this process.
 
-Pass a Keyv instance when you want a different adapter. Install the adapter in your project. This package does not include an adapter.
+Pass a Keyv 6 instance when you want a different adapter. Install the adapter in your project. This package does not include an adapter. `@keyv/redis` 6 matches this Keyv version.
 
 ```typescript
 import Keyv from 'keyv';

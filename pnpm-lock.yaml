@@ -194,8 +194,8 @@ importers:
         specifier: ^3.0.3
         version: 3.0.3
       keyv:
-        specifier: ^5.6.0
-        version: 5.6.0
+        specifier: ^6.1.0
+        version: 6.1.0
       pino:
         specifier: ^10.4.0
         version: 10.4.0
@@ -1841,6 +1841,10 @@ packages:
 
   keyv@5.6.0:
     resolution: {integrity: sha512-CYDD3SOtsHtyXeEORYRx2qBtpDJFjRTGXUtmNEMGyzYOKj1TE3tycdlho7kA1Ufx9OYWZzg52QFBGALTirzDSw==}
+
+  keyv@6.1.0:
+    resolution: {integrity: sha512-0OO64DxKOITdyQljNCcO+vc+iyaPmm3OV5eKOWRxWCp3V0QnXenpqcKfjGjycNILUJNV+erm1ose6Hsgr1fNFA==}
+    engines: {node: '>= 22.19.0'}
 
   ky@1.14.3:
     resolution: {integrity: sha512-9zy9lkjac+TR1c2tG+mkNSVlyOpInnWdSMiue4F+kq8TwJSgv6o8jhLRg8Ho6SnZ9wOYUq/yozts9qQCfk7bIw==}
@@ -4281,6 +4285,10 @@ snapshots:
   keyv@5.6.0:
     dependencies:
       '@keyv/serialize': 1.1.1
+
+  keyv@6.1.0:
+    dependencies:
+      hookified: 3.0.4
 
   ky@1.14.3: {}
 

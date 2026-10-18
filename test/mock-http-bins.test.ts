@@ -135,11 +135,21 @@ describe("MockHttpBins", () => {
 			expect(await bins.keyv.get(key)).toBeUndefined();
 		});
 
-		it("throws from listBins when the Keyv adapter has no iterator", async () => {
-			bins.keyv.iterator = undefined;
+		it("throws from listBins when the Keyv store has no iterator", async () => {
+			bins.keyv.store.iterator = undefined;
 			await expect(bins.listBins()).rejects.toThrow(
 				/does not support iteration/,
 			);
+		});
+
+		it("lists bins when the Keyv namespace contains a colon", async () => {
+			const namespaced = new MockHttpBins({
+				keyv: new Keyv({ namespace: "tenant:a" }),
+			});
+			const bin = await namespaced.createBin();
+			expect((await namespaced.listBins()).map((entry) => entry.id)).toEqual([
+				bin.id,
+			]);
 		});
 	});
 
@@ -299,7 +309,7 @@ describe("MockHttpBins", () => {
 			vi.useFakeTimers();
 			const timed = new MockHttpBins({ cleanupIntervalMs: 50 });
 			const bin = await timed.createBin();
-			timed.keyv.iterator = undefined;
+			timed.keyv.store.iterator = undefined;
 			timed.start();
 			await vi.advanceTimersByTimeAsync(50);
 			expect(await timed.keyv.get(`bin:${bin.id}`)).toBeDefined();

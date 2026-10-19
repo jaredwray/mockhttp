@@ -242,9 +242,9 @@ describe("MockHttpBins", () => {
 				return set(key, value, ttl);
 			});
 
-			await expect(bins.recordRequest(bin.id, RAW)).rejects.toThrow(
-				"write failed",
-			);
+			const error = await bins.recordRequest(bin.id, RAW).catch((e) => e);
+			expect(error.message).toBe(`MockHttpBins: could not save bin ${bin.id}`);
+			expect(error.cause.message).toBe("write failed");
 			const captured = await bins.recordRequest(bin.id, RAW);
 			expect(captured).toBeDefined();
 			expect(await bins.getRequests(bin.id)).toHaveLength(1);
@@ -281,6 +281,38 @@ describe("MockHttpBins", () => {
 		it("returns false when the bin does not exist", async () => {
 			expect(await bins.clearRequests("ghost")).toBe(false);
 			expect(await bins.getRequests("ghost")).toEqual([]);
+		});
+	});
+
+	describe("write failures", () => {
+		it("throws when Keyv returns false because an error listener is attached", async () => {
+			const keyv = new Keyv({ store: new Map() });
+			keyv.on("error", () => undefined);
+			vi.spyOn(keyv.store, "set").mockRejectedValue(new Error("store down"));
+			const failing = new MockHttpBins({ keyv });
+			await expect(failing.createBin()).rejects.toThrow(
+				/^MockHttpBins: could not save bin /,
+			);
+		});
+
+		it("wraps the store error when no error listener is attached", async () => {
+			const keyv = new Keyv({ store: new Map() });
+			vi.spyOn(keyv.store, "set").mockRejectedValue(new Error("store down"));
+			const failing = new MockHttpBins({ keyv });
+			const error = await failing.createBin().catch((e) => e);
+			expect(error.message).toMatch(/^MockHttpBins: could not save bin /);
+			expect(error.cause.message).toBe("store down");
+		});
+
+		it("throws from clearRequests and keeps the captures when the write fails", async () => {
+			const bin = await bins.createBin();
+			await bins.recordRequest(bin.id, RAW);
+			vi.spyOn(bins.keyv, "set").mockResolvedValue(false);
+			await expect(bins.clearRequests(bin.id)).rejects.toThrow(
+				`MockHttpBins: could not save bin ${bin.id}`,
+			);
+			vi.mocked(bins.keyv.set).mockRestore();
+			expect(await bins.getRequests(bin.id)).toHaveLength(1);
 		});
 	});
 

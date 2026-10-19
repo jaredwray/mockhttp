@@ -147,7 +147,7 @@ Use `mockHttp.bins` to control request bins. See [Request Bins](#request-bins) f
 
 ### `bins.createBin()`
 
-Create a new bin with the configured TTL.
+Create a new bin with the configured TTL. Throws when Keyv does not store the bin.
 
 **Returns:** `Promise<Bin>` — `{ id, createdAt, expiresAt, requestCount }`
 
@@ -183,13 +183,13 @@ Look up a single captured request.
 
 ### `bins.clearRequests(binId)`
 
-Clear all captured requests in a bin. The bin stays.
+Clear all captured requests in a bin. The bin stays. Throws when Keyv does not store the change.
 
 **Returns:** `Promise<boolean>` — `false` when the bin does not exist
 
 ### `bins.recordRequest(binId, raw)`
 
-Manually record a captured request. Returns `undefined` if the bin does not exist. Normally invoked by the capture route, but available for programmatic use.
+Manually record a captured request. Returns `undefined` if the bin does not exist. Throws when Keyv does not store the capture. Normally invoked by the capture route, but available for programmatic use.
 
 **Returns:** `Promise<CapturedRequest | undefined>`
 

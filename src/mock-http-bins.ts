@@ -86,7 +86,10 @@ export class MockHttpBins {
 		return this._defaultTtlMs;
 	}
 
-	/** Create a new bin with the configured lifetime. */
+	/**
+	 * Create a new bin with the configured lifetime.
+	 * Throws when Keyv does not store the bin.
+	 */
 	public async createBin(): Promise<Bin> {
 		const id = this.generateId();
 		const now = Date.now();
@@ -96,11 +99,7 @@ export class MockHttpBins {
 			expiresAt: new Date(now + this._defaultTtlMs).toISOString(),
 			requestCount: 0,
 		};
-		await this._keyv.set(
-			this.binKey(id),
-			{ bin, requests: [] },
-			this.ttlFor(bin),
-		);
+		await this.save({ bin, requests: [] });
 		return bin;
 	}
 
@@ -144,6 +143,7 @@ export class MockHttpBins {
 	/**
 	 * Record a request for a bin.
 	 * Returns `undefined` when the bin does not exist.
+	 * Throws when Keyv does not store the capture.
 	 */
 	public async recordRequest(
 		binId: string,
@@ -179,17 +179,17 @@ export class MockHttpBins {
 	/**
 	 * Remove captured requests and keep the bin.
 	 * Returns false when the bin does not exist.
+	 * Throws when Keyv does not store the change.
 	 */
 	public async clearRequests(binId: string): Promise<boolean> {
 		return this.enqueue(binId, async () => {
-			const key = this.binKey(binId);
-			const doc = await this._keyv.get(key);
+			const doc = await this._keyv.get(this.binKey(binId));
 			if (!doc) {
 				return false;
 			}
 			doc.requests = [];
 			doc.bin.requestCount = 0;
-			await this._keyv.set(key, doc, this.ttlFor(doc.bin));
+			await this.save(doc);
 			return true;
 		});
 	}
@@ -237,8 +237,7 @@ export class MockHttpBins {
 		binId: string,
 		captured: CapturedRequest,
 	): Promise<boolean> {
-		const key = this.binKey(binId);
-		const doc = await this._keyv.get(key);
+		const doc = await this._keyv.get(this.binKey(binId));
 		if (!doc) {
 			return false;
 		}
@@ -247,8 +246,29 @@ export class MockHttpBins {
 			doc.requests.pop();
 		}
 		doc.bin.requestCount = doc.requests.length;
-		await this._keyv.set(key, doc, this.ttlFor(doc.bin));
+		await this.save(doc);
 		return true;
+	}
+
+	/**
+	 * Write a bin document with a TTL from its lifetime.
+	 * Keyv returns false or throws when the write fails. Both cases throw here.
+	 */
+	private async save(doc: BinDocument): Promise<void> {
+		const message = `MockHttpBins: could not save bin ${doc.bin.id}`;
+		let saved: boolean;
+		try {
+			saved = await this._keyv.set(
+				this.binKey(doc.bin.id),
+				doc,
+				this.ttlFor(doc.bin),
+			);
+		} catch (cause) {
+			throw new Error(message, { cause });
+		}
+		if (!saved) {
+			throw new Error(message);
+		}
 	}
 
 	/**

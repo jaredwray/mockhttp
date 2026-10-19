@@ -347,4 +347,6 @@ Each capture writes the full bin again. A large body or a high request limit mak
 
 Two processes that share one Keyv can lose a capture. This occurs when both processes write the same bin at the same time.
 
+If Keyv does not store a write, the bin route returns `500` with the standard Fastify error body: `statusCode`, `error`, and `message`.
+
 `listBins()` throws an error when the adapter has no iterator. The cleanup timer does nothing for that adapter.

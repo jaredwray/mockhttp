@@ -1,5 +1,5 @@
 import Fastify, { type FastifyInstance } from "fastify";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MockHttpBins } from "../../../src/mock-http-bins.js";
 import { binsCaptureRoute } from "../../../src/routes/bins/capture.js";
 import { binsManagementRoute } from "../../../src/routes/bins/management.js";
@@ -36,6 +36,24 @@ describe("Bin capture route", () => {
 		const res = await fastify.inject({ method: "POST", url: "/b/missing" });
 		expect(res.statusCode).toBe(404);
 		expect(res.json().error).toBe("bin_not_found");
+	});
+
+	it("returns 500 when Keyv does not store the capture", async () => {
+		const id = await createBin(fastify);
+		vi.spyOn(manager.keyv, "set").mockResolvedValue(false);
+		const res = await fastify.inject({
+			method: "POST",
+			url: `/b/${id}`,
+			payload: "hello",
+		});
+		expect(res.statusCode).toBe(500);
+		expect(res.json()).toMatchObject({
+			statusCode: 500,
+			error: "Internal Server Error",
+			message: `MockHttpBins: could not save bin ${id}`,
+		});
+		vi.mocked(manager.keyv.set).mockRestore();
+		expect(await manager.getRequests(id)).toEqual([]);
 	});
 
 	it("captures a JSON POST and stores utf8 body", async () => {

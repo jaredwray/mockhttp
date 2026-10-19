@@ -1,12 +1,63 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readPublicFile, setPublicFileReader } from "../src/public-files.js";
 
-const { handleAsNodeRequestMock } = vi.hoisted(() => ({
-	handleAsNodeRequestMock: vi.fn(),
-}));
+const { handleAsNodeRequestMock, KeyvMongoMock } = vi.hoisted(() => {
+	class KeyvMongoMock {
+		static instances: KeyvMongoMock[] = [];
+		readonly url: string;
+		readonly options: Record<string, unknown> | undefined;
+		readonly data = new Map<string, unknown>();
+
+		constructor(
+			url?: string | Record<string, unknown>,
+			options?: Record<string, unknown>,
+		) {
+			if (typeof url === "string") {
+				this.url = url;
+				this.options = options;
+			} else {
+				this.url = "";
+				this.options = url;
+			}
+			KeyvMongoMock.instances.push(this);
+		}
+
+		async get(key: string): Promise<unknown> {
+			return this.data.get(key);
+		}
+
+		async set(key: string, value: unknown): Promise<boolean> {
+			this.data.set(key, value);
+			return true;
+		}
+
+		async delete(key: string): Promise<boolean> {
+			return this.data.delete(key);
+		}
+
+		async clear(): Promise<void> {
+			this.data.clear();
+		}
+
+		async *iterator(): AsyncGenerator<[string, unknown]> {
+			for (const entry of this.data) {
+				yield entry;
+			}
+		}
+	}
+
+	return {
+		handleAsNodeRequestMock: vi.fn(),
+		KeyvMongoMock,
+	};
+});
 
 vi.mock("cloudflare:node", () => ({
 	handleAsNodeRequest: handleAsNodeRequestMock,
+}));
+
+vi.mock("@keyv/mongo", () => ({
+	default: KeyvMongoMock,
 }));
 
 const {
@@ -18,6 +69,7 @@ const {
 	handleWorkerFetch,
 	listenWorkerApp,
 	workerMockHttpOptions,
+	workerMongoUri,
 	workerRuntime,
 } = await import("../worker/app.js");
 
@@ -222,5 +274,78 @@ describe("worker Fastify app", () => {
 		});
 		spy.mockRestore();
 		await mockHttp.close();
+	});
+
+	it("serves bin routes from memory when no Atlas URI is configured", async () => {
+		delete process.env.MONGODB_URI;
+		KeyvMongoMock.instances.length = 0;
+		expect(workerMongoUri()).toBeUndefined();
+		expect(workerMongoUri({ MONGODB_URI: "" })).toBeUndefined();
+
+		const mockHttp = await createWorkerApp({ MONGODB_URI: "" });
+		const created = await mockHttp.server.inject({
+			method: "POST",
+			url: "/bins",
+		});
+		expect(created.statusCode).toBe(200);
+		const id = created.json().id as string;
+		const fetched = await mockHttp.server.inject({
+			method: "GET",
+			url: `/bins/${id}`,
+		});
+		expect(fetched.statusCode).toBe(200);
+		expect(fetched.json()).toMatchObject({ id });
+		expect(KeyvMongoMock.instances).toHaveLength(0);
+		await mockHttp.close();
+	});
+
+	it("stores bins in MongoDB Atlas when MONGODB_URI is set", async () => {
+		const uri = "mongodb+srv://user:pass@cluster.mongodb.net/mockhttp";
+		KeyvMongoMock.instances.length = 0;
+		process.env.MONGODB_URI = "mongodb://from-process-env";
+
+		const mockHttp = await createWorkerApp({ MONGODB_URI: uri });
+		const store = KeyvMongoMock.instances[0];
+		expect(store?.url).toBe(uri);
+		expect(store?.options).toEqual({
+			collection: "bins",
+			maxPoolSize: 5,
+			minPoolSize: 0,
+			serverSelectionTimeoutMS: 5_000,
+		});
+
+		const created = await mockHttp.server.inject({
+			method: "POST",
+			url: "/bins",
+		});
+		expect(created.statusCode).toBe(200);
+		const id = created.json().id as string;
+		expect(store?.data.size).toBeGreaterThan(0);
+
+		const fetched = await mockHttp.server.inject({
+			method: "GET",
+			url: `/bins/${id}`,
+		});
+		expect(fetched.statusCode).toBe(200);
+		expect(fetched.json()).toMatchObject({ id });
+		await mockHttp.close();
+		delete process.env.MONGODB_URI;
+	});
+
+	it("reads the Atlas URI from process.env when the binding is unset", async () => {
+		const uri = "mongodb+srv://user:pass@cluster.mongodb.net/mockhttp";
+		process.env.MONGODB_URI = uri;
+		KeyvMongoMock.instances.length = 0;
+
+		expect(workerMongoUri({})).toBe(uri);
+		const mockHttp = await createWorkerApp();
+		expect(KeyvMongoMock.instances[0]?.url).toBe(uri);
+		const created = await mockHttp.server.inject({
+			method: "POST",
+			url: "/bins",
+		});
+		expect(created.statusCode).toBe(200);
+		await mockHttp.close();
+		delete process.env.MONGODB_URI;
 	});
 });

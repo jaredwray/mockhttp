@@ -22,8 +22,25 @@ The Worker starts the same MockHTTP app as Node.js, with a few options set for t
 | `pluginTimeout` | `0` | Disables Fastify's plugin boot timeout. Those timers are unreliable on Workers. |
 | `logging` | `false` | Request logging is off. |
 | `autoDetectPort` | `false` | The app always listens on port 3000 inside the isolate. |
+| `bin store` | `@keyv/mongo` when `MONGODB_URI` is set | Request bins live in MongoDB Atlas, so every isolate sees the same bins. |
 
-The rate limiter key is the `cf-connecting-ip` header, then the first address in `x-forwarded-for`, then `unknown`. A limited request returns `429` with `retry-after: 60`. That limiter is shared across isolates. Bins are not. The default store is in memory inside the isolate that handled the request, so a bin created on one request can be missing when another isolate or location handles the next one.
+The rate limiter key is the `cf-connecting-ip` header, then the first address in `x-forwarded-for`, then `unknown`. A limited request returns `429` with `retry-after: 60`. That limiter is shared across isolates.
+
+## Request bins
+
+Bin routes stay enabled. The Worker stores them with [`@keyv/mongo`](https://keyv.org/docs/storage-adapters/mongo/) when `MONGODB_URI` is set. The collection name is `bins`. Each isolate keeps one Mongo client, with a pool of 5 connections, and stops waiting after 5 seconds if Atlas cannot be reached. The database name comes from the connection string.
+
+Set the secret before you rely on bins in production:
+
+```bash
+npx wrangler@4.127.0 secret put MONGODB_URI
+```
+
+Use an Atlas connection string that includes the database name, such as `mongodb+srv://USER:PASSWORD@CLUSTER.mongodb.net/mockhttp`. For local `wrangler dev`, put the same value in `.dev.vars` (that file is gitignored). Atlas has to accept traffic from Cloudflare Workers. Workers do not publish a fixed egress address, so the network access list usually allows `0.0.0.0/0` and the database user still authenticates the connection.
+
+The secret is available on the request environment, so the Worker starts Fastify on the first request and reuses that server for later requests in the same isolate.
+
+When `MONGODB_URI` is absent, bins stay in memory inside the isolate that handled the request. A bin created on one request can be missing when another isolate handles the next one. `wrangler.jsonc` lists `MONGODB_URI` as a required secret so local development warns when it is missing.
 
 Taps are a library API (`mock.taps.inject`). They have no HTTP routes, so a deployed Worker has no way to inject one.
 

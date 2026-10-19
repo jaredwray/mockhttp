@@ -143,10 +143,13 @@ describe("MockHttpBins", () => {
 		});
 
 		it("lists bins when the Keyv namespace contains a colon", async () => {
+			// Keyv 6 applies a namespace only when a store is also passed.
+			const store = new Map();
 			const namespaced = new MockHttpBins({
-				keyv: new Keyv({ namespace: "tenant:a" }),
+				keyv: new Keyv({ store, namespace: "tenant:a" }),
 			});
 			const bin = await namespaced.createBin();
+			expect([...store.keys()]).toEqual([`tenant:a::bin:${bin.id}`]);
 			expect((await namespaced.listBins()).map((entry) => entry.id)).toEqual([
 				bin.id,
 			]);

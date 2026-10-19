@@ -250,7 +250,7 @@ for (const req of requests) {
 
 // Clean up
 await mock.bins.deleteBin(bin.id);
-await mock.close(); // also stops the bin cleanup timer
+await mock.close();
 ```
 
 ### Using Bins in a Vitest Test
@@ -310,7 +310,6 @@ mock.bins = new MockHttpBins({
   maxRequestsPerBin: 500,           // (default: 100)
   maxBodySize: 512 * 1024,          // 512 KiB (default: 128 KiB)
   idLength: 16,                     // (default: 12)
-  cleanupIntervalMs: 30 * 1000,     // sweep every 30s (default: 60s)
 });
 
 await mock.start();
@@ -324,7 +323,6 @@ await mock.start();
 | `maxRequestsPerBin` | `100` | When exceeded, oldest captures are dropped (FIFO). |
 | `maxBodySize` | `131072` (128 KiB) | Larger bodies are truncated; `truncated: true` is set on the capture. |
 | `idLength` | `12` | Length of generated bin and request ids. |
-| `cleanupIntervalMs` | `60000` (1 min) | How often the in-memory Keyv store is walked to remove expired bins. Other stores are not walked. The timer is `unref()`'d so it never keeps the process alive. |
 | `keyv` | `new Keyv()` | Keyv store for bins. The default keeps bins in memory. |
 
 ### Storage
@@ -353,4 +351,4 @@ A failed read depends on the Keyv `error` listener. Without a listener, Keyv thr
 
 `listBins()` throws an error when the adapter has no iterator.
 
-The cleanup timer walks only the in-memory Keyv store, because that store deletes an expired key only when it reads the key. Other adapters, such as Redis, expire keys on their own. The timer does nothing for them.
+An expired bin returns 404. The in-memory Keyv store deletes an expired bin only when a read or `listBins()` reaches it. Until then, the bin stays in memory.

@@ -1,4 +1,4 @@
-import Keyv, { KeyvMemoryAdapter } from "keyv";
+import Keyv from "keyv";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CapturedRequest } from "../src/bin-store.js";
 import { MockHttpBins } from "../src/mock-http-bins.js";
@@ -24,9 +24,7 @@ describe("MockHttpBins", () => {
 	});
 
 	afterEach(() => {
-		bins.stop();
 		vi.useRealTimers();
-		vi.unstubAllGlobals();
 	});
 
 	describe("constructor", () => {
@@ -54,7 +52,6 @@ describe("MockHttpBins", () => {
 				maxRequestsPerBin: 5,
 				maxBodySize: 32,
 				idLength: 6,
-				cleanupIntervalMs: 50,
 			});
 			expect(custom.keyv).toBe(keyv);
 			expect(custom.defaultTtlMs).toBe(1000);
@@ -313,93 +310,6 @@ describe("MockHttpBins", () => {
 			);
 			vi.mocked(bins.keyv.set).mockRestore();
 			expect(await bins.getRequests(bin.id)).toHaveLength(1);
-		});
-	});
-
-	describe("cleanup timer", () => {
-		it("walks the store on the configured interval and a second start does not add a timer", async () => {
-			vi.useFakeTimers();
-			const store = new Map();
-			const timed = new MockHttpBins({
-				keyv: new Keyv({ store }),
-				cleanupIntervalMs: 100,
-				defaultTtlMs: 50,
-			});
-			const bin = await timed.createBin();
-			const key = `bin:${bin.id}`;
-			await vi.advanceTimersByTimeAsync(60);
-			expect(store.has(key)).toBe(true);
-
-			const iterator = vi.spyOn(timed.keyv.store, "iterator");
-			timed.start();
-			timed.start();
-			await vi.advanceTimersByTimeAsync(100);
-			expect(iterator).toHaveBeenCalledTimes(1);
-			expect(store.has(key)).toBe(false);
-
-			await vi.advanceTimersByTimeAsync(200);
-			expect(iterator).toHaveBeenCalledTimes(3);
-			timed.stop();
-		});
-
-		it("does not walk a store that expires keys on its own", async () => {
-			vi.useFakeTimers();
-			const data = new Map<string, unknown>();
-			const remote = {
-				get: async (key: string) => data.get(key),
-				set: async (key: string, value: unknown) => {
-					data.set(key, value);
-					return true;
-				},
-				delete: async (key: string) => data.delete(key),
-				clear: async () => data.clear(),
-			};
-			const timed = new MockHttpBins({
-				keyv: new Keyv({ store: remote }),
-				cleanupIntervalMs: 50,
-			});
-			expect(timed.keyv.store).not.toBeInstanceOf(KeyvMemoryAdapter);
-			const iterator = vi.spyOn(timed.keyv.store, "iterator");
-			timed.start();
-			await vi.advanceTimersByTimeAsync(150);
-			expect(iterator).not.toHaveBeenCalled();
-			timed.stop();
-		});
-
-		it("swallows a sweep error so the timer does not emit an unhandled rejection", async () => {
-			vi.useFakeTimers();
-			const errors: unknown[] = [];
-			const onError = (error: unknown) => {
-				errors.push(error);
-			};
-			process.on("unhandledRejection", onError);
-			const timed = new MockHttpBins({ cleanupIntervalMs: 50 });
-			vi.spyOn(timed.keyv.store, "iterator").mockImplementation(() => {
-				throw new Error("sweep failed");
-			});
-			try {
-				timed.start();
-				await vi.advanceTimersByTimeAsync(50);
-				await Promise.resolve();
-				expect(errors).toEqual([]);
-			} finally {
-				process.off("unhandledRejection", onError);
-				timed.stop();
-			}
-		});
-
-		it("stop is safe before start and after stop", () => {
-			expect(() => bins.stop()).not.toThrow();
-			bins.start();
-			bins.stop();
-			expect(() => bins.stop()).not.toThrow();
-		});
-
-		it("starts when the timer cannot be unref'd", () => {
-			vi.stubGlobal("setInterval", () => 123);
-			const timed = new MockHttpBins();
-			expect(() => timed.start()).not.toThrow();
-			timed.stop();
 		});
 	});
 });

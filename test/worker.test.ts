@@ -47,7 +47,6 @@ describe("cloudflare worker", () => {
 			staticFiles: false,
 			rateLimit: false,
 			pluginTimeout: 0,
-			startBins: false,
 			siteDistPath: "/__mockhttp_worker_no_site__",
 		});
 	});
@@ -181,7 +180,6 @@ describe("cloudflare worker", () => {
 describe("worker Fastify app", () => {
 	it("serves mock endpoints without listening", async () => {
 		const mockHttp = await createWorkerApp();
-		expect(mockHttp.startBins).toBe(false);
 		const response = await mockHttp.server.inject({
 			method: "GET",
 			url: "/get",

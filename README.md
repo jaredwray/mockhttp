@@ -688,7 +688,7 @@ for (const req of requests) {
 
 // Clean up
 await mock.bins.deleteBin(bin.id);
-await mock.close(); // also stops the bin cleanup timer
+await mock.close();
 ```
 
 ### Using Bins in a Vitest Test
@@ -748,7 +748,6 @@ mock.bins = new MockHttpBins({
   maxRequestsPerBin: 500,           // (default: 100)
   maxBodySize: 512 * 1024,          // 512 KiB (default: 128 KiB)
   idLength: 16,                     // (default: 12)
-  cleanupIntervalMs: 30 * 1000,     // sweep every 30s (default: 60s)
 });
 
 await mock.start();
@@ -762,7 +761,6 @@ await mock.start();
 | `maxRequestsPerBin` | `100` | When exceeded, oldest captures are dropped (FIFO). |
 | `maxBodySize` | `131072` (128 KiB) | Larger bodies are truncated; `truncated: true` is set on the capture. |
 | `idLength` | `12` | Length of generated bin and request ids. |
-| `cleanupIntervalMs` | `60000` (1 min) | How often the in-memory Keyv store is walked to remove expired bins. Other stores are not walked. The timer is `unref()`'d so it never keeps the process alive. |
 | `keyv` | `new Keyv()` | Keyv store for bins. The default keeps bins in memory. |
 
 ### Storage
@@ -791,7 +789,7 @@ A failed read depends on the Keyv `error` listener. Without a listener, Keyv thr
 
 `listBins()` throws an error when the adapter has no iterator.
 
-The cleanup timer walks only the in-memory Keyv store, because that store deletes an expired key only when it reads the key. Other adapters, such as Redis, expire keys on their own. The timer does nothing for them.
+An expired bin returns 404. The in-memory Keyv store deletes an expired bin only when a read or `listBins()` reaches it. Until then, the bin stays in memory.
 
 # Rate Limiting
 
@@ -1008,7 +1006,6 @@ new MockHttp(options?)
   - `logging?`: boolean - Enable logging (default: true)
   - `staticFiles?`: boolean - Serve files from the package `public/` directory (default: true)
   - `pluginTimeout?`: number - Fastify plugin boot timeout in milliseconds; `0` disables it (default: Fastify's timeout)
-  - `startBins?`: boolean - Start the request-bin cleanup timer during `initialize()` (default: true)
   - `httpBin?`: HttpBinOptions - Configure which httpbin routes to enable
     - `httpMethods?`: boolean - Enable HTTP method routes (default: true)
     - `redirects?`: boolean - Enable redirect routes (default: true)
@@ -1037,7 +1034,6 @@ new MockHttp(options?)
 - `logging`: boolean - Get/set logging enabled state
 - `staticFiles`: boolean - Get/set whether files from `public/` are served
 - `pluginTimeout`: number | undefined - Get/set Fastify plugin boot timeout
-- `startBins`: boolean - Get/set whether bin cleanup starts during `initialize()`
 - `rateLimit`: RateLimitPluginOptions | undefined - Get/set rate limiting options
 - `httpBin`: HttpBinOptions - Get/set httpbin route options
 - `https`: HttpsOptions | undefined - Get/set HTTPS configuration
@@ -1175,10 +1171,6 @@ Clear all captured requests in a bin. The bin stays. Throws when Keyv does not s
 Manually record a captured request. Returns `undefined` if the bin does not exist. Throws when Keyv does not store the capture. Normally invoked by the capture route, but available for programmatic use.
 
 **Returns:** `Promise<CapturedRequest | undefined>`
-
-### `bins.start()` / `bins.stop()`
-
-Start or stop the periodic walk of the in-memory Keyv store, which removes expired bins that nobody reads. The timer does nothing for other Keyv stores. `MockHttp.start()` and `MockHttp.close()` call these automatically. The interval is `unref()`'d so it never keeps the Node process alive.
 
 ### `bins.maxBodySize` / `bins.maxRequestsPerBin` / `bins.defaultTtlMs`
 

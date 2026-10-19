@@ -28,7 +28,6 @@ describe("Bin capture route", () => {
 	});
 
 	afterEach(async () => {
-		manager.stop();
 		await fastify.close();
 	});
 
@@ -117,7 +116,6 @@ describe("Bin capture route", () => {
 			expect(stored[0].bodySize).toBe(10);
 			expect(stored[0].body).toBe("abcd");
 		} finally {
-			small.stop();
 			await made.fastify.close();
 		}
 	});
@@ -184,7 +182,6 @@ describe("Bin capture route", () => {
 			expect(stored).toHaveLength(2);
 			expect(stored.map((r) => r.path)).toEqual(["/n3", "/n2"]);
 		} finally {
-			small.stop();
 			await made.fastify.close();
 		}
 	});

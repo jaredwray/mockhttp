@@ -16,7 +16,6 @@ describe("Bin management routes", () => {
 	});
 
 	afterEach(async () => {
-		manager.stop();
 		await fastify.close();
 	});
 

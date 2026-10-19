@@ -25,7 +25,6 @@ new MockHttp(options?)
   - `logging?`: boolean - Enable logging (default: true)
   - `staticFiles?`: boolean - Serve files from the package `public/` directory (default: true)
   - `pluginTimeout?`: number - Fastify plugin boot timeout in milliseconds; `0` disables it (default: Fastify's timeout)
-  - `startBins?`: boolean - Start the request-bin cleanup timer during `initialize()` (default: true)
   - `httpBin?`: HttpBinOptions - Configure which httpbin routes to enable
     - `httpMethods?`: boolean - Enable HTTP method routes (default: true)
     - `redirects?`: boolean - Enable redirect routes (default: true)
@@ -54,7 +53,6 @@ new MockHttp(options?)
 - `logging`: boolean - Get/set logging enabled state
 - `staticFiles`: boolean - Get/set whether files from `public/` are served
 - `pluginTimeout`: number | undefined - Get/set Fastify plugin boot timeout
-- `startBins`: boolean - Get/set whether bin cleanup starts during `initialize()`
 - `rateLimit`: RateLimitPluginOptions | undefined - Get/set rate limiting options
 - `httpBin`: HttpBinOptions - Get/set httpbin route options
 - `https`: HttpsOptions | undefined - Get/set HTTPS configuration
@@ -192,10 +190,6 @@ Clear all captured requests in a bin. The bin stays. Throws when Keyv does not s
 Manually record a captured request. Returns `undefined` if the bin does not exist. Throws when Keyv does not store the capture. Normally invoked by the capture route, but available for programmatic use.
 
 **Returns:** `Promise<CapturedRequest | undefined>`
-
-### `bins.start()` / `bins.stop()`
-
-Start or stop the periodic walk of the in-memory Keyv store, which removes expired bins that nobody reads. The timer does nothing for other Keyv stores. `MockHttp.start()` and `MockHttp.close()` call these automatically. The interval is `unref()`'d so it never keeps the Node process alive.
 
 ### `bins.maxBodySize` / `bins.maxRequestsPerBin` / `bins.defaultTtlMs`
 

@@ -12,7 +12,6 @@ export const workerMockHttpOptions: MockHttpOptions = {
 	staticFiles: false,
 	rateLimit: false,
 	pluginTimeout: 0,
-	startBins: false,
 	siteDistPath: "/__mockhttp_worker_no_site__",
 };
 

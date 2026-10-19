@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import Keyv, { KeyvMemoryAdapter } from "keyv";
+import Keyv from "keyv";
 import type { Bin, CapturedRequest } from "./bin-store.js";
 
 /**
@@ -27,15 +27,12 @@ export type MockHttpBinsOptions = {
 	maxBodySize?: number;
 	/** Length of a generated bin id or request id. The default is 12. */
 	idLength?: number;
-	/** Interval between cleanup sweeps in milliseconds. The default is 1 minute. */
-	cleanupIntervalMs?: number;
 };
 
 const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_MAX_REQUESTS = 100;
 const DEFAULT_MAX_BODY_SIZE = 128 * 1024;
 const DEFAULT_ID_LENGTH = 12;
-const DEFAULT_CLEANUP_INTERVAL_MS = 60_000;
 const BIN_KEY_PREFIX = "bin:";
 
 /**
@@ -48,9 +45,7 @@ export class MockHttpBins {
 	private readonly _maxRequestsPerBin: number;
 	private readonly _maxBodySize: number;
 	private readonly _idLength: number;
-	private readonly _cleanupIntervalMs: number;
 	private readonly _locks = new Map<string, Promise<void>>();
-	private _cleanupTimer: ReturnType<typeof setInterval> | undefined;
 
 	constructor(options?: MockHttpBinsOptions) {
 		this._keyv = options?.keyv ?? new Keyv<BinDocument>();
@@ -62,8 +57,6 @@ export class MockHttpBins {
 		);
 		this._maxBodySize = options?.maxBodySize ?? DEFAULT_MAX_BODY_SIZE;
 		this._idLength = options?.idLength ?? DEFAULT_ID_LENGTH;
-		this._cleanupIntervalMs =
-			options?.cleanupIntervalMs ?? DEFAULT_CLEANUP_INTERVAL_MS;
 	}
 
 	/** Keyv instance that stores the bins. */
@@ -194,40 +187,6 @@ export class MockHttpBins {
 			await this.save(doc);
 			return true;
 		});
-	}
-
-	/** Start the periodic removal of expired bins from the Keyv store. */
-	public start(): void {
-		if (this._cleanupTimer) {
-			return;
-		}
-		this._cleanupTimer = setInterval(() => {
-			void this.removeExpired().catch(() => undefined);
-		}, this._cleanupIntervalMs);
-		this._cleanupTimer.unref?.();
-	}
-
-	/** Stop the periodic cleanup. A second call does nothing. */
-	public stop(): void {
-		if (this._cleanupTimer) {
-			clearInterval(this._cleanupTimer);
-			this._cleanupTimer = undefined;
-		}
-	}
-
-	/**
-	 * The memory adapter deletes an expired key only when it reads that key.
-	 * Walking the store deletes expired bins that nobody reads, without decoding them.
-	 * Other adapters expire keys on their own, and a walk would read every bin from them.
-	 */
-	private async removeExpired(): Promise<void> {
-		const store = this._keyv.store;
-		if (!(store instanceof KeyvMemoryAdapter)) {
-			return;
-		}
-		for await (const _entry of store.iterator()) {
-			// The adapter deletes expired entries during the walk.
-		}
 	}
 
 	/** Keyv 6 yields nothing when the store has no iterator. Listing must fail instead. */

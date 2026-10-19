@@ -180,12 +180,6 @@ export type MockHttpOptions = {
 	 */
 	pluginTimeout?: number;
 	/**
-	 * Whether to start the request-bin cleanup timer during `initialize()`.
-	 * Defaults to true. Disable this on Cloudflare Workers, where `setInterval`
-	 * during startup can hang the isolate.
-	 */
-	startBins?: boolean;
-	/**
 	 * HTTPS configuration. Set to true to auto-generate a self-signed certificate,
 	 * or provide an object with cert/key strings/paths or auto-generation options.
 	 */
@@ -214,7 +208,6 @@ export class MockHttp extends Hookified {
 	private _siteDistPath = defaultSiteDistPath;
 	private _logging = true;
 	private _pluginTimeout?: number;
-	private _startBins = true;
 	private _httpBin: HttpBinOptions = {
 		httpMethods: true,
 		redirects: true,
@@ -294,10 +287,6 @@ export class MockHttp extends Hookified {
 
 		if (options?.pluginTimeout !== undefined) {
 			this._pluginTimeout = options.pluginTimeout;
-		}
-
-		if (options?.startBins !== undefined) {
-			this._startBins = options.startBins;
 		}
 
 		if (options?.http2 !== undefined) {
@@ -459,22 +448,6 @@ export class MockHttp extends Hookified {
 	 */
 	public set pluginTimeout(pluginTimeout: number | undefined) {
 		this._pluginTimeout = pluginTimeout;
-	}
-
-	/**
-	 * Whether to start the request-bin cleanup timer during `initialize()`.
-	 * @default true
-	 */
-	public get startBins(): boolean {
-		return this._startBins;
-	}
-
-	/**
-	 * Whether to start the request-bin cleanup timer during `initialize()`.
-	 * @default true
-	 */
-	public set startBins(startBins: boolean) {
-		this._startBins = startBins;
 	}
 
 	/**
@@ -783,9 +756,6 @@ export class MockHttp extends Hookified {
 
 			if (bins) {
 				await this.registerBinRoutes();
-				if (this._startBins) {
-					this._bins.start();
-				}
 			}
 
 			if (this._apiDocs) {
@@ -826,7 +796,6 @@ export class MockHttp extends Hookified {
 	 * Close the Fastify server.
 	 */
 	public async close(): Promise<void> {
-		this._bins.stop();
 		if (this._server) {
 			await this._server.close();
 		}

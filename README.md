@@ -618,13 +618,13 @@ curl -s "http://localhost:3000/bins/$ID/requests" \
 
 ### Truncation
 
-Bodies larger than `maxBodySize` (1 MiB by default) are cut off and flagged:
+Bodies larger than `maxBodySize` (128 KiB by default) are cut off and flagged:
 
 ```javascript
 // In test setup
-import { MockHttp, BinManager } from '@jaredwray/mockhttp';
+import { MockHttp, MockHttpBins } from '@jaredwray/mockhttp';
 const mock = new MockHttp();
-mock.bins = new BinManager({ maxBodySize: 1024 }); // 1 KiB cap
+mock.bins = new MockHttpBins({ maxBodySize: 1024 }); // 1 KiB cap
 await mock.start();
 ```
 
@@ -664,8 +664,7 @@ curl -s "http://localhost:3000/bins/$ID/requests" | jq '.requests[0].path'
 
 ## Programmatic Access
 
-The bin manager is exposed on the `MockHttp` instance as `mock.bins`. This
-makes it easy to drive bins from a test suite without going through HTTP:
+Use `mock.bins` to control request bins from a test. You do not need an HTTP call:
 
 ```javascript
 import { MockHttp } from '@jaredwray/mockhttp';
@@ -674,13 +673,13 @@ const mock = new MockHttp({ logging: false });
 await mock.start();
 
 // Create a bin
-const bin = mock.bins.createBin();
+const bin = await mock.bins.createBin();
 console.log(`Webhook target: http://localhost:${mock.port}/b/${bin.id}`);
 
 // ... point your code-under-test at that URL ...
 
 // Read captured requests (newest first)
-const requests = mock.bins.getRequests(bin.id);
+const requests = await mock.bins.getRequests(bin.id);
 console.log(`Captured ${requests.length} requests`);
 
 for (const req of requests) {
@@ -688,8 +687,8 @@ for (const req of requests) {
 }
 
 // Clean up
-mock.bins.deleteBin(bin.id);
-await mock.close(); // also stops the bin cleanup timer
+await mock.bins.deleteBin(bin.id);
+await mock.close();
 ```
 
 ### Using Bins in a Vitest Test
@@ -710,14 +709,14 @@ afterAll(async () => {
 });
 
 test('my SDK sends the right webhook payload', async () => {
-  const bin = mock.bins.createBin();
+  const bin = await mock.bins.createBin();
   const webhookUrl = `http://localhost:${mock.port}/b/${bin.id}`;
 
   // Drive your SDK at the bin
   await mySdk.notify(webhookUrl, { event: 'user.created', id: 42 });
 
   // Assert on what actually arrived
-  const [captured] = mock.bins.getRequests(bin.id);
+  const [captured] = await mock.bins.getRequests(bin.id);
   expect(captured.method).toBe('POST');
   expect(captured.contentType).toBe('application/json');
   expect(JSON.parse(captured.body!)).toEqual({
@@ -738,18 +737,17 @@ const mock = new MockHttp({
 });
 ```
 
-To tune limits, replace the default `BinManager` before starting:
+To change the limits, replace the default `MockHttpBins` before you start the server:
 
 ```javascript
-import { MockHttp, BinManager } from '@jaredwray/mockhttp';
+import { MockHttp, MockHttpBins } from '@jaredwray/mockhttp';
 
 const mock = new MockHttp();
-mock.bins = new BinManager({
+mock.bins = new MockHttpBins({
   defaultTtlMs: 60 * 60 * 1000,    // 1 hour (default: 24h)
   maxRequestsPerBin: 500,           // (default: 100)
-  maxBodySize: 5 * 1024 * 1024,     // 5 MiB (default: 1 MiB)
+  maxBodySize: 512 * 1024,          // 512 KiB (default: 128 KiB)
   idLength: 16,                     // (default: 12)
-  cleanupIntervalMs: 30 * 1000,     // sweep every 30s (default: 60s)
 });
 
 await mock.start();
@@ -759,43 +757,39 @@ await mock.start();
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `defaultTtlMs` | `86400000` (24h) | Bin lifetime. Expired bins return 404 and are lazily removed. |
+| `defaultTtlMs` | `86400000` (24h) | Bin lifetime, set as the Keyv TTL. An expired bin returns 404. |
 | `maxRequestsPerBin` | `100` | When exceeded, oldest captures are dropped (FIFO). |
-| `maxBodySize` | `1048576` (1 MiB) | Larger bodies are truncated; `truncated: true` is set on the capture. |
+| `maxBodySize` | `131072` (128 KiB) | Larger bodies are truncated; `truncated: true` is set on the capture. |
 | `idLength` | `12` | Length of generated bin and request ids. |
-| `cleanupIntervalMs` | `60000` (1 min) | How often expired bins are swept. The timer is `unref()`'d so it never keeps the process alive. |
+| `keyv` | `new Keyv()` | Keyv store for bins. The default keeps bins in memory. |
 
-### Pluggable Storage
+### Storage
 
-`BinManager` accepts a `store: BinStore` so you can plug in alternative
-backends (Redis, SQLite, etc.) without changing the rest of the codebase. The
-default `InMemoryBinStore` keeps state in process memory.
+`MockHttpBins` stores each bin in [Keyv](https://github.com/jaredwray/keyv) 6. The default is `new Keyv()`. That store keeps the data in memory for this process.
+
+Pass a Keyv 6 instance when you want a different adapter. Install the adapter in your project. This package does not include an adapter. `@keyv/redis` 6 matches this Keyv version.
 
 ```typescript
-import {
-  BinManager,
-  InMemoryBinStore,
-  type Bin,
-  type BinStore,
-  type CapturedRequest,
-} from '@jaredwray/mockhttp';
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis'; // pnpm add @keyv/redis
+import { MockHttpBins } from '@jaredwray/mockhttp';
 
-class RedisBinStore implements BinStore {
-  createBin(bin: Bin): void { /* SET bin:${bin.id} ... */ }
-  getBin(id: string): Bin | undefined { /* GET ... */ }
-  listBins(): Bin[] { /* SCAN ... */ }
-  deleteBin(id: string): boolean { /* DEL ... */ }
-  addRequest(binId: string, req: CapturedRequest, max: number): void {
-    /* LPUSH bin:${binId}:requests + LTRIM to max */
-  }
-  getRequests(binId: string): CapturedRequest[] { /* LRANGE ... */ }
-  getRequest(binId: string, reqId: string): CapturedRequest | undefined { /* ... */ }
-  clearRequests(binId: string): void { /* DEL bin:${binId}:requests */ }
-  cleanupExpired(now: number): string[] { /* scan + delete */ return []; }
-}
-
-mock.bins = new BinManager({ store: new RedisBinStore() });
+mock.bins = new MockHttpBins({
+  keyv: new Keyv({ store: new KeyvRedis('redis://localhost:6379') }),
+});
 ```
+
+Each capture writes the full bin again. A large body or a high request limit makes that write large. Set `maxBodySize` and `maxRequestsPerBin` to limit the size. With the defaults, a full bin of binary bodies is about 17 MB.
+
+Two processes that share one Keyv can lose a capture. This occurs when both processes write the same bin at the same time.
+
+If Keyv does not store a write, the bin route returns `500` with the standard Fastify error body: `statusCode`, `error`, and `message`.
+
+A failed read depends on the Keyv `error` listener. Without a listener, Keyv throws the store error and the route returns `500`. With a listener, Keyv does not throw. A failed read then looks like a missing bin, and the route returns `404`. `listBins()` returns only the bins that it read before the error.
+
+`listBins()` throws an error when the adapter has no iterator.
+
+An expired bin returns 404. The in-memory Keyv store deletes an expired bin only when a read or `listBins()` reaches it. Until then, the bin stays in memory.
 
 # Rate Limiting
 
@@ -1012,7 +1006,6 @@ new MockHttp(options?)
   - `logging?`: boolean - Enable logging (default: true)
   - `staticFiles?`: boolean - Serve files from the package `public/` directory (default: true)
   - `pluginTimeout?`: number - Fastify plugin boot timeout in milliseconds; `0` disables it (default: Fastify's timeout)
-  - `startBins?`: boolean - Start the request-bin cleanup timer during `initialize()` (default: true)
   - `httpBin?`: HttpBinOptions - Configure which httpbin routes to enable
     - `httpMethods?`: boolean - Enable HTTP method routes (default: true)
     - `redirects?`: boolean - Enable redirect routes (default: true)
@@ -1041,7 +1034,6 @@ new MockHttp(options?)
 - `logging`: boolean - Get/set logging enabled state
 - `staticFiles`: boolean - Get/set whether files from `public/` are served
 - `pluginTimeout`: number | undefined - Get/set Fastify plugin boot timeout
-- `startBins`: boolean - Get/set whether bin cleanup starts during `initialize()`
 - `rateLimit`: RateLimitPluginOptions | undefined - Get/set rate limiting options
 - `httpBin`: HttpBinOptions - Get/set httpbin route options
 - `https`: HttpsOptions | undefined - Get/set HTTPS configuration
@@ -1050,7 +1042,7 @@ new MockHttp(options?)
 - `http1`: boolean - Get/set HTTP/1.1 fallback for HTTP/2 with HTTPS
 - `server`: FastifyInstance - Get/set the Fastify server instance
 - `taps`: TapManager - Get/set the TapManager instance
-- `bins`: BinManager - Get/set the BinManager instance for request bins
+- `bins`: MockHttpBins - Get or set the request bins
 
 ### Methods
 
@@ -1130,57 +1122,55 @@ Register the request bin routes — management at `/bins` and capture at `/b/:id
 
 ## Bins (Request Capture)
 
-Access the BinManager via `mockHttp.bins` to manage request bins programmatically. See [Request Bins](#request-bins) for usage examples.
+Use `mockHttp.bins` to control request bins. See [Request Bins](#request-bins) for usage examples.
 
 ### `bins.createBin()`
 
-Create a new bin with the configured TTL.
+Create a new bin with the configured TTL. Throws when Keyv does not store the bin.
 
-**Returns:** `Bin` — `{ id, createdAt, expiresAt, requestCount }`
+**Returns:** `Promise<Bin>` — `{ id, createdAt, expiresAt, requestCount }`
 
 ### `bins.getBin(id)`
 
-Look up a bin by id. Returns `undefined` if the bin does not exist or has expired (and lazily removes the expired entry).
+Look up a bin by id. Returns `undefined` if the bin does not exist or Keyv has expired it. When the Keyv instance has an `error` listener, a failed read also returns `undefined`.
 
-**Returns:** `Bin | undefined`
+**Returns:** `Promise<Bin | undefined>`
 
 ### `bins.listBins()`
 
-List all non-expired bins.
+List the bins that Keyv still holds.
 
-**Returns:** `Bin[]`
+**Returns:** `Promise<Bin[]>`
 
 ### `bins.deleteBin(id)`
 
-Delete a bin and all its captured requests.
+Delete a bin and all its captured requests. The delete waits for captures already queued for that bin.
 
-**Returns:** `boolean` — `true` if the bin existed
+**Returns:** `Promise<boolean>` — `true` when the bin existed
 
 ### `bins.getRequests(binId)`
 
 List captured requests for a bin, newest first.
 
-**Returns:** `CapturedRequest[]`
+**Returns:** `Promise<CapturedRequest[]>`
 
 ### `bins.getRequest(binId, reqId)`
 
 Look up a single captured request.
 
-**Returns:** `CapturedRequest | undefined`
+**Returns:** `Promise<CapturedRequest | undefined>`
 
 ### `bins.clearRequests(binId)`
 
-Clear all captured requests in a bin (the bin itself is preserved).
+Clear all captured requests in a bin. The bin stays. Throws when Keyv does not store the change.
+
+**Returns:** `Promise<boolean>` — `false` when the bin does not exist
 
 ### `bins.recordRequest(binId, raw)`
 
-Manually record a captured request. Returns `undefined` if the bin does not exist or is expired. Normally invoked by the capture route, but available for programmatic use.
+Manually record a captured request. Returns `undefined` if the bin does not exist. Throws when Keyv does not store the capture. Normally invoked by the capture route, but available for programmatic use.
 
-**Returns:** `CapturedRequest | undefined`
-
-### `bins.start()` / `bins.stop()`
-
-Start or stop the periodic cleanup of expired bins. `MockHttp.start()` and `MockHttp.close()` call these automatically. The interval is `unref()`'d so it never keeps the Node process alive.
+**Returns:** `Promise<CapturedRequest | undefined>`
 
 ### `bins.maxBodySize` / `bins.maxRequestsPerBin` / `bins.defaultTtlMs`
 

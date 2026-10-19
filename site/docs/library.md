@@ -25,7 +25,6 @@ new MockHttp(options?)
   - `logging?`: boolean - Enable logging (default: true)
   - `staticFiles?`: boolean - Serve files from the package `public/` directory (default: true)
   - `pluginTimeout?`: number - Fastify plugin boot timeout in milliseconds; `0` disables it (default: Fastify's timeout)
-  - `startBins?`: boolean - Start the request-bin cleanup timer during `initialize()` (default: true)
   - `httpBin?`: HttpBinOptions - Configure which httpbin routes to enable
     - `httpMethods?`: boolean - Enable HTTP method routes (default: true)
     - `redirects?`: boolean - Enable redirect routes (default: true)
@@ -54,7 +53,6 @@ new MockHttp(options?)
 - `logging`: boolean - Get/set logging enabled state
 - `staticFiles`: boolean - Get/set whether files from `public/` are served
 - `pluginTimeout`: number | undefined - Get/set Fastify plugin boot timeout
-- `startBins`: boolean - Get/set whether bin cleanup starts during `initialize()`
 - `rateLimit`: RateLimitPluginOptions | undefined - Get/set rate limiting options
 - `httpBin`: HttpBinOptions - Get/set httpbin route options
 - `https`: HttpsOptions | undefined - Get/set HTTPS configuration
@@ -63,7 +61,7 @@ new MockHttp(options?)
 - `http1`: boolean - Get/set HTTP/1.1 fallback for HTTP/2 with HTTPS
 - `server`: FastifyInstance - Get/set the Fastify server instance
 - `taps`: TapManager - Get/set the TapManager instance
-- `bins`: BinManager - Get/set the BinManager instance for request bins
+- `bins`: MockHttpBins - Get or set the request bins
 
 ### Methods
 
@@ -143,57 +141,55 @@ Register the request bin routes — management at `/bins` and capture at `/b/:id
 
 ## Bins (Request Capture)
 
-Access the BinManager via `mockHttp.bins` to manage request bins programmatically. See [Request Bins](#request-bins) for usage examples.
+Use `mockHttp.bins` to control request bins. See [Request Bins](#request-bins) for usage examples.
 
 ### `bins.createBin()`
 
-Create a new bin with the configured TTL.
+Create a new bin with the configured TTL. Throws when Keyv does not store the bin.
 
-**Returns:** `Bin` — `{ id, createdAt, expiresAt, requestCount }`
+**Returns:** `Promise<Bin>` — `{ id, createdAt, expiresAt, requestCount }`
 
 ### `bins.getBin(id)`
 
-Look up a bin by id. Returns `undefined` if the bin does not exist or has expired (and lazily removes the expired entry).
+Look up a bin by id. Returns `undefined` if the bin does not exist or Keyv has expired it. When the Keyv instance has an `error` listener, a failed read also returns `undefined`.
 
-**Returns:** `Bin | undefined`
+**Returns:** `Promise<Bin | undefined>`
 
 ### `bins.listBins()`
 
-List all non-expired bins.
+List the bins that Keyv still holds.
 
-**Returns:** `Bin[]`
+**Returns:** `Promise<Bin[]>`
 
 ### `bins.deleteBin(id)`
 
-Delete a bin and all its captured requests.
+Delete a bin and all its captured requests. The delete waits for captures already queued for that bin.
 
-**Returns:** `boolean` — `true` if the bin existed
+**Returns:** `Promise<boolean>` — `true` when the bin existed
 
 ### `bins.getRequests(binId)`
 
 List captured requests for a bin, newest first.
 
-**Returns:** `CapturedRequest[]`
+**Returns:** `Promise<CapturedRequest[]>`
 
 ### `bins.getRequest(binId, reqId)`
 
 Look up a single captured request.
 
-**Returns:** `CapturedRequest | undefined`
+**Returns:** `Promise<CapturedRequest | undefined>`
 
 ### `bins.clearRequests(binId)`
 
-Clear all captured requests in a bin (the bin itself is preserved).
+Clear all captured requests in a bin. The bin stays. Throws when Keyv does not store the change.
+
+**Returns:** `Promise<boolean>` — `false` when the bin does not exist
 
 ### `bins.recordRequest(binId, raw)`
 
-Manually record a captured request. Returns `undefined` if the bin does not exist or is expired. Normally invoked by the capture route, but available for programmatic use.
+Manually record a captured request. Returns `undefined` if the bin does not exist. Throws when Keyv does not store the capture. Normally invoked by the capture route, but available for programmatic use.
 
-**Returns:** `CapturedRequest | undefined`
-
-### `bins.start()` / `bins.stop()`
-
-Start or stop the periodic cleanup of expired bins. `MockHttp.start()` and `MockHttp.close()` call these automatically. The interval is `unref()`'d so it never keeps the Node process alive.
+**Returns:** `Promise<CapturedRequest | undefined>`
 
 ### `bins.maxBodySize` / `bins.maxRequestsPerBin` / `bins.defaultTtlMs`
 

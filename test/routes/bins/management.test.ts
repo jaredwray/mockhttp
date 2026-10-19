@@ -1,22 +1,21 @@
 import Fastify, { type FastifyInstance } from "fastify";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { BinManager } from "../../../src/bin-manager.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MockHttpBins } from "../../../src/mock-http-bins.js";
 import { binsCaptureRoute } from "../../../src/routes/bins/capture.js";
 import { binsManagementRoute } from "../../../src/routes/bins/management.js";
 
 describe("Bin management routes", () => {
 	let fastify: FastifyInstance;
-	let manager: BinManager;
+	let manager: MockHttpBins;
 
 	beforeEach(async () => {
 		fastify = Fastify();
-		manager = new BinManager();
+		manager = new MockHttpBins();
 		await fastify.register(binsManagementRoute(manager));
 		await fastify.register(binsCaptureRoute(manager));
 	});
 
 	afterEach(async () => {
-		manager.stop();
 		await fastify.close();
 	});
 
@@ -29,6 +28,16 @@ describe("Bin management routes", () => {
 		expect(body.createdAt).toBeDefined();
 		expect(body.expiresAt).toBeDefined();
 		expect(body.requestCount).toBe(0);
+	});
+
+	it("POST /bins returns 500 when Keyv does not store the bin", async () => {
+		vi.spyOn(manager.keyv, "set").mockResolvedValue(false);
+		const res = await fastify.inject({ method: "POST", url: "/bins" });
+		expect(res.statusCode).toBe(500);
+		expect(res.json()).toMatchObject({
+			statusCode: 500,
+			error: "Internal Server Error",
+		});
 	});
 
 	it("GET /bins lists created bins", async () => {

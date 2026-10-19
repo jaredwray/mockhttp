@@ -2,8 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import Fastify from "fastify";
-import { describe, expect, test, vi } from "vitest";
-import { BinManager } from "../src/bin-manager.js";
+import { describe, expect, test } from "vitest";
 import { generateCertificate } from "../src/certificate.js";
 import {
 	MockHttp,
@@ -11,6 +10,7 @@ import {
 	mockhttp,
 	resolvePackageRoot,
 } from "../src/mock-http.js";
+import { MockHttpBins } from "../src/mock-http-bins.js";
 import { TapManager } from "../src/tap-manager.js";
 
 describe("MockHttp", () => {
@@ -44,7 +44,6 @@ describe("MockHttp", () => {
 			staticFiles: false,
 			apiDocs: true,
 			pluginTimeout: 0,
-			startBins: false,
 			httpBin: { httpMethods: false },
 		};
 		const mock = new MockHttp(options);
@@ -55,7 +54,6 @@ describe("MockHttp", () => {
 		expect(mock.staticFiles).toBe(false);
 		expect(mock.apiDocs).toBe(true);
 		expect(mock.pluginTimeout).toBe(0);
-		expect(mock.startBins).toBe(false);
 		expect(mock.httpBin).toBe(options.httpBin);
 	});
 
@@ -70,7 +68,6 @@ describe("MockHttp", () => {
 		expect(mock.apiDocs).toBe(true);
 		expect(mock.httpBin.httpMethods).toBe(true);
 		expect(mock.pluginTimeout).toBeUndefined();
-		expect(mock.startBins).toBe(true);
 
 		mock.port = 3001;
 		mock.host = "localhost";
@@ -79,7 +76,6 @@ describe("MockHttp", () => {
 		mock.staticFiles = false;
 		mock.apiDocs = false;
 		mock.pluginTimeout = 0;
-		mock.startBins = false;
 		mock.httpBin = {
 			httpMethods: false,
 			redirects: false,
@@ -95,7 +91,6 @@ describe("MockHttp", () => {
 		expect(mock.staticFiles).toBe(false);
 		expect(mock.apiDocs).toBe(false);
 		expect(mock.pluginTimeout).toBe(0);
-		expect(mock.startBins).toBe(false);
 		expect(mock.httpBin.httpMethods).toBe(false);
 	});
 
@@ -167,23 +162,6 @@ describe("MockHttp", () => {
 		await mock.close();
 	});
 
-	test("should skip bin cleanup when startBins is false", async () => {
-		const mock = new MockHttp({
-			logging: false,
-			rateLimit: false,
-			startBins: false,
-		});
-		const spy = vi.spyOn(mock.bins, "start");
-		await mock.initialize();
-		expect(spy).not.toHaveBeenCalled();
-		const response = await mock.server.inject({
-			method: "POST",
-			url: "/bins",
-		});
-		expect(response.statusCode).toBe(200);
-		await mock.close();
-	});
-
 	test("close is safe before the Fastify server is created", async () => {
 		const mock = new MockHttp({ logging: false });
 		await expect(mock.close()).resolves.toBeUndefined();
@@ -249,14 +227,14 @@ describe("MockHttp", () => {
 	});
 
 	describe("request bin feature", () => {
-		test("exposes the BinManager via the bins getter", () => {
+		test("exposes MockHttpBins via the bins getter", () => {
 			const mock = new MockHttp();
-			expect(mock.bins).toBeInstanceOf(BinManager);
+			expect(mock.bins).toBeInstanceOf(MockHttpBins);
 		});
 
-		test("allows replacing the BinManager via the bins setter", () => {
+		test("allows replacing MockHttpBins via the bins setter", () => {
 			const mock = new MockHttp();
-			const replacement = new BinManager({ defaultTtlMs: 1000 });
+			const replacement = new MockHttpBins({ defaultTtlMs: 1000 });
 			mock.bins = replacement;
 			expect(mock.bins).toBe(replacement);
 		});
@@ -330,16 +308,7 @@ describe("MockHttp", () => {
 			expect(created.statusCode).toBe(200);
 			expect(created.json().id).toBeDefined();
 
-			mock.bins.stop();
 			await other.close();
-		});
-
-		test("close() stops the bin cleanup timer", async () => {
-			const mock = new MockHttp({ logging: false });
-			await mock.start();
-			await mock.close();
-			// Calling stop again must be safe (idempotent), proving close() already stopped it.
-			expect(() => mock.bins.stop()).not.toThrow();
 		});
 	});
 

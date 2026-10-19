@@ -12,9 +12,9 @@ import { fastifySwagger } from "@fastify/swagger";
 import { detect } from "detect-port";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { Hookified, type HookifiedOptions } from "hookified";
-import { BinManager } from "./bin-manager.js";
 import { type CertificateOptions, generateCertificate } from "./certificate.js";
 import { getFastifyConfig } from "./fastify-config.js";
+import { MockHttpBins } from "./mock-http-bins.js";
 import { anythingRoute } from "./routes/anything/index.js";
 import {
 	basicAuthRoute,
@@ -180,12 +180,6 @@ export type MockHttpOptions = {
 	 */
 	pluginTimeout?: number;
 	/**
-	 * Whether to start the request-bin cleanup timer during `initialize()`.
-	 * Defaults to true. Disable this on Cloudflare Workers, where `setInterval`
-	 * during startup can hang the isolate.
-	 */
-	startBins?: boolean;
-	/**
 	 * HTTPS configuration. Set to true to auto-generate a self-signed certificate,
 	 * or provide an object with cert/key strings/paths or auto-generation options.
 	 */
@@ -214,7 +208,6 @@ export class MockHttp extends Hookified {
 	private _siteDistPath = defaultSiteDistPath;
 	private _logging = true;
 	private _pluginTimeout?: number;
-	private _startBins = true;
 	private _httpBin: HttpBinOptions = {
 		httpMethods: true,
 		redirects: true,
@@ -243,7 +236,7 @@ export class MockHttp extends Hookified {
 
 	private _server: FastifyInstance | undefined;
 	private _taps: TapManager = new TapManager();
-	private _bins: BinManager = new BinManager();
+	private _bins: MockHttpBins = new MockHttpBins();
 
 	constructor(options?: MockHttpOptions) {
 		super(options?.hookOptions);
@@ -294,10 +287,6 @@ export class MockHttp extends Hookified {
 
 		if (options?.pluginTimeout !== undefined) {
 			this._pluginTimeout = options.pluginTimeout;
-		}
-
-		if (options?.startBins !== undefined) {
-			this._startBins = options.startBins;
 		}
 
 		if (options?.http2 !== undefined) {
@@ -462,22 +451,6 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
-	 * Whether to start the request-bin cleanup timer during `initialize()`.
-	 * @default true
-	 */
-	public get startBins(): boolean {
-		return this._startBins;
-	}
-
-	/**
-	 * Whether to start the request-bin cleanup timer during `initialize()`.
-	 * @default true
-	 */
-	public set startBins(startBins: boolean) {
-		this._startBins = startBins;
-	}
-
-	/**
 	 * HTTPS configuration. Set to true to auto-generate a self-signed certificate,
 	 * or provide an HttpsOptions object with cert/key or auto-generation options.
 	 */
@@ -602,16 +575,16 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
-	 * The BinManager instance for managing request bins.
+	 * The MockHttpBins instance for request bins.
 	 */
-	public get bins(): BinManager {
+	public get bins(): MockHttpBins {
 		return this._bins;
 	}
 
 	/**
-	 * The BinManager instance for managing request bins.
+	 * The MockHttpBins instance for request bins.
 	 */
-	public set bins(bins: BinManager) {
+	public set bins(bins: MockHttpBins) {
 		this._bins = bins;
 	}
 
@@ -783,9 +756,6 @@ export class MockHttp extends Hookified {
 
 			if (bins) {
 				await this.registerBinRoutes();
-				if (this._startBins) {
-					this._bins.start();
-				}
 			}
 
 			if (this._apiDocs) {
@@ -826,7 +796,6 @@ export class MockHttp extends Hookified {
 	 * Close the Fastify server.
 	 */
 	public async close(): Promise<void> {
-		this._bins.stop();
 		if (this._server) {
 			await this._server.close();
 		}

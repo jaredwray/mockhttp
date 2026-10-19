@@ -1,13 +1,13 @@
 {
 	"name": "@jaredwray/mockhttp",
-	"version": "2.1.0",
+	"version": "3.0.0",
 	"description": "Mock Http - Easy way to mock http with httpbin replacement",
 	"type": "module",
 	"main": "dist/index.mjs",
 	"types": "dist/index.d.mts",
 	"packageManager": "pnpm@12.12.1+sha512.b7f98934c0b1f29a65f5da52f2d7f994e7faad573ffdddea1497fb4dcb5aec051590ee7c7d95a38172b4bfae103a5b83edf2ee866e11731c2cafa96063610ac5",
 	"engines": {
-		"node": ">=22.18.0"
+		"node": ">=22.19.0"
 	},
 	"directories": {
 		"test": "test"
@@ -83,6 +83,7 @@
 		"fastify": "^5.12.5",
 		"hookified": "^3.0.4",
 		"html-escaper": "^3.0.3",
+		"keyv": "^6.1.0",
 		"pino": "^10.4.0",
 		"pino-pretty": "^13.2.0"
 	},

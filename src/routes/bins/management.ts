@@ -4,7 +4,7 @@ import type {
 	FastifyRequest,
 	FastifySchema,
 } from "fastify";
-import type { BinManager } from "../../bin-manager.js";
+import type { MockHttpBins } from "../../mock-http-bins.js";
 
 const binSchema = {
 	type: "object",
@@ -190,15 +190,15 @@ type RequestIdRequest = FastifyRequest<{
 
 /**
  * Create a Fastify plugin that registers bin management endpoints, with the
- * provided {@link BinManager} injected.
+ * provided {@link MockHttpBins} injected.
  */
-export const binsManagementRoute = (binManager: BinManager) => {
+export const binsManagementRoute = (bins: MockHttpBins) => {
 	return (fastify: FastifyInstance) => {
 		fastify.post(
 			"/bins",
 			{ schema: createBinSchema },
 			async (request: FastifyRequest, _reply: FastifyReply) => {
-				const bin = binManager.createBin();
+				const bin = await bins.createBin();
 				/* v8 ignore next -- @preserve */
 				const host = request.headers.host ?? request.hostname;
 				return {
@@ -212,7 +212,7 @@ export const binsManagementRoute = (binManager: BinManager) => {
 			"/bins",
 			{ schema: listBinsSchema },
 			async (_request, _reply) => ({
-				bins: binManager.listBins(),
+				bins: await bins.listBins(),
 			}),
 		);
 
@@ -220,7 +220,7 @@ export const binsManagementRoute = (binManager: BinManager) => {
 			"/bins/:id",
 			{ schema: getBinSchema },
 			async (request: BinIdRequest, reply: FastifyReply) => {
-				const bin = binManager.getBin(request.params.id);
+				const bin = await bins.getBin(request.params.id);
 				if (!bin) {
 					return reply.code(404).send({ error: "bin_not_found" });
 				}
@@ -232,11 +232,11 @@ export const binsManagementRoute = (binManager: BinManager) => {
 			"/bins/:id/requests",
 			{ schema: listRequestsSchema },
 			async (request: BinIdRequest, reply: FastifyReply) => {
-				const bin = binManager.getBin(request.params.id);
+				const bin = await bins.getBin(request.params.id);
 				if (!bin) {
 					return reply.code(404).send({ error: "bin_not_found" });
 				}
-				return { requests: binManager.getRequests(request.params.id) };
+				return { requests: await bins.getRequests(request.params.id) };
 			},
 		);
 
@@ -244,11 +244,11 @@ export const binsManagementRoute = (binManager: BinManager) => {
 			"/bins/:id/requests/:reqId",
 			{ schema: getRequestSchema },
 			async (request: RequestIdRequest, reply: FastifyReply) => {
-				const bin = binManager.getBin(request.params.id);
+				const bin = await bins.getBin(request.params.id);
 				if (!bin) {
 					return reply.code(404).send({ error: "bin_not_found" });
 				}
-				const captured = binManager.getRequest(
+				const captured = await bins.getRequest(
 					request.params.id,
 					request.params.reqId,
 				);
@@ -263,11 +263,10 @@ export const binsManagementRoute = (binManager: BinManager) => {
 			"/bins/:id/requests",
 			{ schema: clearRequestsSchema },
 			async (request: BinIdRequest, reply: FastifyReply) => {
-				const bin = binManager.getBin(request.params.id);
-				if (!bin) {
+				const cleared = await bins.clearRequests(request.params.id);
+				if (!cleared) {
 					return reply.code(404).send({ error: "bin_not_found" });
 				}
-				binManager.clearRequests(request.params.id);
 				return reply.code(204).send();
 			},
 		);
@@ -276,7 +275,7 @@ export const binsManagementRoute = (binManager: BinManager) => {
 			"/bins/:id",
 			{ schema: deleteBinSchema },
 			async (request: BinIdRequest, reply: FastifyReply) => {
-				const existed = binManager.deleteBin(request.params.id);
+				const existed = await bins.deleteBin(request.params.id);
 				if (!existed) {
 					return reply.code(404).send({ error: "bin_not_found" });
 				}

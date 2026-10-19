@@ -59,7 +59,7 @@ wasmer deploy --non-interactive --build-remote
 
 ## Runtime behavior
 
-Bins use the default in-memory store, so a bin exists only on the instance that created it. Taps are a library API (`mock.taps.inject`) and have no HTTP routes, so a deployed app cannot inject one.
+Bins use `new Keyv()` by default. The store keeps each bin in memory on the instance that created it. Give `MockHttpBins` a shared Keyv when bins must be visible on more than one instance. Two processes can lose a capture when they write the same bin at the same time. Taps are a library API (`mock.taps.inject`) and have no HTTP routes, so a deployed app cannot inject one.
 
 `@fastify/rate-limit` is on at 1000 requests per minute. It keys on the address that connects to the process. The server does not trust proxy headers, and the allow list is only `127.0.0.1` and `::1`. On the test app, `/ip` reports `127.0.0.100`, which is the edge proxy rather than the caller, and the response includes `x-ratelimit-limit: 1000`. Clients that share that proxy address share one limit on that instance. This is not the Cloudflare limiter used by [mockhttp.org](https://mockhttp.org).
 

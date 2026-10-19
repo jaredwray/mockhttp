@@ -40,14 +40,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 	await start();
 }
 
-export type { BinManagerOptions } from "./bin-manager.js";
-export { BinManager } from "./bin-manager.js";
-export type {
-	Bin,
-	BinStore,
-	CapturedRequest,
-} from "./bin-store.js";
-export { InMemoryBinStore } from "./bin-store.js";
+export type { Bin, CapturedRequest } from "./bin-store.js";
 export type {
 	CertificateFileOptions,
 	CertificateOptions,
@@ -59,6 +52,8 @@ export {
 } from "./certificate.js";
 export type { HttpsOptions } from "./mock-http.js";
 export { MockHttp as default, MockHttp as mockhttp } from "./mock-http.js";
+export type { MockHttpBinsOptions } from "./mock-http-bins.js";
+export { MockHttpBins } from "./mock-http-bins.js";
 export type {
 	InjectionMatcher,
 	InjectionResponse,

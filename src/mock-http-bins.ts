@@ -23,7 +23,7 @@ export type MockHttpBinsOptions = {
 	defaultTtlMs?: number;
 	/** Maximum number of requests in one bin. The default is 100. */
 	maxRequestsPerBin?: number;
-	/** Maximum captured body size in bytes. The default is 1 MiB. */
+	/** Maximum captured body size in bytes. The default is 128 KiB. */
 	maxBodySize?: number;
 	/** Length of a generated bin id or request id. The default is 12. */
 	idLength?: number;
@@ -33,7 +33,7 @@ export type MockHttpBinsOptions = {
 
 const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_MAX_REQUESTS = 100;
-const DEFAULT_MAX_BODY_SIZE = 1024 * 1024;
+const DEFAULT_MAX_BODY_SIZE = 128 * 1024;
 const DEFAULT_ID_LENGTH = 12;
 const DEFAULT_CLEANUP_INTERVAL_MS = 60_000;
 const BIN_KEY_PREFIX = "bin:";

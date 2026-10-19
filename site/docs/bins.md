@@ -180,7 +180,7 @@ curl -s "http://localhost:3000/bins/$ID/requests" \
 
 ### Truncation
 
-Bodies larger than `maxBodySize` (1 MiB by default) are cut off and flagged:
+Bodies larger than `maxBodySize` (128 KiB by default) are cut off and flagged:
 
 ```javascript
 // In test setup
@@ -308,7 +308,7 @@ const mock = new MockHttp();
 mock.bins = new MockHttpBins({
   defaultTtlMs: 60 * 60 * 1000,    // 1 hour (default: 24h)
   maxRequestsPerBin: 500,           // (default: 100)
-  maxBodySize: 5 * 1024 * 1024,     // 5 MiB (default: 1 MiB)
+  maxBodySize: 512 * 1024,          // 512 KiB (default: 128 KiB)
   idLength: 16,                     // (default: 12)
   cleanupIntervalMs: 30 * 1000,     // sweep every 30s (default: 60s)
 });
@@ -322,7 +322,7 @@ await mock.start();
 |--------|---------|-------------|
 | `defaultTtlMs` | `86400000` (24h) | Bin lifetime. Expired bins return 404 and are lazily removed. |
 | `maxRequestsPerBin` | `100` | When exceeded, oldest captures are dropped (FIFO). |
-| `maxBodySize` | `1048576` (1 MiB) | Larger bodies are truncated; `truncated: true` is set on the capture. |
+| `maxBodySize` | `131072` (128 KiB) | Larger bodies are truncated; `truncated: true` is set on the capture. |
 | `idLength` | `12` | Length of generated bin and request ids. |
 | `cleanupIntervalMs` | `60000` (1 min) | How often expired bins are swept. The timer is `unref()`'d so it never keeps the process alive. |
 | `keyv` | `new Keyv()` | Keyv store for bins. The default keeps bins in memory. |
@@ -343,7 +343,7 @@ mock.bins = new MockHttpBins({
 });
 ```
 
-Each capture writes the full bin again. A large body or a high request limit makes that write large. Set `maxBodySize` and `maxRequestsPerBin` to limit the size.
+Each capture writes the full bin again. A large body or a high request limit makes that write large. Set `maxBodySize` and `maxRequestsPerBin` to limit the size. With the defaults, a full bin of binary bodies is about 17 MB.
 
 Two processes that share one Keyv can lose a capture. This occurs when both processes write the same bin at the same time.
 

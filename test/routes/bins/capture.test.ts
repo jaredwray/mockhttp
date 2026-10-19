@@ -104,6 +104,21 @@ describe("Bin capture route", () => {
 		}
 	});
 
+	it("truncates a body larger than 128 KiB by default", async () => {
+		const id = await createBin(fastify);
+		const payload = "a".repeat(200 * 1024);
+		await fastify.inject({
+			method: "POST",
+			url: `/b/${id}`,
+			headers: { "content-type": "text/plain" },
+			payload,
+		});
+		const stored = await manager.getRequests(id);
+		expect(stored[0].truncated).toBe(true);
+		expect(stored[0].bodySize).toBe(200 * 1024);
+		expect(stored[0].body).toHaveLength(128 * 1024);
+	});
+
 	it("captures the sub-path and query string", async () => {
 		const id = await createBin(fastify);
 		await fastify.inject({

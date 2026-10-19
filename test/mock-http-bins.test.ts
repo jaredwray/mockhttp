@@ -32,7 +32,7 @@ describe("MockHttpBins", () => {
 	describe("constructor", () => {
 		it("uses an in-memory Keyv and the default limits", () => {
 			expect(bins.keyv).toBeInstanceOf(Keyv);
-			expect(bins.maxBodySize).toBe(1024 * 1024);
+			expect(bins.maxBodySize).toBe(128 * 1024);
 			expect(bins.maxRequestsPerBin).toBe(100);
 			expect(bins.defaultTtlMs).toBe(24 * 60 * 60 * 1000);
 		});

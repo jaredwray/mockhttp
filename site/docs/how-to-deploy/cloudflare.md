@@ -22,7 +22,7 @@ The Worker starts the same MockHTTP app as Node.js, with a few options set for t
 | `pluginTimeout` | `0` | Disables Fastify's plugin boot timeout. Those timers are unreliable on Workers. |
 | `logging` | `false` | Request logging is off. |
 | `autoDetectPort` | `false` | The app always listens on port 3000 inside the isolate. |
-| `bin store` | `@keyv/mongo` when `MONGODB_URI` is set | Request bins live in MongoDB Atlas, so every isolate sees the same bins. |
+| `bins` | `@keyv/mongo` when `MONGODB_URI` is set | Request bins live in MongoDB Atlas, so every isolate sees the same bins. |
 
 The rate limiter key is the `cf-connecting-ip` header, then the first address in `x-forwarded-for`, then `unknown`. A limited request returns `429` with `retry-after: 60`. That limiter is shared across isolates.
 

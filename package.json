@@ -79,6 +79,7 @@
 		"@fastify/rate-limit": "^11.2.1",
 		"@fastify/static": "^10.1.6",
 		"@fastify/swagger": "^9.9.2",
+		"@keyv/mongo": "^6.1.0",
 		"detect-port": "^2.1.0",
 		"fastify": "^5.12.5",
 		"hookified": "^3.0.4",

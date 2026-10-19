@@ -1,5 +1,8 @@
 import { handleAsNodeRequest } from "cloudflare:node";
+import KeyvMongo from "@keyv/mongo";
+import Keyv from "keyv";
 import { MockHttp, type MockHttpOptions } from "../src/mock-http.js";
+import { MockHttpBins } from "../src/mock-http-bins.js";
 import { setPublicFileReader } from "../src/public-files.js";
 
 export const WORKER_PORT = 3000;
@@ -26,7 +29,42 @@ export type WorkerAssets = {
 export type WorkerEnv = {
 	ASSETS?: WorkerAssets;
 	RATE_LIMITER?: RateLimiter;
+	/** MongoDB Atlas connection string for shared request bins. */
+	MONGODB_URI?: string;
 };
+
+/**
+ * Pool stays small because each Worker isolate opens its own client.
+ * `serverSelectionTimeoutMS` keeps a down Atlas from holding the request
+ * for the driver's 30 second default.
+ */
+const workerBinMongoOptions = {
+	collection: "bins",
+	maxPoolSize: 5,
+	minPoolSize: 0,
+	serverSelectionTimeoutMS: 5_000,
+};
+
+/**
+ * Atlas URI for this request. The Worker binding wins. An empty string is
+ * treated as unset so a blank secret does not open a client.
+ */
+export function workerMongoUri(env: WorkerEnv = {}): string | undefined {
+	const uri = env.MONGODB_URI || process.env.MONGODB_URI;
+	if (!uri) {
+		return undefined;
+	}
+	return uri;
+}
+
+/** Request bins stored in MongoDB through Keyv. */
+export function createWorkerBins(uri: string): MockHttpBins {
+	return new MockHttpBins({
+		keyv: new Keyv({
+			store: new KeyvMongo(uri, workerBinMongoOptions),
+		}),
+	});
+}
 
 export type WorkerDispatch = (
 	port: number,
@@ -89,8 +127,12 @@ export function bindPublicAssets(assets: WorkerAssets | undefined): void {
 	});
 }
 
-export async function createWorkerApp(): Promise<MockHttp> {
+export async function createWorkerApp(env: WorkerEnv = {}): Promise<MockHttp> {
 	const mockHttp = new MockHttp(workerMockHttpOptions);
+	const uri = workerMongoUri(env);
+	if (uri) {
+		mockHttp.bins = createWorkerBins(uri);
+	}
 	await mockHttp.initialize();
 	return mockHttp;
 }

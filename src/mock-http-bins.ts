@@ -106,6 +106,7 @@ export class MockHttpBins {
 	/**
 	 * Look up a bin by id.
 	 * Returns `undefined` when the bin does not exist or Keyv has expired it.
+	 * A failed read also returns `undefined` when the Keyv instance has an `error` listener.
 	 */
 	public async getBin(id: string): Promise<Bin | undefined> {
 		const doc = await this._keyv.get(this.binKey(id));
@@ -115,6 +116,7 @@ export class MockHttpBins {
 	/**
 	 * List the bins that Keyv still holds.
 	 * Throws when the Keyv store has no iterator.
+	 * When the Keyv instance has an `error` listener, a failed walk returns the bins read before the error.
 	 */
 	public async listBins(): Promise<Bin[]> {
 		if (!this.canIterate()) {

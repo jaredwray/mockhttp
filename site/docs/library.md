@@ -153,7 +153,7 @@ Create a new bin with the configured TTL. Throws when Keyv does not store the bi
 
 ### `bins.getBin(id)`
 
-Look up a bin by id. Returns `undefined` if the bin does not exist or Keyv has expired it.
+Look up a bin by id. Returns `undefined` if the bin does not exist or Keyv has expired it. When the Keyv instance has an `error` listener, a failed read also returns `undefined`.
 
 **Returns:** `Promise<Bin | undefined>`
 

@@ -349,6 +349,8 @@ Two processes that share one Keyv can lose a capture. This occurs when both proc
 
 If Keyv does not store a write, the bin route returns `500` with the standard Fastify error body: `statusCode`, `error`, and `message`.
 
+A failed read depends on the Keyv `error` listener. Without a listener, Keyv throws the store error and the route returns `500`. With a listener, Keyv does not throw. A failed read then looks like a missing bin, and the route returns `404`. `listBins()` returns only the bins that it read before the error.
+
 `listBins()` throws an error when the adapter has no iterator.
 
 The cleanup timer walks only the in-memory Keyv store, because that store deletes an expired key only when it reads the key. Other adapters, such as Redis, expire keys on their own. The timer does nothing for them.

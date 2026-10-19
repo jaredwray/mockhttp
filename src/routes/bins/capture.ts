@@ -68,11 +68,6 @@ export const binsCaptureRoute = (bins: MockHttpBins) => {
 			const { id } = request.params;
 			const rest = request.params["*"] ?? "";
 
-			const bin = await bins.getBin(id);
-			if (!bin) {
-				return reply.code(404).send({ error: "bin_not_found" });
-			}
-
 			const raw = request.body as Buffer | undefined;
 			const bodySize = raw?.length ?? 0;
 			const max = bins.maxBodySize;
@@ -115,12 +110,14 @@ export const binsCaptureRoute = (bins: MockHttpBins) => {
 				bodyEncoding,
 				truncated,
 			});
+			if (!captured) {
+				return reply.code(404).send({ error: "bin_not_found" });
+			}
 
 			return reply.code(200).send({
 				ok: true,
 				binId: id,
-				/* v8 ignore next -- @preserve */
-				requestId: captured?.id ?? "",
+				requestId: captured.id,
 			});
 		};
 

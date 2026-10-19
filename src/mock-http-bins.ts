@@ -133,31 +133,32 @@ export class MockHttpBins {
 		return bins;
 	}
 
-	/** Delete a bin. Returns true when the bin existed. */
+	/**
+	 * Delete a bin. Returns true when the bin existed.
+	 * The delete waits for captures already queued for that bin, so a capture cannot write the bin back.
+	 */
 	public async deleteBin(id: string): Promise<boolean> {
-		return this._keyv.delete(this.binKey(id));
+		return this.enqueue(id, () => this._keyv.delete(this.binKey(id)));
 	}
 
 	/**
 	 * Record a request for a bin.
-	 * Returns `undefined` when the bin does not exist or its lifetime is over.
+	 * Returns `undefined` when the bin does not exist.
 	 */
 	public async recordRequest(
 		binId: string,
 		raw: Omit<CapturedRequest, "id" | "binId" | "capturedAt">,
 	): Promise<CapturedRequest | undefined> {
-		const bin = await this.getBin(binId);
-		if (!bin) {
-			return undefined;
-		}
 		const captured: CapturedRequest = {
 			...raw,
 			id: this.generateId(),
 			binId,
 			capturedAt: new Date().toISOString(),
 		};
-		await this.enqueue(binId, () => this.appendRequest(binId, captured));
-		return captured;
+		const recorded = await this.enqueue(binId, () =>
+			this.appendRequest(binId, captured),
+		);
+		return recorded ? captured : undefined;
 	}
 
 	/** List captured requests for a bin, newest first. */
@@ -175,17 +176,21 @@ export class MockHttpBins {
 		return doc?.requests.find((request) => request.id === reqId);
 	}
 
-	/** Remove captured requests and keep the bin. */
-	public async clearRequests(binId: string): Promise<void> {
-		await this.enqueue(binId, async () => {
+	/**
+	 * Remove captured requests and keep the bin.
+	 * Returns false when the bin does not exist.
+	 */
+	public async clearRequests(binId: string): Promise<boolean> {
+		return this.enqueue(binId, async () => {
 			const key = this.binKey(binId);
 			const doc = await this._keyv.get(key);
 			if (!doc) {
-				return;
+				return false;
 			}
 			doc.requests = [];
 			doc.bin.requestCount = 0;
 			await this._keyv.set(key, doc, this.ttlFor(doc.bin));
+			return true;
 		});
 	}
 
@@ -227,14 +232,15 @@ export class MockHttpBins {
 		return typeof this._keyv.store.iterator === "function";
 	}
 
+	/** Returns false when the bin does not exist. */
 	private async appendRequest(
 		binId: string,
 		captured: CapturedRequest,
-	): Promise<void> {
+	): Promise<boolean> {
 		const key = this.binKey(binId);
 		const doc = await this._keyv.get(key);
 		if (!doc) {
-			return;
+			return false;
 		}
 		doc.requests.unshift(captured);
 		while (doc.requests.length > this._maxRequestsPerBin) {
@@ -242,6 +248,7 @@ export class MockHttpBins {
 		}
 		doc.bin.requestCount = doc.requests.length;
 		await this._keyv.set(key, doc, this.ttlFor(doc.bin));
+		return true;
 	}
 
 	/**

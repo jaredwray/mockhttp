@@ -1142,7 +1142,7 @@ List the bins that Keyv still holds.
 
 ### `bins.deleteBin(id)`
 
-Delete a bin and all its captured requests.
+Delete a bin and all its captured requests. The delete waits for captures already queued for that bin.
 
 **Returns:** `Promise<boolean>` — `true` when the bin existed
 
@@ -1160,11 +1160,13 @@ Look up a single captured request.
 
 ### `bins.clearRequests(binId)`
 
-Clear all captured requests in a bin (the bin itself is preserved).
+Clear all captured requests in a bin. The bin stays.
+
+**Returns:** `Promise<boolean>` — `false` when the bin does not exist
 
 ### `bins.recordRequest(binId, raw)`
 
-Manually record a captured request. Returns `undefined` if the bin does not exist or is expired. Normally invoked by the capture route, but available for programmatic use.
+Manually record a captured request. Returns `undefined` if the bin does not exist. Normally invoked by the capture route, but available for programmatic use.
 
 **Returns:** `Promise<CapturedRequest | undefined>`
 

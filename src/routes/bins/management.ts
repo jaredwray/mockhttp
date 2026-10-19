@@ -263,11 +263,10 @@ export const binsManagementRoute = (bins: MockHttpBins) => {
 			"/bins/:id/requests",
 			{ schema: clearRequestsSchema },
 			async (request: BinIdRequest, reply: FastifyReply) => {
-				const bin = await bins.getBin(request.params.id);
-				if (!bin) {
+				const cleared = await bins.clearRequests(request.params.id);
+				if (!cleared) {
 					return reply.code(404).send({ error: "bin_not_found" });
 				}
-				await bins.clearRequests(request.params.id);
 				return reply.code(204).send();
 			},
 		);

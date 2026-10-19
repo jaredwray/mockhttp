@@ -167,6 +167,21 @@ describe("MockHttpBins", () => {
 			expect(await bins.deleteBin(bin.id)).toBe(false);
 			expect(await bins.getBin(bin.id)).toBeUndefined();
 		});
+
+		it("waits for an in-flight capture, so the capture cannot write the bin back", async () => {
+			const bin = await bins.createBin();
+			const set = bins.keyv.set.bind(bins.keyv);
+			let deleted: Promise<boolean> | undefined;
+			vi.spyOn(bins.keyv, "set").mockImplementation(async (key, value, ttl) => {
+				deleted ??= bins.deleteBin(bin.id);
+				await new Promise((resolve) => setTimeout(resolve, 10));
+				return set(key, value, ttl);
+			});
+
+			expect(await bins.recordRequest(bin.id, RAW)).toBeDefined();
+			expect(await deleted).toBe(true);
+			expect(await bins.getBin(bin.id)).toBeUndefined();
+		});
 	});
 
 	describe("recordRequest", () => {
@@ -235,24 +250,6 @@ describe("MockHttpBins", () => {
 			expect(await bins.getRequests(bin.id)).toHaveLength(1);
 		});
 
-		it("does not throw when the bin disappears before the write", async () => {
-			const bin = await bins.createBin();
-			const get = bins.keyv.get.bind(bins.keyv);
-			let reads = 0;
-			vi.spyOn(bins.keyv, "get").mockImplementation(async (key) => {
-				reads += 1;
-				if (reads === 2) {
-					return undefined;
-				}
-				return get(key);
-			});
-
-			const captured = await bins.recordRequest(bin.id, RAW);
-			expect(captured).toBeDefined();
-			vi.mocked(bins.keyv.get).mockRestore();
-			expect(await bins.getRequests(bin.id)).toEqual([]);
-		});
-
 		it("returns a copy of the request list", async () => {
 			const bin = await bins.createBin();
 			await bins.recordRequest(bin.id, RAW);
@@ -276,13 +273,13 @@ describe("MockHttpBins", () => {
 		it("clears captures and keeps the bin", async () => {
 			const bin = await bins.createBin();
 			await bins.recordRequest(bin.id, RAW);
-			await bins.clearRequests(bin.id);
+			expect(await bins.clearRequests(bin.id)).toBe(true);
 			expect(await bins.getRequests(bin.id)).toEqual([]);
 			expect((await bins.getBin(bin.id))?.requestCount).toBe(0);
 		});
 
-		it("does nothing when the bin does not exist", async () => {
-			await bins.clearRequests("ghost");
+		it("returns false when the bin does not exist", async () => {
+			expect(await bins.clearRequests("ghost")).toBe(false);
 			expect(await bins.getRequests("ghost")).toEqual([]);
 		});
 	});

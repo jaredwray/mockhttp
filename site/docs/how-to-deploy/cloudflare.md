@@ -19,7 +19,7 @@ The Worker starts the same MockHTTP app as Node.js, with a few options set for t
 | `rateLimit` | `false` | [`@fastify/rate-limit`](https://github.com/fastify/fastify-rate-limit) is off. A Cloudflare rate limiting binding allows 1000 requests per 60 seconds per IP. |
 | `siteDistPath` | unused path | Fastify does not serve the docs. Workers Assets serve `site/dist`. |
 | `staticFiles` | `false` | Logos and other `public/` files are copied into `site/dist` and read through the `ASSETS` binding. |
-| `startBins` | `false` | The bin cleanup timer uses `setInterval`, which can hang a Worker isolate during startup. Bin routes still register. Expired bins are removed when that bin is read, not by a sweep of every bin. |
+| `startBins` | `false` | The bin cleanup timer uses `setInterval`, which can hang a Worker isolate during startup. Bin routes still register. Keyv removes an expired bin when that bin is read or listed. Nothing walks the whole store. |
 | `pluginTimeout` | `0` | Disables Fastify's plugin boot timeout. Those timers are unreliable on Workers. |
 | `logging` | `false` | Request logging is off. |
 | `autoDetectPort` | `false` | The app always listens on port 3000 inside the isolate. |

@@ -78,9 +78,11 @@ describe("MockHttpBins", () => {
 			expect((await custom.createBin()).id).toHaveLength(8);
 		});
 
-		it("does not return a bin whose lifetime is zero", async () => {
+		it("lets Keyv expire a bin whose lifetime is zero", async () => {
+			vi.useFakeTimers();
 			const immediate = new MockHttpBins({ defaultTtlMs: 0 });
 			const bin = await immediate.createBin();
+			await vi.advanceTimersByTimeAsync(2);
 			expect(await immediate.getBin(bin.id)).toBeUndefined();
 		});
 	});
@@ -104,21 +106,24 @@ describe("MockHttpBins", () => {
 			expect(await short.listBins()).toEqual([]);
 		});
 
-		it("deletes a bin whose expiresAt is past even when Keyv still returns it", async () => {
+		it("keeps a Keyv TTL when a write lands after expiresAt", async () => {
+			vi.useFakeTimers();
 			const bin = await bins.createBin();
 			const key = `bin:${bin.id}`;
 			const doc = await bins.keyv.get(key);
-			expect(doc).toBeDefined();
 			if (!doc) {
-				return;
+				throw new Error("expected stored bin");
 			}
 			doc.bin.expiresAt = new Date(Date.now() - 1).toISOString();
 			await bins.keyv.set(key, doc, 60_000);
+
+			expect(await bins.recordRequest(bin.id, RAW)).toBeDefined();
+			await vi.advanceTimersByTimeAsync(2);
 			expect(await bins.getBin(bin.id)).toBeUndefined();
-			expect(await bins.keyv.get(key)).toBeUndefined();
 		});
 
-		it("lists live bins, drops expired ones, and ignores other keys", async () => {
+		it("lists the bins that Keyv holds and ignores other keys", async () => {
+			vi.useFakeTimers();
 			await bins.keyv.set("other", { hello: "world" });
 			const fresh = await bins.createBin();
 			const expired = await bins.createBin();
@@ -127,12 +132,11 @@ describe("MockHttpBins", () => {
 			if (!doc) {
 				throw new Error("expected stored bin");
 			}
-			doc.bin.expiresAt = new Date(Date.now() - 1).toISOString();
-			await bins.keyv.set(key, doc, 60_000);
+			await bins.keyv.set(key, doc, 10);
+			await vi.advanceTimersByTimeAsync(11);
 
 			const ids = (await bins.listBins()).map((bin) => bin.id);
 			expect(ids).toEqual([fresh.id]);
-			expect(await bins.keyv.get(key)).toBeUndefined();
 		});
 
 		it("throws from listBins when the Keyv store has no iterator", async () => {
@@ -284,38 +288,44 @@ describe("MockHttpBins", () => {
 	});
 
 	describe("cleanup timer", () => {
-		it("sweeps on the configured interval and a second start does not add a timer", async () => {
+		it("walks the store on the configured interval and a second start does not add a timer", async () => {
 			vi.useFakeTimers();
-			const timed = new MockHttpBins({ cleanupIntervalMs: 100 });
+			const store = new Map();
+			const timed = new MockHttpBins({
+				keyv: new Keyv({ store }),
+				cleanupIntervalMs: 100,
+				defaultTtlMs: 50,
+			});
 			const bin = await timed.createBin();
 			const key = `bin:${bin.id}`;
-			const doc = await timed.keyv.get(key);
-			if (!doc) {
-				throw new Error("expected stored bin");
-			}
-			doc.bin.expiresAt = new Date(Date.now() - 1).toISOString();
-			await timed.keyv.set(key, doc, 60_000);
+			await vi.advanceTimersByTimeAsync(60);
+			expect(store.has(key)).toBe(true);
 
-			const iterator = vi.spyOn(timed.keyv, "iterator");
+			const iterator = vi.spyOn(timed.keyv.store, "iterator");
 			timed.start();
 			timed.start();
 			await vi.advanceTimersByTimeAsync(100);
 			expect(iterator).toHaveBeenCalledTimes(1);
-			expect(await timed.keyv.get(key)).toBeUndefined();
+			expect(store.has(key)).toBe(false);
 
 			await vi.advanceTimersByTimeAsync(200);
 			expect(iterator).toHaveBeenCalledTimes(3);
 			timed.stop();
 		});
 
-		it("does not remove bins when the adapter has no iterator", async () => {
+		it("leaves expired entries in place when the store has no iterator", async () => {
 			vi.useFakeTimers();
-			const timed = new MockHttpBins({ cleanupIntervalMs: 50 });
+			const store = new Map();
+			const timed = new MockHttpBins({
+				keyv: new Keyv({ store }),
+				cleanupIntervalMs: 50,
+				defaultTtlMs: 10,
+			});
 			const bin = await timed.createBin();
 			timed.keyv.store.iterator = undefined;
 			timed.start();
 			await vi.advanceTimersByTimeAsync(50);
-			expect(await timed.keyv.get(`bin:${bin.id}`)).toBeDefined();
+			expect(store.has(`bin:${bin.id}`)).toBe(true);
 			timed.stop();
 		});
 
@@ -327,7 +337,7 @@ describe("MockHttpBins", () => {
 			};
 			process.on("unhandledRejection", onError);
 			const timed = new MockHttpBins({ cleanupIntervalMs: 50 });
-			vi.spyOn(timed.keyv, "iterator").mockImplementation(() => {
+			vi.spyOn(timed.keyv.store, "iterator").mockImplementation(() => {
 				throw new Error("sweep failed");
 			});
 			try {

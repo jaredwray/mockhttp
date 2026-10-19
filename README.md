@@ -758,11 +758,11 @@ await mock.start();
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `defaultTtlMs` | `86400000` (24h) | Bin lifetime. Expired bins return 404 and are lazily removed. |
+| `defaultTtlMs` | `86400000` (24h) | Bin lifetime, set as the Keyv TTL. An expired bin returns 404. |
 | `maxRequestsPerBin` | `100` | When exceeded, oldest captures are dropped (FIFO). |
 | `maxBodySize` | `131072` (128 KiB) | Larger bodies are truncated; `truncated: true` is set on the capture. |
 | `idLength` | `12` | Length of generated bin and request ids. |
-| `cleanupIntervalMs` | `60000` (1 min) | How often expired bins are swept. The timer is `unref()`'d so it never keeps the process alive. |
+| `cleanupIntervalMs` | `60000` (1 min) | How often the Keyv store is walked to remove expired bins. The timer is `unref()`'d so it never keeps the process alive. |
 | `keyv` | `new Keyv()` | Keyv store for bins. The default keeps bins in memory. |
 
 ### Storage
@@ -785,7 +785,7 @@ Each capture writes the full bin again. A large body or a high request limit mak
 
 Two processes that share one Keyv can lose a capture. This occurs when both processes write the same bin at the same time.
 
-`listBins()` throws an error when the adapter has no iterator. The cleanup sweep does nothing for that adapter.
+`listBins()` throws an error when the adapter has no iterator. The cleanup timer does nothing for that adapter.
 
 # Rate Limiting
 
@@ -1130,13 +1130,13 @@ Create a new bin with the configured TTL.
 
 ### `bins.getBin(id)`
 
-Look up a bin by id. Returns `undefined` if the bin does not exist or has expired (and lazily removes the expired entry).
+Look up a bin by id. Returns `undefined` if the bin does not exist or Keyv has expired it.
 
 **Returns:** `Promise<Bin | undefined>`
 
 ### `bins.listBins()`
 
-List all non-expired bins.
+List the bins that Keyv still holds.
 
 **Returns:** `Promise<Bin[]>`
 
@@ -1170,7 +1170,7 @@ Manually record a captured request. Returns `undefined` if the bin does not exis
 
 ### `bins.start()` / `bins.stop()`
 
-Start or stop the periodic cleanup of expired bins. `MockHttp.start()` and `MockHttp.close()` call these automatically. The interval is `unref()`'d so it never keeps the Node process alive.
+Start or stop the periodic walk of the Keyv store, which removes expired bins that nobody reads. `MockHttp.start()` and `MockHttp.close()` call these automatically. The interval is `unref()`'d so it never keeps the Node process alive.
 
 ### `bins.maxBodySize` / `bins.maxRequestsPerBin` / `bins.defaultTtlMs`
 

@@ -106,24 +106,15 @@ export class MockHttpBins {
 
 	/**
 	 * Look up a bin by id.
-	 * Returns `undefined` when the bin does not exist or its lifetime is over.
-	 * An expired bin is deleted.
+	 * Returns `undefined` when the bin does not exist or Keyv has expired it.
 	 */
 	public async getBin(id: string): Promise<Bin | undefined> {
-		const key = this.binKey(id);
-		const doc = await this._keyv.get(key);
-		if (!doc) {
-			return undefined;
-		}
-		if (Date.parse(doc.bin.expiresAt) <= Date.now()) {
-			await this._keyv.delete(key);
-			return undefined;
-		}
-		return doc.bin;
+		const doc = await this._keyv.get(this.binKey(id));
+		return doc?.bin;
 	}
 
 	/**
-	 * List bins whose lifetime is not over.
+	 * List the bins that Keyv still holds.
 	 * Throws when the Keyv store has no iterator.
 	 */
 	public async listBins(): Promise<Bin[]> {
@@ -132,7 +123,14 @@ export class MockHttpBins {
 				"MockHttpBins: the configured Keyv store does not support iteration; listBins() is unavailable",
 			);
 		}
-		return this.freshBins(Date.now());
+		const bins: Bin[] = [];
+		// Keyv 6 reads `this` inside iterator(). Keep the call on the instance.
+		for await (const [key, value] of this._keyv.iterator()) {
+			if (key.startsWith(BIN_KEY_PREFIX)) {
+				bins.push((value as BinDocument).bin);
+			}
+		}
+		return bins;
 	}
 
 	/** Delete a bin. Returns true when the bin existed. */
@@ -191,13 +189,13 @@ export class MockHttpBins {
 		});
 	}
 
-	/** Start the periodic cleanup of expired bins. */
+	/** Start the periodic removal of expired bins from the Keyv store. */
 	public start(): void {
 		if (this._cleanupTimer) {
 			return;
 		}
 		this._cleanupTimer = setInterval(() => {
-			void this.cleanupExpired(Date.now()).catch(() => undefined);
+			void this.removeExpired().catch(() => undefined);
 		}, this._cleanupIntervalMs);
 		this._cleanupTimer.unref?.();
 	}
@@ -210,33 +208,17 @@ export class MockHttpBins {
 		}
 	}
 
-	private async cleanupExpired(now: number): Promise<void> {
-		await this.freshBins(now);
-	}
-
-	private async freshBins(now: number): Promise<Bin[]> {
-		const result: Bin[] = [];
-		for await (const [key, doc] of this.documents()) {
-			if (Date.parse(doc.bin.expiresAt) <= now) {
-				await this._keyv.delete(key);
-				continue;
-			}
-			result.push(doc.bin);
-		}
-		return result;
-	}
-
-	private async *documents(): AsyncGenerator<[string, BinDocument]> {
-		if (!this.canIterate()) {
+	/**
+	 * The memory adapter deletes an expired key only when it reads that key.
+	 * Walking the store deletes expired bins that nobody reads, without decoding them.
+	 */
+	private async removeExpired(): Promise<void> {
+		const store = this._keyv.store;
+		if (typeof store.iterator !== "function") {
 			return;
 		}
-		// Keyv 6 reads `this` inside iterator(). Keep the call on the instance.
-		for await (const entry of this._keyv.iterator()) {
-			const [key, value] = entry as [string, BinDocument];
-			if (!key.startsWith(BIN_KEY_PREFIX)) {
-				continue;
-			}
-			yield [key, value];
+		for await (const _entry of store.iterator()) {
+			// The adapter deletes expired entries during the walk.
 		}
 	}
 
@@ -282,12 +264,9 @@ export class MockHttpBins {
 		return run;
 	}
 
-	private ttlFor(bin: Bin): number | undefined {
-		const ms = Date.parse(bin.expiresAt) - Date.now();
-		if (ms > 0) {
-			return ms;
-		}
-		return undefined;
+	/** Keyv keeps a key without a TTL forever, so the TTL never drops below 1 ms. */
+	private ttlFor(bin: Bin): number {
+		return Math.max(1, Date.parse(bin.expiresAt) - Date.now());
 	}
 
 	private binKey(id: string): string {

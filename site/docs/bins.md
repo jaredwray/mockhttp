@@ -320,11 +320,11 @@ await mock.start();
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `defaultTtlMs` | `86400000` (24h) | Bin lifetime. Expired bins return 404 and are lazily removed. |
+| `defaultTtlMs` | `86400000` (24h) | Bin lifetime, set as the Keyv TTL. An expired bin returns 404. |
 | `maxRequestsPerBin` | `100` | When exceeded, oldest captures are dropped (FIFO). |
 | `maxBodySize` | `131072` (128 KiB) | Larger bodies are truncated; `truncated: true` is set on the capture. |
 | `idLength` | `12` | Length of generated bin and request ids. |
-| `cleanupIntervalMs` | `60000` (1 min) | How often expired bins are swept. The timer is `unref()`'d so it never keeps the process alive. |
+| `cleanupIntervalMs` | `60000` (1 min) | How often the Keyv store is walked to remove expired bins. The timer is `unref()`'d so it never keeps the process alive. |
 | `keyv` | `new Keyv()` | Keyv store for bins. The default keeps bins in memory. |
 
 ### Storage
@@ -347,4 +347,4 @@ Each capture writes the full bin again. A large body or a high request limit mak
 
 Two processes that share one Keyv can lose a capture. This occurs when both processes write the same bin at the same time.
 
-`listBins()` throws an error when the adapter has no iterator. The cleanup sweep does nothing for that adapter.
+`listBins()` throws an error when the adapter has no iterator. The cleanup timer does nothing for that adapter.

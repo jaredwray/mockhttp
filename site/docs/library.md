@@ -153,13 +153,13 @@ Create a new bin with the configured TTL.
 
 ### `bins.getBin(id)`
 
-Look up a bin by id. Returns `undefined` if the bin does not exist or has expired (and lazily removes the expired entry).
+Look up a bin by id. Returns `undefined` if the bin does not exist or Keyv has expired it.
 
 **Returns:** `Promise<Bin | undefined>`
 
 ### `bins.listBins()`
 
-List all non-expired bins.
+List the bins that Keyv still holds.
 
 **Returns:** `Promise<Bin[]>`
 
@@ -193,7 +193,7 @@ Manually record a captured request. Returns `undefined` if the bin does not exis
 
 ### `bins.start()` / `bins.stop()`
 
-Start or stop the periodic cleanup of expired bins. `MockHttp.start()` and `MockHttp.close()` call these automatically. The interval is `unref()`'d so it never keeps the Node process alive.
+Start or stop the periodic walk of the Keyv store, which removes expired bins that nobody reads. `MockHttp.start()` and `MockHttp.close()` call these automatically. The interval is `unref()`'d so it never keeps the Node process alive.
 
 ### `bins.maxBodySize` / `bins.maxRequestsPerBin` / `bins.defaultTtlMs`
 

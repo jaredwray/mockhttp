@@ -20,9 +20,6 @@
 		"binding": "ASSETS",
 		"html_handling": "auto-trailing-slash"
 	},
-	"secrets": {
-		"required": ["MONGODB_URI"]
-	},
 	"ratelimits": [
 		{
 			"name": "RATE_LIMITER",

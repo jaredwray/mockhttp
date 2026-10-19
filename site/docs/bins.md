@@ -324,7 +324,7 @@ await mock.start();
 | `maxRequestsPerBin` | `100` | When exceeded, oldest captures are dropped (FIFO). |
 | `maxBodySize` | `131072` (128 KiB) | Larger bodies are truncated; `truncated: true` is set on the capture. |
 | `idLength` | `12` | Length of generated bin and request ids. |
-| `cleanupIntervalMs` | `60000` (1 min) | How often the Keyv store is walked to remove expired bins. The timer is `unref()`'d so it never keeps the process alive. |
+| `cleanupIntervalMs` | `60000` (1 min) | How often the in-memory Keyv store is walked to remove expired bins. Other stores are not walked. The timer is `unref()`'d so it never keeps the process alive. |
 | `keyv` | `new Keyv()` | Keyv store for bins. The default keeps bins in memory. |
 
 ### Storage
@@ -349,4 +349,6 @@ Two processes that share one Keyv can lose a capture. This occurs when both proc
 
 If Keyv does not store a write, the bin route returns `500` with the standard Fastify error body: `statusCode`, `error`, and `message`.
 
-`listBins()` throws an error when the adapter has no iterator. The cleanup timer does nothing for that adapter.
+`listBins()` throws an error when the adapter has no iterator.
+
+The cleanup timer walks only the in-memory Keyv store, because that store deletes an expired key only when it reads the key. Other adapters, such as Redis, expire keys on their own. The timer does nothing for them.

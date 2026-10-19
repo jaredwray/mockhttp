@@ -1,4 +1,4 @@
-import Keyv from "keyv";
+import Keyv, { KeyvMemoryAdapter } from "keyv";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CapturedRequest } from "../src/bin-store.js";
 import { MockHttpBins } from "../src/mock-http-bins.js";
@@ -342,19 +342,27 @@ describe("MockHttpBins", () => {
 			timed.stop();
 		});
 
-		it("leaves expired entries in place when the store has no iterator", async () => {
+		it("does not walk a store that expires keys on its own", async () => {
 			vi.useFakeTimers();
-			const store = new Map();
+			const data = new Map<string, unknown>();
+			const remote = {
+				get: async (key: string) => data.get(key),
+				set: async (key: string, value: unknown) => {
+					data.set(key, value);
+					return true;
+				},
+				delete: async (key: string) => data.delete(key),
+				clear: async () => data.clear(),
+			};
 			const timed = new MockHttpBins({
-				keyv: new Keyv({ store }),
+				keyv: new Keyv({ store: remote }),
 				cleanupIntervalMs: 50,
-				defaultTtlMs: 10,
 			});
-			const bin = await timed.createBin();
-			timed.keyv.store.iterator = undefined;
+			expect(timed.keyv.store).not.toBeInstanceOf(KeyvMemoryAdapter);
+			const iterator = vi.spyOn(timed.keyv.store, "iterator");
 			timed.start();
-			await vi.advanceTimersByTimeAsync(50);
-			expect(store.has(`bin:${bin.id}`)).toBe(true);
+			await vi.advanceTimersByTimeAsync(150);
+			expect(iterator).not.toHaveBeenCalled();
 			timed.stop();
 		});
 

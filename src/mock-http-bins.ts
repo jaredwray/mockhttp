@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import Keyv from "keyv";
+import Keyv, { KeyvMemoryAdapter } from "keyv";
 import type { Bin, CapturedRequest } from "./bin-store.js";
 
 /**
@@ -216,10 +216,11 @@ export class MockHttpBins {
 	/**
 	 * The memory adapter deletes an expired key only when it reads that key.
 	 * Walking the store deletes expired bins that nobody reads, without decoding them.
+	 * Other adapters expire keys on their own, and a walk would read every bin from them.
 	 */
 	private async removeExpired(): Promise<void> {
 		const store = this._keyv.store;
-		if (typeof store.iterator !== "function") {
+		if (!(store instanceof KeyvMemoryAdapter)) {
 			return;
 		}
 		for await (const _entry of store.iterator()) {

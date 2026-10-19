@@ -195,7 +195,7 @@ Manually record a captured request. Returns `undefined` if the bin does not exis
 
 ### `bins.start()` / `bins.stop()`
 
-Start or stop the periodic walk of the Keyv store, which removes expired bins that nobody reads. `MockHttp.start()` and `MockHttp.close()` call these automatically. The interval is `unref()`'d so it never keeps the Node process alive.
+Start or stop the periodic walk of the in-memory Keyv store, which removes expired bins that nobody reads. The timer does nothing for other Keyv stores. `MockHttp.start()` and `MockHttp.close()` call these automatically. The interval is `unref()`'d so it never keeps the Node process alive.
 
 ### `bins.maxBodySize` / `bins.maxRequestsPerBin` / `bins.defaultTtlMs`
 

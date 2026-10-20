@@ -2,8 +2,12 @@ import { handleAsNodeRequest } from "cloudflare:node";
 import KeyvMongo from "@keyv/mongo";
 import Keyv from "keyv";
 import { MockHttp, type MockHttpOptions } from "../src/mock-http.js";
-import { MockHttpBins } from "../src/mock-http-bins.js";
+import {
+	MockHttpBins,
+	type MockHttpBinsOptions,
+} from "../src/mock-http-bins.js";
 import { setPublicFileReader } from "../src/public-files.js";
+import { PUBLIC_PROTOCOL_HEADER } from "../src/routes/bins/management.js";
 
 export const WORKER_PORT = 3000;
 
@@ -57,13 +61,55 @@ export function workerMongoUri(env: WorkerEnv = {}): string | undefined {
 	return uri;
 }
 
+type WorkerBinKeyv = NonNullable<MockHttpBinsOptions["keyv"]>;
+
+/**
+ * Keyv backed by MongoDB. `@keyv/mongo` calls `MongoClient.connect()` from
+ * its constructor, and workerd rejects that network I/O during isolate
+ * startup, so the client is created on the first bin operation.
+ */
+function createLazyBinKeyv(uri: string): WorkerBinKeyv {
+	let keyv: WorkerBinKeyv | undefined;
+	const open = (): WorkerBinKeyv => {
+		keyv ??= new Keyv({
+			store: new KeyvMongo(uri, workerBinMongoOptions),
+		}) as WorkerBinKeyv;
+		return keyv;
+	};
+
+	return new Proxy({} as WorkerBinKeyv, {
+		get(_target, property) {
+			const target = open();
+			const value = Reflect.get(target, property, target);
+			if (typeof value === "function") {
+				return value.bind(target);
+			}
+			return value;
+		},
+	});
+}
+
 /** Request bins stored in MongoDB through Keyv. */
 export function createWorkerBins(uri: string): MockHttpBins {
 	return new MockHttpBins({
-		keyv: new Keyv({
-			store: new KeyvMongo(uri, workerBinMongoOptions),
-		}),
+		keyv: createLazyBinKeyv(uri),
 	});
+}
+
+/**
+ * The Node server inside the Worker is plain HTTP. workerd then rewrites
+ * `x-forwarded-proto` to `http`, so Fastify cannot see the client scheme.
+ * Stamp it on {@link PUBLIC_PROTOCOL_HEADER}, which the bridge leaves intact.
+ */
+export function requestWithPublicProtocol(request: Request): Request {
+	const protocol = new URL(request.url).protocol.slice(0, -1);
+	if (request.headers.get(PUBLIC_PROTOCOL_HEADER) === protocol) {
+		return request;
+	}
+
+	const headers = new Headers(request.headers);
+	headers.set(PUBLIC_PROTOCOL_HEADER, protocol);
+	return new Request(request, { headers });
 }
 
 export type WorkerDispatch = (
@@ -155,5 +201,5 @@ export async function handleWorkerFetch(
 	}
 
 	bindPublicAssets(env.ASSETS);
-	return dispatch(WORKER_PORT, request);
+	return dispatch(WORKER_PORT, requestWithPublicProtocol(request));
 }

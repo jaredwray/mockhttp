@@ -189,6 +189,37 @@ type RequestIdRequest = FastifyRequest<{
 }>;
 
 /**
+ * Set by the Worker from the incoming request URL. The Node bridge rewrites
+ * `x-forwarded-proto` to the plain-HTTP socket, so that header cannot carry
+ * the public scheme.
+ */
+export const PUBLIC_PROTOCOL_HEADER = "x-mockhttp-forwarded-proto";
+
+/**
+ * Public capture URL for a new bin.
+ * The last forwarded protocol wins, matching a proxy chain. An unrecognized
+ * value falls back to the socket protocol, then `http`.
+ */
+export function binCaptureUrl(
+	forwardedProto: string | string[] | undefined,
+	socketProtocol: string | undefined,
+	host: string,
+	id: string,
+): string {
+	const raw = Array.isArray(forwardedProto)
+		? forwardedProto.join(",")
+		: forwardedProto;
+	const forwarded = raw?.split(",").at(-1)?.trim().toLowerCase();
+	let protocol = "http";
+	if (forwarded === "https" || forwarded === "http") {
+		protocol = forwarded;
+	} else if (socketProtocol === "https") {
+		protocol = "https";
+	}
+	return `${protocol}://${host}/b/${id}`;
+}
+
+/**
  * Create a Fastify plugin that registers bin management endpoints, with the
  * provided {@link MockHttpBins} injected.
  */
@@ -203,7 +234,13 @@ export const binsManagementRoute = (bins: MockHttpBins) => {
 				const host = request.headers.host ?? request.hostname;
 				return {
 					...bin,
-					url: `${request.protocol}://${host}/b/${bin.id}`,
+					url: binCaptureUrl(
+						request.headers[PUBLIC_PROTOCOL_HEADER] ??
+							request.headers["x-forwarded-proto"],
+						request.protocol,
+						host,
+						bin.id,
+					),
 				};
 			},
 		);

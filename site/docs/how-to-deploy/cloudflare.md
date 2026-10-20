@@ -25,7 +25,7 @@ The Worker starts the same MockHTTP app as Node.js, with a few options set for t
 
 The rate limiter key is the `cf-connecting-ip` header, then the first address in `x-forwarded-for`, then `unknown`. A limited request returns `429` with `retry-after: 60`. That limiter is shared across isolates.
 
-Bins stay in memory in the isolate when `MONGODB_URI` is not set. A bin from one request can be absent when a different isolate handles the next request. When `MONGODB_URI` is set, bins are stored in MongoDB. The client connects on the first bin operation. It does not connect while the isolate starts.
+Bins stay in memory in the isolate when `MONGODB_URI` is not set. A bin from one request can be absent when a different isolate handles the next request. When `MONGODB_URI` is set, bins are stored in MongoDB. Each request opens its own client on its first bin operation and closes it after the response, through `ctx.waitUntil`. No client is shared between requests: workerd rejects I/O on a socket that a different request opened, and a shared client made bin requests fail with error 1101. It does not connect while the isolate starts. Each bin request therefore pays one connection setup, which is a few round trips to Atlas.
 
 Percent-encode reserved characters in the username and the password. `@` is `%40`. An unencoded `@` makes the driver throw `Invalid connection string` before it contacts Atlas.
 

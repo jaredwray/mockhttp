@@ -87,6 +87,19 @@ A failed ping sends HTTP 503:
     "connected": false,
     "uriPresent": true,
     "scheme": "mongodb+srv",
+    "uri": {
+      "length": 78,
+      "leadingWhitespace": false,
+      "trailingWhitespace": false,
+      "newline": false,
+      "wrappedQuotes": false,
+      "atCount": 2,
+      "host": "cluster0.example.invalid",
+      "username": "user",
+      "passwordLength": 8,
+      "passwordReserved": ["@"],
+      "passwordHasPercent": false
+    },
     "error": {
       "name": "MongoParseError",
       "message": "Invalid connection string. Percent-encode reserved characters in the username and password (@ : / ? # [ ]).",
@@ -96,9 +109,11 @@ A failed ping sends HTTP 503:
 }
 ```
 
-The response does not contain the connection string, the username, the password, or the host. The logs do not contain them. `uriPresent` is a boolean. `scheme` is `mongodb`, `mongodb+srv`, or `null`.
+A MongoDB result includes `bins.uri` on success and on failure. A memory result omits `bins.uri`. `uri.host` is the text after the last `@` and before the first `/` or `?`. `uri.username` is the username. `uri.passwordLength` is the password length.
 
-`Invalid connection string` means that the URI has a second `@`. It also means that you did not encode a reserved character in the username or the password. Encode these characters:
+`uri.passwordReserved` lists raw reserved characters in the password. `uri.passwordHasPercent` is true when the password contains `%`. The response does not contain the connection string or the password. The logs do not contain the connection string, the username, the password, or the host. `uriPresent` is a boolean. `scheme` is `mongodb`, `mongodb+srv`, or `null`.
+
+`Invalid connection string` is the driver text. MockHTTP adds the percent-encode hint only for that text or for `unescaped characters`. A DNS error stays a DNS error. `Invalid connection string` means that the URI has a second `@`. It also means that you did not encode a reserved character in the username or the password. Encode these characters:
 
 - `@` as `%40`
 - `:` as `%3A`

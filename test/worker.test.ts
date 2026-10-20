@@ -488,6 +488,41 @@ describe("worker Fastify app", () => {
 		delete process.env.MONGODB_URI;
 	});
 
+	it("passes MONGODB_URI through without trimming or joining text", async () => {
+		const uri = "mongodb://user:pass@cluster.example.invalid/mockhttp\n";
+		delete process.env.MONGODB_URI;
+		process.env.MONGODB_URI = "mongodb://from-process-env";
+		expect(workerMongoUri({ MONGODB_URI: uri })).toBe(uri);
+		expect(workerMongoUri({ MONGODB_URI: "" })).toBe(
+			"mongodb://from-process-env",
+		);
+		delete process.env.MONGODB_URI;
+
+		const ping = vi.spyOn(binStoreRuntime, "ping").mockResolvedValue({
+			status: "ok",
+			bins: {
+				store: "mongo",
+				connected: true,
+				latencyMs: 1,
+				uriPresent: true,
+				scheme: "mongodb",
+			},
+		});
+		const mockHttp = await createWorkerApp({ MONGODB_URI: uri });
+		const health = await mockHttp.server.inject({
+			method: "GET",
+			url: "/healthz",
+		});
+		expect(health.statusCode).toBe(200);
+		expect(ping).toHaveBeenCalledWith(uri);
+		await mockHttp.close();
+		ping.mockRestore();
+
+		workerMongoState.uri = "mongodb://other";
+		applyWorkerMongoEnv({ MONGODB_URI: uri });
+		expect(workerMongoState.uri).toBe(uri);
+	});
+
 	it("reads the Atlas URI from process.env when the binding is unset", async () => {
 		const uri = "mongodb+srv://user:pass@cluster.mongodb.net/mockhttp";
 		process.env.MONGODB_URI = uri;

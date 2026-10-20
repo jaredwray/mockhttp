@@ -1,8 +1,9 @@
 /**
  * Diagnostics for the bin store.
- * Logs and HTTP bodies can show the error name and a safe message.
- * They can show if the URI is present.
- * They cannot show the URI, the username, the password, or the host.
+ * Logs can show the error name, a safe message, and URI shape flags.
+ * Logs cannot show the URI, the username, the password, or the host.
+ * `GET /healthz` can show the host, the username, and the password length.
+ * It cannot show the password or the full URI.
  */
 
 export type BinStoreScheme = "mongodb" | "mongodb+srv";
@@ -22,6 +23,7 @@ export type BinHealth =
 				latencyMs: number;
 				uriPresent: boolean;
 				scheme: BinStoreScheme | null;
+				uri?: UriDiagnostics;
 			};
 	  }
 	| {
@@ -31,6 +33,7 @@ export type BinHealth =
 				connected: false;
 				uriPresent: boolean;
 				scheme: BinStoreScheme | null;
+				uri?: UriDiagnostics;
 				error: BinStoreErrorInfo;
 			};
 	  };
@@ -40,6 +43,23 @@ export type UriShape = {
 	wrappedQuotes: boolean;
 	extraAt: boolean;
 };
+
+/** Redacted URI facts for `GET /healthz`. No password and no full URI. */
+export type UriDiagnostics = {
+	length: number;
+	leadingWhitespace: boolean;
+	trailingWhitespace: boolean;
+	newline: boolean;
+	wrappedQuotes: boolean;
+	atCount: number;
+	host: string | null;
+	username: string | null;
+	passwordLength: number | null;
+	passwordReserved: string[];
+	passwordHasPercent: boolean;
+};
+
+const PASSWORD_RESERVED = ["@", ":", "/", "?", "#", "[", "]"] as const;
 
 const ENCODING_HINT =
 	"Percent-encode reserved characters in the username and password (@ : / ? # [ ]).";
@@ -95,6 +115,67 @@ export function uriShape(uri: string): UriShape {
 			uri.endsWith('"') ||
 			uri.endsWith("'"),
 		extraAt: uri.split("@").length - 1 > 1,
+	};
+}
+
+function hasWrappedQuotes(uri: string): boolean {
+	const trimmed = uri.trim();
+	return (
+		trimmed.startsWith('"') ||
+		trimmed.startsWith("'") ||
+		trimmed.endsWith('"') ||
+		trimmed.endsWith("'")
+	);
+}
+
+function userinfoBeforeLastAt(uri: string): string | null {
+	const at = uri.lastIndexOf("@");
+	if (at < 0) {
+		return null;
+	}
+	const before = uri.slice(0, at).replace(/^['"\s]+/, "");
+	const scheme = before.match(/^[a-z][a-z0-9+.-]*:\/\//i);
+	return scheme ? before.slice(scheme[0].length) : before;
+}
+
+/**
+ * Host is the text after the last `@` and before the first `/` or `?`.
+ * Username is the text before the first `:` in the userinfo.
+ * The password is not returned.
+ */
+export function uriDiagnostics(uri: string): UriDiagnostics {
+	const at = uri.lastIndexOf("@");
+	const after = at < 0 ? "" : uri.slice(at + 1);
+	const cut = after.search(/[/?]/);
+	const hostText = cut < 0 ? after : after.slice(0, cut);
+	const userinfo = userinfoBeforeLastAt(uri);
+	let username: string | null = null;
+	let password: string | null = null;
+	if (userinfo !== null) {
+		const colon = userinfo.indexOf(":");
+		if (colon < 0) {
+			username = userinfo.length > 0 ? userinfo : null;
+		} else {
+			username = userinfo.slice(0, colon) || null;
+			password = userinfo.slice(colon + 1);
+		}
+	}
+	const secret = password;
+	return {
+		length: uri.length,
+		leadingWhitespace: /^\s/.test(uri),
+		trailingWhitespace: /\s$/.test(uri),
+		newline: /[\r\n]/.test(uri),
+		wrappedQuotes: hasWrappedQuotes(uri),
+		atCount: uri.split("@").length - 1,
+		host: hostText.length > 0 ? hostText : null,
+		username,
+		passwordLength: secret === null ? null : secret.length,
+		passwordReserved:
+			secret === null
+				? []
+				: PASSWORD_RESERVED.filter((char) => secret.includes(char)),
+		passwordHasPercent: secret?.includes("%") === true,
 	};
 }
 
@@ -174,13 +255,14 @@ export function redactSecrets(message: string, uri?: string): string {
 	return out;
 }
 
-function withEncodingHint(
-	message: string,
-	shape: UriShape | undefined,
-): string {
-	const needsHint =
-		shape?.extraAt === true ||
-		/invalid connection string|unescaped characters/i.test(message);
+/**
+ * Add the encode hint only when the driver message is already a parse error.
+ * A DNS error or a scheme error keeps its own text.
+ */
+function withEncodingHint(message: string): string {
+	const needsHint = /invalid connection string|unescaped characters/i.test(
+		message,
+	);
 	if (!needsHint || message.includes("Percent-encode")) {
 		return message;
 	}
@@ -205,10 +287,9 @@ export function redactStoreError(
 		typeof codeValue === "string" || typeof codeValue === "number"
 			? codeValue
 			: null;
-	const shape = uri ? uriShape(uri) : undefined;
 	return {
 		name,
-		message: withEncodingHint(redactSecrets(raw, uri), shape),
+		message: withEncodingHint(redactSecrets(raw, uri)),
 		code,
 	};
 }

@@ -38,6 +38,7 @@ export type WorkerEnv = {
 /**
  * Atlas URI for this request. The Worker binding wins. An empty string is
  * treated as unset so a blank secret does not open a client.
+ * The returned text is the env value. It is not trimmed, and no characters are added.
  */
 export function workerMongoUri(env: WorkerEnv = {}): string | undefined {
 	const uri = env.MONGODB_URI || process.env.MONGODB_URI;

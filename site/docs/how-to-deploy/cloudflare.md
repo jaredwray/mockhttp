@@ -29,7 +29,9 @@ Bins stay in memory in the isolate when `MONGODB_URI` is not set. A bin from one
 
 Percent-encode reserved characters in the username and the password. `@` is `%40`. An unencoded `@` makes the driver throw `Invalid connection string` before it contacts Atlas.
 
-`GET /healthz` reports the bin store. A successful admin ping returns HTTP 200 and `bins.connected: true`. A failed ping returns HTTP 503 with the driver error name, a redacted message, and a code. The body has `uriPresent` (boolean) and `scheme` (`mongodb` or `mongodb+srv`). The body does not have the URI, the username, the password, or the host. On the Node server, this route reports the memory store. Connection failures are also one JSON line in the Worker logs (`mockhttp.bin-store`). Those logs use the same redaction.
+`GET /healthz` reports the bin store. A successful admin ping returns HTTP 200 and `bins.connected: true`. A failed ping returns HTTP 503 with the driver error name, a redacted message, and a code. The body has `uriPresent` (boolean) and `scheme` (`mongodb` or `mongodb+srv`). On the Node server, this route reports the memory store.
+
+When `MONGODB_URI` is set, `bins.uri` has the URI length, leading or trailing whitespace, a newline, quote marks, the `@` count, the host, the username, and the password length. The host is the text after the last `@` and before the first `/` or `?`. The body does not have the password or the full URI. The percent-encode hint is added only when the driver message is `Invalid connection string` or `unescaped characters`. A DNS error keeps the driver text. Worker logs still omit the URI, the username, the password, and the host.
 
 Taps are a library API (`mock.taps.inject`). They have no HTTP routes, so a deployed Worker has no way to inject one.
 

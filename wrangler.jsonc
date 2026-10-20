@@ -9,6 +9,8 @@
 	"observability": {
 		"enabled": true
 	},
+	// Plain text vars are empty. MONGODB_URI is a dashboard secret.
+	"vars": {},
 	"routes": [
 		{
 			"pattern": "mockhttp.org",

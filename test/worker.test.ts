@@ -68,6 +68,7 @@ const {
 	createWorkerApp,
 	handleWorkerFetch,
 	listenWorkerApp,
+	requestWithPublicProtocol,
 	workerMockHttpOptions,
 	workerMongoUri,
 	workerRuntime,
@@ -166,7 +167,11 @@ describe("cloudflare worker", () => {
 		);
 
 		expect(limit).toHaveBeenCalledWith({ key: "unknown" });
-		expect(dispatch).toHaveBeenCalledWith(WORKER_PORT, request);
+		expect(dispatch).toHaveBeenCalledOnce();
+		const forwarded = dispatch.mock.calls[0]?.[1] as Request;
+		expect(dispatch.mock.calls[0]?.[0]).toBe(WORKER_PORT);
+		expect(forwarded.url).toBe(request.url);
+		expect(forwarded.headers.get("x-mockhttp-forwarded-proto")).toBe("https");
 		expect(response).toBe(expected);
 	});
 
@@ -223,9 +228,45 @@ describe("cloudflare worker", () => {
 		handleAsNodeRequestMock.mockResolvedValue(new Response("ok"));
 		const request = new Request("https://mockhttp.org/ip");
 		const response = await handleWorkerFetch(request, {});
-		expect(handleAsNodeRequestMock).toHaveBeenCalledWith(WORKER_PORT, request);
+		expect(handleAsNodeRequestMock).toHaveBeenCalledOnce();
+		const forwarded = handleAsNodeRequestMock.mock.calls[0]?.[1] as Request;
+		expect(handleAsNodeRequestMock.mock.calls[0]?.[0]).toBe(WORKER_PORT);
+		expect(forwarded.url).toBe(request.url);
+		expect(forwarded.headers.get("x-mockhttp-forwarded-proto")).toBe("https");
 		expect(response.status).toBe(200);
 		expect(await response.text()).toBe("ok");
+	});
+
+	it("stamps the worker request scheme onto x-forwarded-proto", () => {
+		const request = new Request("https://mockhttp.org/bins", {
+			method: "POST",
+		});
+		const stamped = requestWithPublicProtocol(request);
+		expect(stamped).not.toBe(request);
+		expect(stamped.method).toBe("POST");
+		expect(stamped.url).toBe(request.url);
+		expect(stamped.headers.get("x-mockhttp-forwarded-proto")).toBe("https");
+	});
+
+	it("leaves a request alone when the public protocol header already matches", () => {
+		const request = new Request("http://127.0.0.1/bins", {
+			headers: { "x-mockhttp-forwarded-proto": "http" },
+		});
+		expect(requestWithPublicProtocol(request)).toBe(request);
+	});
+
+	it("replaces a public protocol header that disagrees with the request URL", () => {
+		const request = new Request("https://mockhttp.org/bins", {
+			headers: {
+				"x-forwarded-proto": "http",
+				"x-mockhttp-forwarded-proto": "http",
+				"x-request-id": "abc",
+			},
+		});
+		const stamped = requestWithPublicProtocol(request);
+		expect(stamped.headers.get("x-mockhttp-forwarded-proto")).toBe("https");
+		expect(stamped.headers.get("x-forwarded-proto")).toBe("http");
+		expect(stamped.headers.get("x-request-id")).toBe("abc");
 	});
 });
 
@@ -305,7 +346,22 @@ describe("worker Fastify app", () => {
 		process.env.MONGODB_URI = "mongodb://from-process-env";
 
 		const mockHttp = await createWorkerApp({ MONGODB_URI: uri });
+		// The client must not be constructed while the Worker isolate is starting.
+		expect(KeyvMongoMock.instances).toHaveLength(0);
+		const untouched = await mockHttp.server.inject({
+			method: "GET",
+			url: "/get",
+		});
+		expect(untouched.statusCode).toBe(200);
+		expect(KeyvMongoMock.instances).toHaveLength(0);
+
+		const created = await mockHttp.server.inject({
+			method: "POST",
+			url: "/bins",
+		});
+		expect(created.statusCode).toBe(200);
 		const store = KeyvMongoMock.instances[0];
+		expect(KeyvMongoMock.instances).toHaveLength(1);
 		expect(store?.url).toBe(uri);
 		expect(store?.options).toEqual({
 			collection: "bins",
@@ -313,12 +369,6 @@ describe("worker Fastify app", () => {
 			minPoolSize: 0,
 			serverSelectionTimeoutMS: 5_000,
 		});
-
-		const created = await mockHttp.server.inject({
-			method: "POST",
-			url: "/bins",
-		});
-		expect(created.statusCode).toBe(200);
 		const id = created.json().id as string;
 		expect(store?.data.size).toBeGreaterThan(0);
 
@@ -328,6 +378,22 @@ describe("worker Fastify app", () => {
 		});
 		expect(fetched.statusCode).toBe(200);
 		expect(fetched.json()).toMatchObject({ id });
+
+		const listed = await mockHttp.server.inject({
+			method: "GET",
+			url: "/bins",
+		});
+		expect(listed.statusCode).toBe(200);
+		expect(listed.json().bins).toEqual(
+			expect.arrayContaining([expect.objectContaining({ id })]),
+		);
+
+		const removed = await mockHttp.server.inject({
+			method: "DELETE",
+			url: `/bins/${id}`,
+		});
+		expect(removed.statusCode).toBe(204);
+		await mockHttp.bins.keyv.clear();
 		await mockHttp.close();
 		delete process.env.MONGODB_URI;
 	});
@@ -339,12 +405,14 @@ describe("worker Fastify app", () => {
 
 		expect(workerMongoUri({})).toBe(uri);
 		const mockHttp = await createWorkerApp();
-		expect(KeyvMongoMock.instances[0]?.url).toBe(uri);
+		expect(KeyvMongoMock.instances).toHaveLength(0);
 		const created = await mockHttp.server.inject({
 			method: "POST",
 			url: "/bins",
 		});
 		expect(created.statusCode).toBe(200);
+		expect(KeyvMongoMock.instances).toHaveLength(1);
+		expect(KeyvMongoMock.instances[0]?.url).toBe(uri);
 		await mockHttp.close();
 		delete process.env.MONGODB_URI;
 	});

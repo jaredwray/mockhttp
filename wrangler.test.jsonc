@@ -1,0 +1,6 @@
+{
+	"name": "mockhttp-test",
+	"main": "worker/index.ts",
+	"compatibility_date": "2026-08-27",
+	"compatibility_flags": ["nodejs_compat"]
+}

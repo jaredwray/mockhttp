@@ -9,3 +9,4 @@ trustPolicy: no-downgrade
 allowBuilds:
   '@swc/core': true
   esbuild: true
+  workerd: true

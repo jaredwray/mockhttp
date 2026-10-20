@@ -2,7 +2,10 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MockHttpBins } from "../../../src/mock-http-bins.js";
 import { binsCaptureRoute } from "../../../src/routes/bins/capture.js";
-import { binsManagementRoute } from "../../../src/routes/bins/management.js";
+import {
+	binCaptureUrl,
+	binsManagementRoute,
+} from "../../../src/routes/bins/management.js";
 
 describe("Bin management routes", () => {
 	let fastify: FastifyInstance;
@@ -28,6 +31,51 @@ describe("Bin management routes", () => {
 		expect(body.createdAt).toBeDefined();
 		expect(body.expiresAt).toBeDefined();
 		expect(body.requestCount).toBe(0);
+	});
+
+	it("POST /bins uses the forwarded protocol in the capture URL", async () => {
+		const res = await fastify.inject({
+			method: "POST",
+			url: "/bins",
+			headers: {
+				host: "mockhttp.org",
+				"x-forwarded-proto": "https",
+			},
+		});
+		expect(res.statusCode).toBe(200);
+		const body = res.json();
+		expect(body.url).toBe(`https://mockhttp.org/b/${body.id}`);
+
+		const workerScheme = await fastify.inject({
+			method: "POST",
+			url: "/bins",
+			headers: {
+				host: "mockhttp.org",
+				"x-forwarded-proto": "http",
+				"x-mockhttp-forwarded-proto": "https",
+			},
+		});
+		expect(workerScheme.statusCode).toBe(200);
+		const workerBody = workerScheme.json();
+		expect(workerBody.url).toBe(`https://mockhttp.org/b/${workerBody.id}`);
+	});
+
+	it("builds a capture URL from the forwarded protocol chain", () => {
+		expect(binCaptureUrl("http, https", "http", "mockhttp.org", "abc")).toBe(
+			"https://mockhttp.org/b/abc",
+		);
+		expect(
+			binCaptureUrl(["http", "https"], "http", "mockhttp.org", "abc"),
+		).toBe("https://mockhttp.org/b/abc");
+		expect(binCaptureUrl("ftp", "https", "mockhttp.org", "abc")).toBe(
+			"https://mockhttp.org/b/abc",
+		);
+		expect(binCaptureUrl(undefined, "http", "localhost:3000", "abc")).toBe(
+			"http://localhost:3000/b/abc",
+		);
+		expect(binCaptureUrl("  ", undefined, "localhost", "abc")).toBe(
+			"http://localhost/b/abc",
+		);
 	});
 
 	it("POST /bins returns 500 when Keyv does not store the bin", async () => {

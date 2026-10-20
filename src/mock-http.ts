@@ -12,6 +12,7 @@ import { fastifySwagger } from "@fastify/swagger";
 import { detect } from "detect-port";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { Hookified, type HookifiedOptions } from "hookified";
+import type { BinHealth } from "./bin-store-diagnostics.js";
 import { type CertificateOptions, generateCertificate } from "./certificate.js";
 import { getFastifyConfig } from "./fastify-config.js";
 import { MockHttpBins } from "./mock-http-bins.js";
@@ -40,6 +41,7 @@ import {
 	streamRoute,
 	uuidRoute,
 } from "./routes/dynamic-data/index.js";
+import { checkMemoryBinStore, healthRoute } from "./routes/health.js";
 import {
 	deleteRoute,
 	getRoute,
@@ -237,6 +239,7 @@ export class MockHttp extends Hookified {
 	private _server: FastifyInstance | undefined;
 	private _taps: TapManager = new TapManager();
 	private _bins: MockHttpBins = new MockHttpBins();
+	private _binHealthCheck?: () => Promise<BinHealth>;
 
 	constructor(options?: MockHttpOptions) {
 		super(options?.hookOptions);
@@ -589,6 +592,22 @@ export class MockHttp extends Hookified {
 	}
 
 	/**
+	 * Override the bin storage probe used by `GET /healthz`.
+	 * The default probe reads the in-memory Keyv.
+	 */
+	public set binHealthCheck(check: () => Promise<BinHealth>) {
+		this._binHealthCheck = check;
+	}
+
+	/** Whether bin storage can serve a read or a MongoDB ping. */
+	public checkBinStore(): Promise<BinHealth> {
+		if (this._binHealthCheck) {
+			return this._binHealthCheck();
+		}
+		return checkMemoryBinStore(this._bins.keyv);
+	}
+
+	/**
 	 * Register plugins and routes without listening. Use `inject()` against
 	 * `server`, or call `start()` to bind a port.
 	 */
@@ -694,6 +713,8 @@ export class MockHttp extends Hookified {
 			if (this._apiDocs) {
 				await this.registerSwagger();
 			}
+
+			await this.server.register(healthRoute(() => this.checkBinStore()));
 
 			const {
 				httpMethods,

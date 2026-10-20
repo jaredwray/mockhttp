@@ -137,7 +137,7 @@ Register image routes (jpeg, png, svg, webp) with content negotiation support.
 
 #### `async registerBinRoutes(fastifyInstance?)`
 
-Register the request bin routes — management at `/bins` and capture at `/b/:id`.
+Register the request bin routes. Management is at `/bins` and capture is at `/b/:id`. `GET /healthz` reports whether bin storage is reachable.
 
 ## Bins (Request Capture)
 

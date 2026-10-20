@@ -25,6 +25,8 @@ The Worker starts the same MockHTTP app as Node.js, with a few options set for t
 
 The rate limiter key is the `cf-connecting-ip` header, then the first address in `x-forwarded-for`, then `unknown`. A limited request returns `429` with `retry-after: 60`. That limiter is shared across isolates.
 
+`wrangler.jsonc` sets `vars` to an empty object. A deploy then stays in sync with the dashboard. `MONGODB_URI` is a secret. Do not put its value in the file.
+
 Bins stay in memory in the isolate when `MONGODB_URI` is not set. A bin from one request can be absent when a different isolate handles the next request. When `MONGODB_URI` is set, bins are stored in MongoDB. The client connects on the first bin operation. It does not connect while the isolate starts.
 
 Percent-encode reserved characters in the username and the password. `@` is `%40`. An unencoded `@` makes the driver throw `Invalid connection string` before it contacts Atlas.

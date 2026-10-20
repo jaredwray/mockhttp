@@ -174,6 +174,42 @@ describe("bin store diagnostics", () => {
 			host: "example.invalid",
 		});
 		expect(JSON.stringify(emptyUser)).not.toContain("secret");
+
+		const query = uriDiagnostics(
+			"mongodb://user:pass@cluster.example.invalid/db?appName=ops@example.com",
+		);
+		expect(query.host).toBe("cluster.example.invalid");
+		expect(query.username).toBe("user");
+		expect(query.passwordLength).toBe(4);
+		expect(query.passwordReserved).toEqual([]);
+		expect(query.atCount).toBe(2);
+		expect(JSON.stringify(query)).not.toContain("ops@example.com");
+
+		expect(
+			uriDiagnostics("mongodb://user:pa$ss@cluster.example.invalid/db")
+				.passwordReserved,
+		).toEqual(["$"]);
+
+		expect(
+			uriDiagnostics("mongodb://user:pass@localhost/db?appName=ops@example.com")
+				.host,
+		).toBe("localhost");
+		expect(
+			uriDiagnostics(
+				"mongodb://user:pass@127.0.0.1:27017/db?appName=ops@example.com",
+			).host,
+		).toBe("127.0.0.1:27017");
+		expect(
+			uriDiagnostics("mongodb://user:pass@[::1]/db?appName=ops@example.com")
+				.host,
+		).toBe("[::1]");
+
+		const marks = uriDiagnostics("mongodb://user:@@@@@cluster.example.invalid");
+		expect(marks.atCount).toBe(5);
+		expect(marks.host).toBe("cluster.example.invalid");
+		expect(marks.passwordLength).toBeNull();
+		expect(marks.passwordReserved).toEqual([]);
+		expect(JSON.stringify(marks)).not.toContain("@@@@");
 	});
 
 	it("adds a percent-encoding hint for parser failures", () => {

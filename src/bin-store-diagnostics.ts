@@ -59,10 +59,10 @@ export type UriDiagnostics = {
 	passwordHasPercent: boolean;
 };
 
-const PASSWORD_RESERVED = ["@", ":", "/", "?", "#", "[", "]"] as const;
+const PASSWORD_RESERVED = ["@", ":", "/", "?", "#", "[", "]", "$"] as const;
 
 const ENCODING_HINT =
-	"Percent-encode reserved characters in the username and password (@ : / ? # [ ]).";
+	"Percent-encode reserved characters in the username and password (@ : / ? # [ ] $).";
 
 const loggedPhases = new WeakMap<object, Set<string>>();
 
@@ -128,39 +128,90 @@ function hasWrappedQuotes(uri: string): boolean {
 	);
 }
 
-function userinfoBeforeLastAt(uri: string): string | null {
-	const at = uri.lastIndexOf("@");
-	if (at < 0) {
-		return null;
+function looksLikeHost(value: string): boolean {
+	if (value === "localhost" || /^localhost:\d+$/.test(value)) {
+		return true;
 	}
-	const before = uri.slice(0, at).replace(/^['"\s]+/, "");
-	const scheme = before.match(/^[a-z][a-z0-9+.-]*:\/\//i);
-	return scheme ? before.slice(scheme[0].length) : before;
+	if (/^\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?$/.test(value)) {
+		return true;
+	}
+	if (/^\[[0-9a-fA-F:.]+\](?::\d+)?$/.test(value)) {
+		return true;
+	}
+	const name = value.replace(/:\d+$/, "");
+	return name.includes(".") && /^[A-Za-z0-9._-]+$/.test(name);
 }
 
 /**
- * Host is the text after the last `@` and before the first `/` or `?`.
+ * Keep the authority section. Stop at the `/` or `?` that follows the host.
+ * An `@` in the query string or the path is outside that section.
+ */
+function authorityBody(body: string): string {
+	const firstAt = body.indexOf("@");
+	if (firstAt < 0) {
+		return body;
+	}
+	for (let i = firstAt + 1; i < body.length; i++) {
+		const mark = body[i];
+		if (mark !== "/" && mark !== "?") {
+			continue;
+		}
+		const at = body.lastIndexOf("@", i - 1);
+		const between = body.slice(at + 1, i);
+		if (looksLikeHost(between)) {
+			return body.slice(0, i);
+		}
+	}
+	return body;
+}
+
+function userinfoAndHost(uri: string): {
+	userinfo: string | null;
+	host: string | null;
+} {
+	const cleaned = uri.trim().replace(/^['"]+|['"]+$/g, "");
+	const scheme = cleaned.match(/^[a-z][a-z0-9+.-]*:\/\//i);
+	const body = scheme ? cleaned.slice(scheme[0].length) : cleaned;
+	const authority = authorityBody(body);
+	const at = authority.lastIndexOf("@");
+	if (at < 0) {
+		return { userinfo: null, host: null };
+	}
+	const host = authority.slice(at + 1);
+	return {
+		userinfo: authority.slice(0, at),
+		host: host.length > 0 ? host : null,
+	};
+}
+
+/**
+ * Host is the text after the last `@` in the authority section.
+ * The search stops at the first `/` or `?` after that host.
  * Username is the text before the first `:` in the userinfo.
  * The password is not returned.
+ * When every password character is reserved, the length and the list stay empty.
+ * Those two values rebuild the password.
  */
 export function uriDiagnostics(uri: string): UriDiagnostics {
-	const at = uri.lastIndexOf("@");
-	const after = at < 0 ? "" : uri.slice(at + 1);
-	const cut = after.search(/[/?]/);
-	const hostText = cut < 0 ? after : after.slice(0, cut);
-	const userinfo = userinfoBeforeLastAt(uri);
+	const parts = userinfoAndHost(uri);
 	let username: string | null = null;
 	let password: string | null = null;
-	if (userinfo !== null) {
-		const colon = userinfo.indexOf(":");
+	if (parts.userinfo !== null) {
+		const colon = parts.userinfo.indexOf(":");
 		if (colon < 0) {
-			username = userinfo.length > 0 ? userinfo : null;
+			username = parts.userinfo.length > 0 ? parts.userinfo : null;
 		} else {
-			username = userinfo.slice(0, colon) || null;
-			password = userinfo.slice(colon + 1);
+			username = parts.userinfo.slice(0, colon) || null;
+			password = parts.userinfo.slice(colon + 1);
 		}
 	}
 	const secret = password;
+	const onlyReserved =
+		secret !== null &&
+		secret.length > 0 &&
+		[...secret].every((char) =>
+			(PASSWORD_RESERVED as readonly string[]).includes(char),
+		);
 	return {
 		length: uri.length,
 		leadingWhitespace: /^\s/.test(uri),
@@ -168,11 +219,11 @@ export function uriDiagnostics(uri: string): UriDiagnostics {
 		newline: /[\r\n]/.test(uri),
 		wrappedQuotes: hasWrappedQuotes(uri),
 		atCount: uri.split("@").length - 1,
-		host: hostText.length > 0 ? hostText : null,
+		host: parts.host,
 		username,
-		passwordLength: secret === null ? null : secret.length,
+		passwordLength: secret === null || onlyReserved ? null : secret.length,
 		passwordReserved:
-			secret === null
+			secret === null || onlyReserved
 				? []
 				: PASSWORD_RESERVED.filter((char) => secret.includes(char)),
 		passwordHasPercent: secret?.includes("%") === true,

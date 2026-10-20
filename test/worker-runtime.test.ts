@@ -153,10 +153,27 @@ describe("worker srv and unencoded password under workerd", () => {
 			const health = await worker.fetch("https://mockhttp.org/healthz");
 			const body = await health.text();
 			expect(health.status, body).toBe(503);
+			const report = JSON.parse(body) as {
+				bins: {
+					error: { message: string };
+					uri: {
+						host: string;
+						username: string;
+						passwordLength: number;
+						atCount: number;
+					};
+				};
+			};
 			expect(body).toContain('"scheme":"mongodb+srv"');
-			expect(body).not.toContain("Invalid connection string");
+			expect(report.bins.error.message).not.toContain(
+				"Invalid connection string",
+			);
+			expect(report.bins.error.message).not.toContain("Percent-encode");
+			expect(report.bins.uri.host).toBe("cluster0.example.invalid");
+			expect(report.bins.uri.username).toBe("user");
+			expect(report.bins.uri.passwordLength).toBe(4);
+			expect(report.bins.uri.atCount).toBe(1);
 			expect(body).not.toContain("user:pass");
-			expect(body).not.toContain("cluster0");
 			expect(body).not.toContain("mongodb+srv://");
 		} finally {
 			await worker.stop();
@@ -177,10 +194,27 @@ describe("worker srv and unencoded password under workerd", () => {
 			const health = await worker.fetch("https://mockhttp.org/healthz");
 			const body = await health.text();
 			expect(health.status, body).toBe(503);
-			expect(body).toContain("Invalid connection string");
-			expect(body).toContain("Percent-encode");
+			const report = JSON.parse(body) as {
+				bins: {
+					error: { name: string; message: string };
+					uri: {
+						host: string;
+						username: string;
+						passwordLength: number;
+						passwordReserved: string[];
+						atCount: number;
+					};
+				};
+			};
+			expect(report.bins.error.name).toBe("MongoParseError");
+			expect(report.bins.error.message).toContain("Invalid connection string");
+			expect(report.bins.error.message).toContain("Percent-encode");
+			expect(report.bins.uri.atCount).toBe(2);
+			expect(report.bins.uri.host).toBe("cluster0.example.invalid");
+			expect(report.bins.uri.username).toBe("user");
+			expect(report.bins.uri.passwordLength).toBe(8);
+			expect(report.bins.uri.passwordReserved).toEqual(["@"]);
 			expect(body).not.toContain("p@ssw");
-			expect(body).not.toContain("cluster0");
 			expect(body).not.toContain("mongodb+srv://");
 		} finally {
 			await worker.stop();

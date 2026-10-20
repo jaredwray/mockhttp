@@ -37,17 +37,48 @@ export async function checkMemoryBinStore(keyv: {
 	}
 }
 
+const uriDiagnosticsSchema = {
+	type: "object",
+	properties: {
+		length: { type: "integer" },
+		leadingWhitespace: { type: "boolean" },
+		trailingWhitespace: { type: "boolean" },
+		newline: { type: "boolean" },
+		wrappedQuotes: { type: "boolean" },
+		atCount: { type: "integer" },
+		host: { type: ["string", "null"] },
+		username: { type: ["string", "null"] },
+		passwordLength: { type: ["integer", "null"] },
+		passwordReserved: { type: "array", items: { type: "string" } },
+		passwordHasPercent: { type: "boolean" },
+	},
+	required: [
+		"length",
+		"leadingWhitespace",
+		"trailingWhitespace",
+		"newline",
+		"wrappedQuotes",
+		"atCount",
+		"host",
+		"username",
+		"passwordLength",
+		"passwordReserved",
+		"passwordHasPercent",
+	],
+};
+
 const binHealthFields = {
 	store: { type: "string", enum: ["mongo", "memory"] },
 	connected: { type: "boolean" },
 	latencyMs: { type: "integer" },
 	uriPresent: { type: "boolean" },
 	scheme: { type: ["string", "null"], enum: ["mongodb", "mongodb+srv", null] },
+	uri: uriDiagnosticsSchema,
 };
 
 const healthSchema: FastifySchema = {
 	description:
-		"Report whether bin storage is reachable. MongoDB failures include the driver error with credentials removed. The URI, username, password, and host are never returned.",
+		"Report whether bin storage is reachable. MongoDB failures include the driver error. The password and the full URI are never returned. A MongoDB result can include the host, the username, the URI length, and the password length.",
 	tags: ["Health"],
 	response: {
 		200: {

@@ -1,8 +1,9 @@
 /**
  * Diagnostics for the bin store.
- * Logs and HTTP bodies can show the error name and a safe message.
- * They can show if the URI is present.
- * They cannot show the URI, the username, the password, or the host.
+ * Logs can show the error name, a safe message, and URI shape flags.
+ * Logs cannot show the URI, the username, the password, or the host.
+ * `GET /healthz` can show the host, the username, and the password length.
+ * It cannot show the password or the full URI.
  */
 
 export type BinStoreScheme = "mongodb" | "mongodb+srv";
@@ -22,6 +23,7 @@ export type BinHealth =
 				latencyMs: number;
 				uriPresent: boolean;
 				scheme: BinStoreScheme | null;
+				uri?: UriDiagnostics;
 			};
 	  }
 	| {
@@ -31,6 +33,7 @@ export type BinHealth =
 				connected: false;
 				uriPresent: boolean;
 				scheme: BinStoreScheme | null;
+				uri?: UriDiagnostics;
 				error: BinStoreErrorInfo;
 			};
 	  };
@@ -41,8 +44,25 @@ export type UriShape = {
 	extraAt: boolean;
 };
 
+/** Redacted URI facts for `GET /healthz`. No password and no full URI. */
+export type UriDiagnostics = {
+	length: number;
+	leadingWhitespace: boolean;
+	trailingWhitespace: boolean;
+	newline: boolean;
+	wrappedQuotes: boolean;
+	atCount: number;
+	host: string | null;
+	username: string | null;
+	passwordLength: number | null;
+	passwordReserved: string[];
+	passwordHasPercent: boolean;
+};
+
+const PASSWORD_RESERVED = ["@", ":", "/", "?", "#", "[", "]", "$"] as const;
+
 const ENCODING_HINT =
-	"Percent-encode reserved characters in the username and password (@ : / ? # [ ]).";
+	"Percent-encode reserved characters in the username and password (@ : / ? # [ ] $).";
 
 const loggedPhases = new WeakMap<object, Set<string>>();
 
@@ -95,6 +115,118 @@ export function uriShape(uri: string): UriShape {
 			uri.endsWith('"') ||
 			uri.endsWith("'"),
 		extraAt: uri.split("@").length - 1 > 1,
+	};
+}
+
+function hasWrappedQuotes(uri: string): boolean {
+	const trimmed = uri.trim();
+	return (
+		trimmed.startsWith('"') ||
+		trimmed.startsWith("'") ||
+		trimmed.endsWith('"') ||
+		trimmed.endsWith("'")
+	);
+}
+
+function looksLikeHost(value: string): boolean {
+	if (value === "localhost" || /^localhost:\d+$/.test(value)) {
+		return true;
+	}
+	if (/^\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?$/.test(value)) {
+		return true;
+	}
+	if (/^\[[0-9a-fA-F:.]+\](?::\d+)?$/.test(value)) {
+		return true;
+	}
+	const name = value.replace(/:\d+$/, "");
+	return name.includes(".") && /^[A-Za-z0-9._-]+$/.test(name);
+}
+
+/**
+ * Keep the authority section. Stop at the `/` or `?` that follows the host.
+ * An `@` in the query string or the path is outside that section.
+ */
+function authorityBody(body: string): string {
+	const firstAt = body.indexOf("@");
+	if (firstAt < 0) {
+		return body;
+	}
+	for (let i = firstAt + 1; i < body.length; i++) {
+		const mark = body[i];
+		if (mark !== "/" && mark !== "?") {
+			continue;
+		}
+		const at = body.lastIndexOf("@", i - 1);
+		const between = body.slice(at + 1, i);
+		if (looksLikeHost(between)) {
+			return body.slice(0, i);
+		}
+	}
+	return body;
+}
+
+function userinfoAndHost(uri: string): {
+	userinfo: string | null;
+	host: string | null;
+} {
+	const cleaned = uri.trim().replace(/^['"]+|['"]+$/g, "");
+	const scheme = cleaned.match(/^[a-z][a-z0-9+.-]*:\/\//i);
+	const body = scheme ? cleaned.slice(scheme[0].length) : cleaned;
+	const authority = authorityBody(body);
+	const at = authority.lastIndexOf("@");
+	if (at < 0) {
+		return { userinfo: null, host: null };
+	}
+	const host = authority.slice(at + 1);
+	return {
+		userinfo: authority.slice(0, at),
+		host: host.length > 0 ? host : null,
+	};
+}
+
+/**
+ * Host is the text after the last `@` in the authority section.
+ * The search stops at the first `/` or `?` after that host.
+ * Username is the text before the first `:` in the userinfo.
+ * The password is not returned.
+ * When every password character is reserved, the length and the list stay empty.
+ * Those two values rebuild the password.
+ */
+export function uriDiagnostics(uri: string): UriDiagnostics {
+	const parts = userinfoAndHost(uri);
+	let username: string | null = null;
+	let password: string | null = null;
+	if (parts.userinfo !== null) {
+		const colon = parts.userinfo.indexOf(":");
+		if (colon < 0) {
+			username = parts.userinfo.length > 0 ? parts.userinfo : null;
+		} else {
+			username = parts.userinfo.slice(0, colon) || null;
+			password = parts.userinfo.slice(colon + 1);
+		}
+	}
+	const secret = password;
+	const onlyReserved =
+		secret !== null &&
+		secret.length > 0 &&
+		[...secret].every((char) =>
+			(PASSWORD_RESERVED as readonly string[]).includes(char),
+		);
+	return {
+		length: uri.length,
+		leadingWhitespace: /^\s/.test(uri),
+		trailingWhitespace: /\s$/.test(uri),
+		newline: /[\r\n]/.test(uri),
+		wrappedQuotes: hasWrappedQuotes(uri),
+		atCount: uri.split("@").length - 1,
+		host: parts.host,
+		username,
+		passwordLength: secret === null || onlyReserved ? null : secret.length,
+		passwordReserved:
+			secret === null || onlyReserved
+				? []
+				: PASSWORD_RESERVED.filter((char) => secret.includes(char)),
+		passwordHasPercent: secret?.includes("%") === true,
 	};
 }
 
@@ -174,13 +306,14 @@ export function redactSecrets(message: string, uri?: string): string {
 	return out;
 }
 
-function withEncodingHint(
-	message: string,
-	shape: UriShape | undefined,
-): string {
-	const needsHint =
-		shape?.extraAt === true ||
-		/invalid connection string|unescaped characters/i.test(message);
+/**
+ * Add the encode hint only when the driver message is already a parse error.
+ * A DNS error or a scheme error keeps its own text.
+ */
+function withEncodingHint(message: string): string {
+	const needsHint = /invalid connection string|unescaped characters/i.test(
+		message,
+	);
 	if (!needsHint || message.includes("Percent-encode")) {
 		return message;
 	}
@@ -205,10 +338,9 @@ export function redactStoreError(
 		typeof codeValue === "string" || typeof codeValue === "number"
 			? codeValue
 			: null;
-	const shape = uri ? uriShape(uri) : undefined;
 	return {
 		name,
-		message: withEncodingHint(redactSecrets(raw, uri), shape),
+		message: withEncodingHint(redactSecrets(raw, uri)),
 		code,
 	};
 }

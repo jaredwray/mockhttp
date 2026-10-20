@@ -38,8 +38,23 @@ describe("mongo bin store ping", () => {
 		}
 		const body = JSON.stringify(report);
 		expect(body).not.toContain("p@ssw");
-		expect(body).not.toContain("cluster0");
 		expect(body).not.toContain(uri);
+		if (report.status === "error") {
+			expect(report.bins.uri).toEqual({
+				length: uri.length,
+				leadingWhitespace: false,
+				trailingWhitespace: false,
+				newline: false,
+				wrappedQuotes: false,
+				atCount: 2,
+				host: "cluster0.example.invalid",
+				username: "user",
+				passwordLength: 8,
+				passwordReserved: ["@"],
+				passwordHasPercent: false,
+			});
+			expect(report.bins.error.message).not.toContain("cluster0");
+		}
 		expect(errorLog.mock.calls.join("\n")).not.toContain("p@ssw");
 		expect(errorLog.mock.calls.join("\n")).not.toContain("cluster0");
 	});
@@ -68,7 +83,11 @@ describe("mongo bin store ping", () => {
 		});
 		if (report.status === "ok") {
 			expect(report.bins.latencyMs).toEqual(expect.any(Number));
+			expect(report.bins.uri?.host).toBe("cluster0.example.invalid:27017");
+			expect(report.bins.uri?.username).toBe("user");
+			expect(report.bins.uri?.passwordLength).toBe(4);
 		}
+		expect(JSON.stringify(report)).not.toContain("user:pass");
 		expect(errorLog.mock.calls.join("\n")).toContain("healthz.close");
 		expect(errorLog.mock.calls.join("\n")).not.toContain("cluster0");
 		expect(errorLog.mock.calls.join("\n")).not.toContain("user:pass");
@@ -96,8 +115,37 @@ describe("mongo bin store ping", () => {
 		if (report.status === "error") {
 			expect(report.bins.error.code).toBe("ENOTFOUND");
 			expect(report.bins.error.message).toContain("querySrv");
+			expect(report.bins.error.message).not.toContain(
+				"Invalid connection string",
+			);
+			expect(report.bins.error.message).not.toContain("Percent-encode");
 			expect(report.bins.error.message).not.toContain("cluster0");
+			expect(report.bins.uri?.host).toBe("cluster0.example.invalid");
+			expect(report.bins.uri?.passwordHasPercent).toBe(false);
 		}
+	});
+
+	it("passes the URI to MongoClient without trimming or extra characters", async () => {
+		const uri = "mongodb://user:pass@cluster.example.invalid/mockhttp\n";
+		let seen: string | undefined;
+		vi.spyOn(MongoClient.prototype, "db").mockImplementation(function (
+			this: MongoClient,
+		) {
+			seen = (this as unknown as { s: { url: string } }).s.url;
+			return {
+				command: vi.fn().mockResolvedValue({ ok: 1 }),
+			} as never;
+		});
+		vi.spyOn(MongoClient.prototype, "close").mockResolvedValue();
+		const report = await binStoreRuntime.ping(uri);
+		expect(seen).toBe(uri);
+		expect(report.status).toBe("ok");
+		if (report.status === "ok") {
+			expect(report.bins.uri?.newline).toBe(true);
+			expect(report.bins.uri?.trailingWhitespace).toBe(true);
+			expect(report.bins.uri?.length).toBe(uri.length);
+		}
+		expect(JSON.stringify(report)).not.toContain("user:pass");
 	});
 
 	it("still throws the first socket error that has no listener", () => {

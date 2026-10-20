@@ -9,6 +9,7 @@ import {
 	mongoUriFacts,
 	redactStoreError,
 	toSafeStoreError,
+	uriDiagnostics,
 	uriShape,
 } from "../src/bin-store-diagnostics.js";
 import type { MockHttpBinsOptions } from "../src/mock-http-bins.js";
@@ -277,6 +278,7 @@ export async function pingMongoBinStore(uri: string): Promise<BinHealth> {
 				latencyMs: Date.now() - started,
 				uriPresent: facts.present,
 				scheme: facts.scheme,
+				uri: uriDiagnostics(uri),
 			},
 		};
 	} catch (error) {
@@ -288,6 +290,7 @@ export async function pingMongoBinStore(uri: string): Promise<BinHealth> {
 				connected: false,
 				uriPresent: facts.present,
 				scheme: facts.scheme,
+				uri: uriDiagnostics(uri),
 				error: redactStoreError(error, uri),
 			},
 		};

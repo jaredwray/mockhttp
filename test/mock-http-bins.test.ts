@@ -297,7 +297,7 @@ describe("MockHttpBins", () => {
 			const keyv = new Keyv({ store: new Map() });
 			vi.spyOn(keyv, "set").mockRejectedValue(
 				new BinStoreFailure(
-					"Invalid connection string. Percent-encode reserved characters in the username and password (@ : / ? # [ ]).",
+					"Invalid connection string. Percent-encode reserved characters in the username and password (@ : / ? # [ ] $).",
 				),
 			);
 			const failing = new MockHttpBins({ keyv });

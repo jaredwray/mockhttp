@@ -15,13 +15,14 @@ import type { MockHttpBinsOptions } from "../src/mock-http-bins.js";
 
 export const BIN_STORE_PING_TIMEOUT_MS = 2_000;
 
-const SOCKET_PROXY_FAILURE = "proxy request failed";
 let socketProxyGuardInstalled = false;
 
 /**
- * workerd reports a refused socket twice. The driver handles the first emit.
- * The second emit has no listener, so the isolate aborts.
- * Keep that second emit inside the process.
+ * workerd `node:net` emits `error` twice for one failed socket.
+ * `cleanupAfterDestroy` emits the first time. The stream `destroy` callback emits again.
+ * The driver listens with `once`, so the second emit has no listener and the isolate aborts.
+ * The message differs for a proxy failure, a TLS failure, or a reset.
+ * Drop each `error` that has no listener. `tls.TLSSocket` uses this `emit`.
  */
 export function installSocketProxyGuard(): void {
 	if (socketProxyGuardInstalled) {
@@ -37,20 +38,11 @@ export function installSocketProxyGuard(): void {
 		event: string | symbol,
 		...args: unknown[]
 	) {
-		if (
-			event === "error" &&
-			this.listenerCount("error") === 0 &&
-			isSocketProxyFailure(args[0])
-		) {
+		if (event === "error" && this.listenerCount("error") === 0) {
 			return false;
 		}
 		return emit.call(this, event, ...args);
 	};
-}
-
-function isSocketProxyFailure(error: unknown): boolean {
-	const message = error instanceof Error ? error.message : String(error ?? "");
-	return message.includes(SOCKET_PROXY_FAILURE);
 }
 
 installSocketProxyGuard();

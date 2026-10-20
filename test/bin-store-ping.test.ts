@@ -100,23 +100,23 @@ describe("mongo bin store ping", () => {
 		}
 	});
 
-	it("keeps a second socket proxy error inside the process", () => {
+	it("drops a second socket error that has no listener", () => {
 		installSocketProxyGuard();
 		const socket = new net.Socket();
 		const proxy = new Error(
 			"proxy request failed, cannot connect to the specified address",
 		);
+		const seen: unknown[] = [];
+		socket.once("error", (error: unknown) => {
+			seen.push(error);
+		});
+		expect(socket.emit("error", proxy)).toBe(true);
 		expect(() => {
 			socket.emit("error", proxy);
 		}).not.toThrow();
 		expect(() => {
-			socket.emit("error", new Error("other failure"));
-		}).toThrow(/other failure/);
-		const seen: unknown[] = [];
-		socket.on("error", (error: unknown) => {
-			seen.push(error);
-		});
-		socket.emit("error", proxy);
+			socket.emit("error", new Error("TLS handshake failed"));
+		}).not.toThrow();
 		expect(seen).toEqual([proxy]);
 		socket.destroy();
 	});

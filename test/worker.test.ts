@@ -571,9 +571,10 @@ describe("worker Fastify app", () => {
 	});
 
 	it("uses the request MONGODB_URI when it differs from startup", async () => {
-		const startup = "mongodb://user:startup-pass@cluster.mongodb.net/mockhttp";
+		const startup =
+			"mongodb://user:startup-pass@cluster.example.invalid/mockhttp";
 		const requestUri =
-			"mongodb+srv://user:request-pass@cluster.mongodb.net/mockhttp";
+			"mongodb+srv://user:request-pass@cluster.example.invalid/mockhttp";
 		const errorLog = vi
 			.spyOn(console, "error")
 			.mockImplementation(() => undefined);

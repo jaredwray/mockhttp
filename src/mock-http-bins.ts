@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import Keyv from "keyv";
 import type { Bin, CapturedRequest } from "./bin-store.js";
+import { BinStoreFailure, isBinStoreFailure } from "./bin-store-diagnostics.js";
 
 /**
  * One bin and its captured requests, stored as a single Keyv value.
@@ -226,6 +227,9 @@ export class MockHttpBins {
 				this.ttlFor(doc.bin),
 			);
 		} catch (cause) {
+			if (isBinStoreFailure(cause)) {
+				throw new BinStoreFailure(`${message}. ${cause.message}`, cause);
+			}
 			throw new Error(message, { cause });
 		}
 		if (!saved) {

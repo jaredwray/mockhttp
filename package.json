@@ -86,6 +86,7 @@
 		"hookified": "^3.0.4",
 		"html-escaper": "^3.0.3",
 		"keyv": "^6.1.0",
+		"mongodb": "7.7.0",
 		"pino": "^10.4.0",
 		"pino-pretty": "^13.2.0"
 	},

@@ -12,6 +12,9 @@ const { handleAsNodeRequestMock, KeyvMongoMock } = vi.hoisted(() => {
 			url?: string | Record<string, unknown>,
 			options?: Record<string, unknown>,
 		) {
+			if (KeyvMongoMock.failConstruct) {
+				throw KeyvMongoMock.failConstruct;
+			}
 			if (typeof url === "string") {
 				this.url = url;
 				this.options = options;
@@ -20,13 +23,49 @@ const { handleAsNodeRequestMock, KeyvMongoMock } = vi.hoisted(() => {
 				this.options = url;
 			}
 			KeyvMongoMock.instances.push(this);
+			if (KeyvMongoMock.failConnect) {
+				this.connect = Promise.reject(KeyvMongoMock.failConnect);
+				void this.connect.catch(() => undefined);
+			} else if (KeyvMongoMock.resolveConnect) {
+				this.connect = Promise.resolve("ok");
+			}
+			if (KeyvMongoMock.useDisconnect) {
+				this.disconnect = async () => {
+					KeyvMongoMock.disconnects += 1;
+					if (KeyvMongoMock.failDisconnect) {
+						throw new Error("disconnect failed");
+					}
+				};
+			}
+			if (KeyvMongoMock.useOn) {
+				const listeners: Array<(error: unknown) => void> = [];
+				this.on = (event, handler) => {
+					if (event === "error") {
+						listeners.push(handler);
+					}
+				};
+				this.emitError = (error) => {
+					for (const listener of listeners) {
+						listener(error);
+					}
+				};
+			}
 		}
 
 		async get(key: string): Promise<unknown> {
+			if (KeyvMongoMock.failGet) {
+				throw KeyvMongoMock.failGet;
+			}
 			return this.data.get(key);
 		}
 
 		async set(key: string, value: unknown): Promise<boolean> {
+			if (KeyvMongoMock.failSet) {
+				throw KeyvMongoMock.failSet;
+			}
+			if (KeyvMongoMock.failSetFalse) {
+				return false;
+			}
 			this.data.set(key, value);
 			return true;
 		}
@@ -40,10 +79,30 @@ const { handleAsNodeRequestMock, KeyvMongoMock } = vi.hoisted(() => {
 		}
 
 		async *iterator(): AsyncGenerator<[string, unknown]> {
+			if (KeyvMongoMock.failIterator) {
+				throw KeyvMongoMock.failIterator;
+			}
 			for (const entry of this.data) {
 				yield entry;
 			}
 		}
+
+		static failConstruct: Error | undefined;
+		static failGet: Error | undefined;
+		static failSet: Error | undefined;
+		static failSetFalse = false;
+		static failIterator: Error | undefined;
+		static failConnect: Error | undefined;
+		static resolveConnect = false;
+		static useOn = false;
+		static useDisconnect = true;
+		static failDisconnect = false;
+		static disconnects = 0;
+
+		connect?: Promise<unknown>;
+		on?: (event: string, handler: (error: unknown) => void) => void;
+		emitError?: (error: unknown) => void;
+		disconnect?: () => Promise<void>;
 	}
 
 	return {
@@ -65,14 +124,17 @@ const {
 	applyRateLimit,
 	bindPublicAssets,
 	clientIp,
+	applyWorkerMongoEnv,
 	createWorkerApp,
 	handleWorkerFetch,
 	listenWorkerApp,
 	requestWithPublicProtocol,
 	workerMockHttpOptions,
+	workerMongoState,
 	workerMongoUri,
 	workerRuntime,
 } = await import("../worker/app.js");
+const { binStoreRuntime } = await import("../worker/bin-store.js");
 
 const originalDispatch = workerRuntime.dispatch;
 
@@ -80,6 +142,18 @@ describe("cloudflare worker", () => {
 	const dispatch = vi.fn();
 
 	afterEach(() => {
+		KeyvMongoMock.failConstruct = undefined;
+		KeyvMongoMock.failGet = undefined;
+		KeyvMongoMock.failSet = undefined;
+		KeyvMongoMock.failSetFalse = false;
+		KeyvMongoMock.failIterator = undefined;
+		KeyvMongoMock.failConnect = undefined;
+		KeyvMongoMock.resolveConnect = false;
+		KeyvMongoMock.useOn = false;
+		KeyvMongoMock.useDisconnect = true;
+		KeyvMongoMock.failDisconnect = false;
+		KeyvMongoMock.disconnects = 0;
+		workerMongoState.uri = undefined;
 		dispatch.mockReset();
 		dispatch.mockResolvedValue(new Response("ok", { status: 200 }));
 		handleAsNodeRequestMock.mockReset();
@@ -271,6 +345,22 @@ describe("cloudflare worker", () => {
 });
 
 describe("worker Fastify app", () => {
+	afterEach(() => {
+		KeyvMongoMock.failConstruct = undefined;
+		KeyvMongoMock.failGet = undefined;
+		KeyvMongoMock.failSet = undefined;
+		KeyvMongoMock.failSetFalse = false;
+		KeyvMongoMock.failIterator = undefined;
+		KeyvMongoMock.failConnect = undefined;
+		KeyvMongoMock.resolveConnect = false;
+		KeyvMongoMock.useOn = false;
+		KeyvMongoMock.useDisconnect = true;
+		KeyvMongoMock.failDisconnect = false;
+		KeyvMongoMock.disconnects = 0;
+		workerMongoState.uri = undefined;
+		delete process.env.MONGODB_URI;
+	});
+
 	it("serves mock endpoints without listening", async () => {
 		const mockHttp = await createWorkerApp();
 		const response = await mockHttp.server.inject({
@@ -415,5 +505,246 @@ describe("worker Fastify app", () => {
 		expect(KeyvMongoMock.instances[0]?.url).toBe(uri);
 		await mockHttp.close();
 		delete process.env.MONGODB_URI;
+	});
+
+	it("reports in-memory bin storage from /healthz", async () => {
+		delete process.env.MONGODB_URI;
+		const mockHttp = await createWorkerApp();
+		const health = await mockHttp.server.inject({
+			method: "GET",
+			url: "/healthz",
+		});
+		expect(health.statusCode).toBe(200);
+		expect(health.json()).toMatchObject({
+			status: "ok",
+			bins: {
+				store: "memory",
+				connected: true,
+				uriPresent: false,
+				scheme: null,
+			},
+		});
+		expect(health.json().bins.latencyMs).toEqual(expect.any(Number));
+		const spec = await mockHttp.server.inject({
+			method: "GET",
+			url: "/openapi.json",
+		});
+		expect(spec.json().paths["/healthz"]).toBeDefined();
+		await mockHttp.close();
+	});
+
+	it("returns a redacted mongo ping failure from /healthz", async () => {
+		const uri = "mongodb+srv://user:pass@cluster.mongodb.net/mockhttp";
+		const ping = vi.spyOn(binStoreRuntime, "ping").mockResolvedValue({
+			status: "error",
+			bins: {
+				store: "mongo",
+				connected: false,
+				uriPresent: true,
+				scheme: "mongodb+srv",
+				error: {
+					name: "MongoServerSelectionError",
+					message: "server selection failed",
+					code: "ENOTFOUND",
+				},
+			},
+		});
+		const mockHttp = await createWorkerApp({ MONGODB_URI: uri });
+		const health = await mockHttp.server.inject({
+			method: "GET",
+			url: "/healthz",
+		});
+		expect(ping).toHaveBeenCalledWith(uri);
+		expect(health.statusCode).toBe(503);
+		expect(health.json()).toMatchObject({
+			status: "error",
+			bins: {
+				store: "mongo",
+				connected: false,
+				scheme: "mongodb+srv",
+				uriPresent: true,
+			},
+		});
+		expect(JSON.stringify(health.json())).not.toContain(uri);
+		ping.mockRestore();
+		await mockHttp.close();
+	});
+
+	it("uses the request MONGODB_URI when it differs from startup", async () => {
+		const startup = "mongodb://user:startup-pass@cluster.mongodb.net/mockhttp";
+		const requestUri =
+			"mongodb+srv://user:request-pass@cluster.mongodb.net/mockhttp";
+		const errorLog = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
+		KeyvMongoMock.instances.length = 0;
+		const mockHttp = await createWorkerApp({ MONGODB_URI: startup });
+		await handleWorkerFetch(
+			new Request("https://mockhttp.org/bins"),
+			{ MONGODB_URI: requestUri },
+			vi.fn().mockResolvedValue(new Response("ok")),
+		);
+		const created = await mockHttp.server.inject({
+			method: "POST",
+			url: "/bins",
+		});
+		expect(created.statusCode).toBe(200);
+		expect(KeyvMongoMock.instances[0]?.url).toBe(requestUri);
+		const logged = errorLog.mock.calls
+			.map((call) => String(call[0]))
+			.join("\n");
+		expect(logged).toContain("keyv.uri");
+		expect(logged).toContain("mongodb+srv");
+		expect(logged).not.toContain(startup);
+		expect(logged).not.toContain(requestUri);
+		expect(logged).not.toContain("startup-pass");
+		expect(logged).not.toContain("request-pass");
+		errorLog.mockRestore();
+		await mockHttp.close();
+	});
+
+	it("logs and returns a safe message when Keyv cannot construct or write", async () => {
+		const uri =
+			"mongodb+srv://user:p@ssw!rd@cluster0.abcde.mongodb.net/mockhttp";
+		const errorLog = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
+		KeyvMongoMock.failConstruct = new Error(`Invalid connection string ${uri}`);
+		let mockHttp = await createWorkerApp({ MONGODB_URI: uri });
+		const construct = await mockHttp.server.inject({
+			method: "POST",
+			url: "/bins",
+		});
+		expect(construct.statusCode).toBe(500);
+		expect(construct.json().message).toContain("Invalid connection string");
+		expect(construct.json().message).toContain("Percent-encode");
+		expect(construct.body).not.toContain("p@ssw");
+		expect(construct.body).not.toContain("cluster0");
+		await mockHttp.close();
+
+		KeyvMongoMock.failConstruct = undefined;
+		KeyvMongoMock.failSet = Object.assign(
+			new Error(`Invalid connection string ${uri}`),
+			{ name: "MongoParseError", code: "PARSE" },
+		);
+		KeyvMongoMock.failConnect = KeyvMongoMock.failSet;
+		KeyvMongoMock.failDisconnect = true;
+		mockHttp = await createWorkerApp({ MONGODB_URI: uri });
+		const saved = await mockHttp.server.inject({
+			method: "POST",
+			url: "/bins",
+		});
+		expect(saved.statusCode).toBe(500);
+		expect(saved.json().message).toContain("could not save bin");
+		expect(saved.json().message).toContain("Percent-encode");
+		expect(saved.body).not.toContain(uri);
+		expect(saved.body).not.toContain("p@ssw");
+		const logged = errorLog.mock.calls
+			.map((call) => String(call[0]))
+			.join("\n");
+		expect(logged).toContain("keyv.construct");
+		expect(logged).toContain("keyv.connect");
+		expect(logged).toContain("keyv.set");
+		expect(logged).toContain("extraAt");
+		expect(logged).not.toContain(uri);
+		expect(logged).not.toContain("p@ssw");
+		expect(KeyvMongoMock.disconnects).toBe(1);
+		await mockHttp.close();
+
+		KeyvMongoMock.failConnect = undefined;
+		KeyvMongoMock.failSet = Object.assign(
+			new Error("Invalid connection string"),
+			{
+				name: "MongoParseError",
+			},
+		);
+		KeyvMongoMock.useDisconnect = false;
+		mockHttp = await createWorkerApp({
+			MONGODB_URI: "mongodb://user:pass@cluster.mongodb.net/mockhttp",
+		});
+		const noDisconnect = await mockHttp.server.inject({
+			method: "POST",
+			url: "/bins",
+		});
+		expect(noDisconnect.statusCode).toBe(500);
+		expect(noDisconnect.body).toContain("Invalid connection string");
+		expect(noDisconnect.body).not.toContain("user:pass");
+		errorLog.mockRestore();
+		await mockHttp.close();
+	});
+
+	it("logs a connected Keyv client and a false set", async () => {
+		const uri = "mongodb://user:pass@cluster.mongodb.net:27017/mockhttp";
+		const infoLog = vi
+			.spyOn(console, "info")
+			.mockImplementation(() => undefined);
+		const errorLog = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
+		KeyvMongoMock.resolveConnect = true;
+		KeyvMongoMock.failSetFalse = true;
+		const mockHttp = await createWorkerApp({ MONGODB_URI: uri });
+		const saved = await mockHttp.server.inject({
+			method: "POST",
+			url: "/bins",
+		});
+		expect(saved.statusCode).toBe(500);
+		await vi.waitFor(() => {
+			expect(infoLog.mock.calls.join("\n")).toContain("keyv.connect");
+		});
+		expect(errorLog.mock.calls.join("\n")).toContain(
+			"Keyv store set returned false",
+		);
+		expect(infoLog.mock.calls.join("\n")).not.toContain("user:pass");
+		infoLog.mockRestore();
+		errorLog.mockRestore();
+		await mockHttp.close();
+	});
+
+	it("redacts iterator failures and forwards store error events", async () => {
+		const uri = "mongodb+srv://user:pass@cluster.mongodb.net/mockhttp";
+		const errorLog = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
+		KeyvMongoMock.failIterator = new Error(
+			"iterator down mongodb://user:pass@cluster.mongodb.net/mockhttp",
+		);
+		const mockHttp = await createWorkerApp({ MONGODB_URI: uri });
+		await mockHttp.server.inject({ method: "POST", url: "/bins" });
+		const listed = await mockHttp.server.inject({
+			method: "GET",
+			url: "/bins",
+		});
+		expect(listed.statusCode).toBe(500);
+		expect(listed.body).toContain("iterator down");
+		expect(listed.body).not.toContain("user:pass");
+		expect(listed.body).not.toContain("cluster.mongodb.net");
+		await mockHttp.close();
+
+		KeyvMongoMock.failIterator = undefined;
+		KeyvMongoMock.useOn = true;
+		KeyvMongoMock.instances.length = 0;
+		const again = await createWorkerApp({ MONGODB_URI: uri });
+		await again.server.inject({ method: "POST", url: "/bins" });
+		const store = KeyvMongoMock.instances[0];
+		const failure = Object.assign(new Error("querySrv ENOTFOUND"), {
+			name: "MongoNetworkError",
+			code: "ENOTFOUND",
+		});
+		expect(() => store?.emitError?.(failure)).toThrow(failure);
+		expect(errorLog.mock.calls.join("\n")).toContain("keyv.error");
+		expect(errorLog.mock.calls.join("\n")).not.toContain("user:pass");
+		errorLog.mockRestore();
+		await again.close();
+	});
+
+	it("leaves the mongo URI in place when the request omits it", () => {
+		workerMongoState.uri = "mongodb://user:pass@cluster.mongodb.net/mockhttp";
+		applyWorkerMongoEnv({});
+		expect(workerMongoState.uri).toBe(
+			"mongodb://user:pass@cluster.mongodb.net/mockhttp",
+		);
+		applyWorkerMongoEnv({ MONGODB_URI: workerMongoState.uri });
+		expect(workerMongoState.uri).toContain("mongodb://");
 	});
 });

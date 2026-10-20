@@ -1,13 +1,11 @@
 import { handleAsNodeRequest } from "cloudflare:node";
-import KeyvMongo from "@keyv/mongo";
-import Keyv from "keyv";
+import { logBinStore } from "../src/bin-store-diagnostics.js";
 import { MockHttp, type MockHttpOptions } from "../src/mock-http.js";
-import {
-	MockHttpBins,
-	type MockHttpBinsOptions,
-} from "../src/mock-http-bins.js";
+import { MockHttpBins } from "../src/mock-http-bins.js";
 import { setPublicFileReader } from "../src/public-files.js";
 import { PUBLIC_PROTOCOL_HEADER } from "../src/routes/bins/management.js";
+import { checkMemoryBinStore } from "../src/routes/health.js";
+import { binStoreRuntime, createAdaptiveBinKeyv } from "./bin-store.js";
 
 export const WORKER_PORT = 3000;
 
@@ -38,18 +36,6 @@ export type WorkerEnv = {
 };
 
 /**
- * Pool stays small because each Worker isolate opens its own client.
- * `serverSelectionTimeoutMS` keeps a down Atlas from holding the request
- * for the driver's 30 second default.
- */
-const workerBinMongoOptions = {
-	collection: "bins",
-	maxPoolSize: 5,
-	minPoolSize: 0,
-	serverSelectionTimeoutMS: 5_000,
-};
-
-/**
  * Atlas URI for this request. The Worker binding wins. An empty string is
  * treated as unset so a blank secret does not open a client.
  */
@@ -61,38 +47,33 @@ export function workerMongoUri(env: WorkerEnv = {}): string | undefined {
 	return uri;
 }
 
-type WorkerBinKeyv = NonNullable<MockHttpBinsOptions["keyv"]>;
-
 /**
- * Keyv backed by MongoDB. `@keyv/mongo` calls `MongoClient.connect()` from
- * its constructor, and workerd rejects that network I/O during isolate
- * startup, so the client is created on the first bin operation.
+ * URI the open bin client should use. Module startup records
+ * `cloudflare:workers` env. Each request then replaces it with the fetch
+ * handler env when that value is non-empty, so a startup snapshot cannot
+ * stick a different string.
  */
-function createLazyBinKeyv(uri: string): WorkerBinKeyv {
-	let keyv: WorkerBinKeyv | undefined;
-	const open = (): WorkerBinKeyv => {
-		keyv ??= new Keyv({
-			store: new KeyvMongo(uri, workerBinMongoOptions),
-		}) as WorkerBinKeyv;
-		return keyv;
-	};
+export const workerMongoState: { uri: string | undefined } = { uri: undefined };
 
-	return new Proxy({} as WorkerBinKeyv, {
-		get(_target, property) {
-			const target = open();
-			const value = Reflect.get(target, property, target);
-			if (typeof value === "function") {
-				return value.bind(target);
-			}
-			return value;
-		},
+/** Apply a request's MONGODB_URI when it is set. Does not log the value. */
+export function applyWorkerMongoEnv(env: WorkerEnv): void {
+	const next = env.MONGODB_URI;
+	if (!next || next === workerMongoState.uri) {
+		return;
+	}
+	logBinStore({
+		phase: "keyv.uri",
+		store: "keyv-mongo",
+		uri: next,
+		error: new Error("MONGODB_URI changed for this isolate"),
 	});
+	workerMongoState.uri = next;
 }
 
-/** Request bins stored in MongoDB through Keyv. */
-export function createWorkerBins(uri: string): MockHttpBins {
+/** Request bins. MongoDB is used when a URI is configured, otherwise memory. */
+export function createWorkerBins(): MockHttpBins {
 	return new MockHttpBins({
-		keyv: createLazyBinKeyv(uri),
+		keyv: createAdaptiveBinKeyv(() => workerMongoState.uri),
 	});
 }
 
@@ -175,10 +156,15 @@ export function bindPublicAssets(assets: WorkerAssets | undefined): void {
 
 export async function createWorkerApp(env: WorkerEnv = {}): Promise<MockHttp> {
 	const mockHttp = new MockHttp(workerMockHttpOptions);
-	const uri = workerMongoUri(env);
-	if (uri) {
-		mockHttp.bins = createWorkerBins(uri);
-	}
+	workerMongoState.uri = workerMongoUri(env);
+	mockHttp.bins = createWorkerBins();
+	mockHttp.binHealthCheck = () => {
+		const uri = workerMongoState.uri;
+		if (!uri) {
+			return checkMemoryBinStore(mockHttp.bins.keyv);
+		}
+		return binStoreRuntime.ping(uri);
+	};
 	await mockHttp.initialize();
 	return mockHttp;
 }
@@ -195,6 +181,7 @@ export async function handleWorkerFetch(
 	env: WorkerEnv,
 	dispatch: WorkerDispatch = workerRuntime.dispatch,
 ): Promise<Response> {
+	applyWorkerMongoEnv(env);
 	const limited = await applyRateLimit(request, env);
 	if (limited) {
 		return limited;

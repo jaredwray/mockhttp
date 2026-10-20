@@ -52,6 +52,63 @@ curl http://localhost:3000/bins/abc123def456/requests
 | DELETE | `/bins/:id/requests` | Clear all captured requests in a bin |
 | DELETE | `/bins/:id` | Delete a bin |
 | ANY | `/b/:id` and `/b/:id/*` | Capture requests sent to a bin |
+| GET | `/healthz` | Check whether bin storage is reachable |
+
+## Storage health
+
+`GET /healthz` is on the Node server and the Worker. This route does not create a bin.
+
+A memory store sends HTTP 200:
+
+```json
+{
+  "status": "ok",
+  "bins": {
+    "store": "memory",
+    "connected": true,
+    "latencyMs": 1,
+    "uriPresent": false,
+    "scheme": null
+  }
+}
+```
+
+The Worker uses MongoDB when `MONGODB_URI` is set. The check opens a client, sends an admin ping, and then closes the client. The timeout is short. The check does not keep the client after a failure.
+
+A successful ping sends HTTP 200. `store` is `mongo`. `scheme` is `mongodb` or `mongodb+srv`.
+
+A failed ping sends HTTP 503:
+
+```json
+{
+  "status": "error",
+  "bins": {
+    "store": "mongo",
+    "connected": false,
+    "uriPresent": true,
+    "scheme": "mongodb+srv",
+    "error": {
+      "name": "MongoParseError",
+      "message": "Invalid connection string. Percent-encode reserved characters in the username and password (@ : / ? # [ ]).",
+      "code": null
+    }
+  }
+}
+```
+
+The response does not contain the connection string, the username, the password, or the host. The logs do not contain them. `uriPresent` is a boolean. `scheme` is `mongodb`, `mongodb+srv`, or `null`.
+
+`Invalid connection string` means that the URI has a second `@`. It also means that you did not encode a reserved character in the username or the password. Encode these characters:
+
+- `@` as `%40`
+- `:` as `%3A`
+- `/` as `%2F`
+- `?` as `%3F`
+- `#` as `%23`
+- `[` as `%5B`
+- `]` as `%5D`
+
+A correct `mongodb+srv://` URI does not fail at parse time. A DNS failure or a network failure has a different error name.
 
 ## End-to-End Webhook Debugging Example
 

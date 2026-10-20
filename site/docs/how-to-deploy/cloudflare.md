@@ -23,7 +23,13 @@ The Worker starts the same MockHTTP app as Node.js, with a few options set for t
 | `logging` | `false` | Request logging is off. |
 | `autoDetectPort` | `false` | The app always listens on port 3000 inside the isolate. |
 
-The rate limiter key is the `cf-connecting-ip` header, then the first address in `x-forwarded-for`, then `unknown`. A limited request returns `429` with `retry-after: 60`. That limiter is shared across isolates. Bins are not. The default store is in memory inside the isolate that handled the request, so a bin created on one request can be missing when another isolate or location handles the next one.
+The rate limiter key is the `cf-connecting-ip` header, then the first address in `x-forwarded-for`, then `unknown`. A limited request returns `429` with `retry-after: 60`. That limiter is shared across isolates.
+
+Bins stay in memory in the isolate when `MONGODB_URI` is not set. A bin from one request can be absent when a different isolate handles the next request. When `MONGODB_URI` is set, bins are stored in MongoDB. The client connects on the first bin operation. It does not connect while the isolate starts.
+
+Percent-encode reserved characters in the username and the password. `@` is `%40`. An unencoded `@` makes the driver throw `Invalid connection string` before it contacts Atlas.
+
+`GET /healthz` reports the bin store. A successful admin ping returns HTTP 200 and `bins.connected: true`. A failed ping returns HTTP 503 with the driver error name, a redacted message, and a code. The body has `uriPresent` (boolean) and `scheme` (`mongodb` or `mongodb+srv`). The body does not have the URI, the username, the password, or the host. On the Node server, this route reports the memory store. Connection failures are also one JSON line in the Worker logs (`mockhttp.bin-store`). Those logs use the same redaction.
 
 Taps are a library API (`mock.taps.inject`). They have no HTTP routes, so a deployed Worker has no way to inject one.
 

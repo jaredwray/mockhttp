@@ -1,6 +1,7 @@
 import Keyv from "keyv";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CapturedRequest } from "../src/bin-store.js";
+import { BinStoreFailure } from "../src/bin-store-diagnostics.js";
 import { MockHttpBins } from "../src/mock-http-bins.js";
 
 const RAW: Omit<CapturedRequest, "id" | "binId" | "capturedAt"> = {
@@ -290,6 +291,21 @@ describe("MockHttpBins", () => {
 			await expect(failing.createBin()).rejects.toThrow(
 				/^MockHttpBins: could not save bin /,
 			);
+		});
+
+		it("includes a safe store message when the Keyv write fails", async () => {
+			const keyv = new Keyv({ store: new Map() });
+			vi.spyOn(keyv, "set").mockRejectedValue(
+				new BinStoreFailure(
+					"Invalid connection string. Percent-encode reserved characters in the username and password (@ : / ? # [ ]).",
+				),
+			);
+			const failing = new MockHttpBins({ keyv });
+			const error = await failing.createBin().catch((cause) => cause);
+			expect(error).toBeInstanceOf(BinStoreFailure);
+			expect(error.message).toMatch(/^MockHttpBins: could not save bin /);
+			expect(error.message).toContain("Percent-encode");
+			expect(error.cause).toBeInstanceOf(BinStoreFailure);
 		});
 
 		it("wraps the store error when no error listener is attached", async () => {

@@ -116,12 +116,75 @@ describe("worker mongo connect under workerd", () => {
 		const get = await worker.fetch("https://mockhttp.org/get");
 		expect(get.status, await textOf(get)).toBe(200);
 
+		const health = await worker.fetch("https://mockhttp.org/healthz");
+		const healthBody = await health.text();
+		expect(health.status, healthBody).toBe(503);
+		expect(healthBody).toContain('"store":"mongo"');
+		expect(healthBody).toContain('"connected":false');
+		expect(healthBody).toContain('"scheme":"mongodb"');
+		expect(healthBody).toContain('"uriPresent":true');
+		expect(healthBody).not.toContain("Invalid connection string");
+		expect(healthBody).not.toContain("127.0.0.1");
+		expect(healthBody).not.toContain("mongodb://");
+
 		const created = await worker.fetch("https://mockhttp.org/bins", {
 			method: "POST",
 		});
 		const body = await created.text();
 		expect(created.status, body).toBe(500);
 		expect(body).not.toContain("Code generation from strings");
+		expect(body).not.toContain("127.0.0.1");
+		expect(body).not.toContain("mongodb://");
+	}, 60_000);
+});
+
+describe("worker srv and unencoded password under workerd", () => {
+	it("reports a DNS error for a well-formed mongodb+srv URI", async () => {
+		const worker = await unstable_dev("worker/index.ts", {
+			...devOptions,
+			port: 18790,
+			inspectorPort: 19232,
+			vars: {
+				MONGODB_URI:
+					"mongodb+srv://user:pass@cluster0.example.invalid/mockhttp",
+			},
+		});
+		try {
+			const health = await worker.fetch("https://mockhttp.org/healthz");
+			const body = await health.text();
+			expect(health.status, body).toBe(503);
+			expect(body).toContain('"scheme":"mongodb+srv"');
+			expect(body).not.toContain("Invalid connection string");
+			expect(body).not.toContain("user:pass");
+			expect(body).not.toContain("cluster0");
+			expect(body).not.toContain("mongodb+srv://");
+		} finally {
+			await worker.stop();
+		}
+	}, 60_000);
+
+	it("explains an unencoded @ without returning the password", async () => {
+		const worker = await unstable_dev("worker/index.ts", {
+			...devOptions,
+			port: 18792,
+			inspectorPort: 19234,
+			vars: {
+				MONGODB_URI:
+					"mongodb+srv://user:p@ssw!rd@cluster0.example.invalid/mockhttp",
+			},
+		});
+		try {
+			const health = await worker.fetch("https://mockhttp.org/healthz");
+			const body = await health.text();
+			expect(health.status, body).toBe(503);
+			expect(body).toContain("Invalid connection string");
+			expect(body).toContain("Percent-encode");
+			expect(body).not.toContain("p@ssw");
+			expect(body).not.toContain("cluster0");
+			expect(body).not.toContain("mongodb+srv://");
+		} finally {
+			await worker.stop();
+		}
 	}, 60_000);
 });
 

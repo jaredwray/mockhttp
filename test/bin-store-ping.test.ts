@@ -100,6 +100,15 @@ describe("mongo bin store ping", () => {
 		}
 	});
 
+	it("still throws the first socket error that has no listener", () => {
+		installSocketProxyGuard();
+		const socket = new net.Socket();
+		expect(() => {
+			socket.emit("error", new Error("first failure"));
+		}).toThrow(/first failure/);
+		socket.destroy();
+	});
+
 	it("drops a second socket error that has no listener", () => {
 		installSocketProxyGuard();
 		const socket = new net.Socket();
@@ -118,6 +127,13 @@ describe("mongo bin store ping", () => {
 			socket.emit("error", new Error("TLS handshake failed"));
 		}).not.toThrow();
 		expect(seen).toEqual([proxy]);
+		const later: unknown[] = [];
+		socket.on("error", (error: unknown) => {
+			later.push(error);
+		});
+		const again = new Error("later failure");
+		expect(socket.emit("error", again)).toBe(true);
+		expect(later).toEqual([again]);
 		socket.destroy();
 	});
 });

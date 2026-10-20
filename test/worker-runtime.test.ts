@@ -222,6 +222,97 @@ describe("worker srv and unencoded password under workerd", () => {
 	}, 60_000);
 });
 
+/**
+ * Needs a reachable MongoDB, for example `mongodb://127.0.0.1:27017/mockhttp`.
+ * Set MOCKHTTP_TEST_MONGODB_URI to run it. CI has no MongoDB, so CI skips it.
+ * Before the per-request client, the second bin request on an isolate failed
+ * with an uncaught "code had hung" error and the third one never answered.
+ */
+describe.skipIf(!process.env.MOCKHTTP_TEST_MONGODB_URI)(
+	"worker bins on MongoDB under workerd",
+	() => {
+		let worker: Unstable_DevWorker;
+
+		beforeAll(async () => {
+			worker = await unstable_dev("worker/index.ts", {
+				...devOptions,
+				port: 18794,
+				inspectorPort: 19236,
+				vars: {
+					MONGODB_URI: process.env.MOCKHTTP_TEST_MONGODB_URI as string,
+				},
+			});
+		}, 120_000);
+
+		afterAll(async () => {
+			await worker?.stop();
+		});
+
+		it("serves repeated create, capture, get, and list requests", async () => {
+			const health = await worker.fetch("https://mockhttp.org/healthz");
+			expect(health.status, await textOf(health)).toBe(200);
+
+			for (let round = 0; round < 5; round++) {
+				const created = await worker.fetch("https://mockhttp.org/bins", {
+					method: "POST",
+				});
+				expect(created.status, await textOf(created)).toBe(200);
+				const bin = (await created.json()) as { id: string };
+
+				for (let i = 0; i < 3; i++) {
+					const captured = await worker.fetch(
+						`https://mockhttp.org/b/${bin.id}/hook`,
+						{
+							method: "POST",
+							headers: { "content-type": "application/json" },
+							body: JSON.stringify({ round, i }),
+						},
+					);
+					expect(captured.status, await textOf(captured)).toBe(200);
+				}
+
+				for (let i = 0; i < 3; i++) {
+					const fetched = await worker.fetch(
+						`https://mockhttp.org/bins/${bin.id}`,
+					);
+					expect(fetched.status, await textOf(fetched)).toBe(200);
+					expect(await fetched.json()).toMatchObject({
+						id: bin.id,
+						requestCount: 3,
+					});
+				}
+
+				const requests = await worker.fetch(
+					`https://mockhttp.org/bins/${bin.id}/requests`,
+				);
+				expect(requests.status, await textOf(requests)).toBe(200);
+				expect(
+					((await requests.json()) as { requests: unknown[] }).requests,
+				).toHaveLength(3);
+
+				const missing = await worker.fetch(
+					"https://mockhttp.org/bins/does-not-exist",
+				);
+				expect(missing.status, await textOf(missing)).toBe(404);
+
+				const listed = await worker.fetch("https://mockhttp.org/bins");
+				expect(listed.status, await textOf(listed)).toBe(200);
+				expect(
+					((await listed.json()) as { bins: Array<{ id: string }> }).bins,
+				).toEqual(
+					expect.arrayContaining([expect.objectContaining({ id: bin.id })]),
+				);
+
+				const removed = await worker.fetch(
+					`https://mockhttp.org/bins/${bin.id}`,
+					{ method: "DELETE" },
+				);
+				expect(removed.status, await textOf(removed)).toBe(204);
+			}
+		}, 120_000);
+	},
+);
+
 async function textOf(response: Response): Promise<string> {
 	return response.clone().text();
 }

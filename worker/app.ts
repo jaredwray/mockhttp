@@ -1,11 +1,17 @@
 import { handleAsNodeRequest } from "cloudflare:node";
-import { logBinStore } from "../src/bin-store-diagnostics.js";
+import { logBinStore, redactStoreError } from "../src/bin-store-diagnostics.js";
 import { MockHttp, type MockHttpOptions } from "../src/mock-http.js";
 import { MockHttpBins } from "../src/mock-http-bins.js";
 import { setPublicFileReader } from "../src/public-files.js";
 import { PUBLIC_PROTOCOL_HEADER } from "../src/routes/bins/management.js";
 import { checkMemoryBinStore } from "../src/routes/health.js";
-import { binStoreRuntime, createAdaptiveBinKeyv } from "./bin-store.js";
+import {
+	binStoreRuntime,
+	closeBinStoreScope,
+	createAdaptiveBinKeyv,
+	createBinStoreScope,
+	runInBinStoreScope,
+} from "./bin-store.js";
 
 export const WORKER_PORT = 3000;
 
@@ -33,6 +39,11 @@ export type WorkerEnv = {
 	RATE_LIMITER?: RateLimiter;
 	/** MongoDB Atlas connection string for shared request bins. */
 	MONGODB_URI?: string;
+};
+
+/** The part of the Workers `ExecutionContext` this app uses. */
+export type WorkerExecutionContext = {
+	waitUntil(promise: Promise<unknown>): void;
 };
 
 /**
@@ -177,9 +188,37 @@ export async function listenWorkerApp(mockHttp: MockHttp): Promise<unknown> {
 	});
 }
 
+/**
+ * Last resort for an error that escapes the Node bridge. Fastify answers its
+ * own route errors. This keeps the Worker from throwing, which Cloudflare
+ * reports as error 1101 with no body.
+ */
+export function internalErrorResponse(error: unknown): Response {
+	logBinStore({ phase: "fetch", store: "worker", error });
+	const info = redactStoreError(error, workerMongoState.uri);
+	return new Response(
+		JSON.stringify({
+			statusCode: 500,
+			error: "Internal Server Error",
+			message: info.message,
+		}),
+		{
+			status: 500,
+			headers: { "content-type": "application/json; charset=utf-8" },
+		},
+	);
+}
+
+/**
+ * Handle one Worker request.
+ * The bin store client for this request opens on its first bin operation and
+ * closes after the response, in `ctx.waitUntil`. No client is shared between
+ * requests: workerd rejects I/O on a socket that a different request opened.
+ */
 export async function handleWorkerFetch(
 	request: Request,
 	env: WorkerEnv,
+	ctx?: WorkerExecutionContext,
 	dispatch: WorkerDispatch = workerRuntime.dispatch,
 ): Promise<Response> {
 	applyWorkerMongoEnv(env);
@@ -189,5 +228,17 @@ export async function handleWorkerFetch(
 	}
 
 	bindPublicAssets(env.ASSETS);
-	return dispatch(WORKER_PORT, requestWithPublicProtocol(request));
+	const scope = createBinStoreScope();
+	try {
+		return await runInBinStoreScope(scope, () =>
+			dispatch(WORKER_PORT, requestWithPublicProtocol(request)),
+		);
+	} catch (error) {
+		return internalErrorResponse(error);
+	} finally {
+		const closing = closeBinStoreScope(scope);
+		if (ctx) {
+			ctx.waitUntil(closing);
+		}
+	}
 }

@@ -2,11 +2,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { readPublicFile, setPublicFileReader } from "../src/public-files.js";
 
 const { handleAsNodeRequestMock, KeyvMongoMock } = vi.hoisted(() => {
+	/**
+	 * Stands in for `@keyv/mongo`. Every instance reads and writes one shared
+	 * map, like clients of one database. The Worker opens one instance per
+	 * request, or one per operation outside a request.
+	 */
 	class KeyvMongoMock {
 		static instances: KeyvMongoMock[] = [];
+		static readonly shared = new Map<string, unknown>();
 		readonly url: string;
 		readonly options: Record<string, unknown> | undefined;
-		readonly data = new Map<string, unknown>();
+		readonly connect: Promise<unknown>;
+		private readonly listeners: Array<(error: unknown) => void> = [];
 
 		constructor(
 			url?: string | Record<string, unknown>,
@@ -26,29 +33,32 @@ const { handleAsNodeRequestMock, KeyvMongoMock } = vi.hoisted(() => {
 			if (KeyvMongoMock.failConnect) {
 				this.connect = Promise.reject(KeyvMongoMock.failConnect);
 				void this.connect.catch(() => undefined);
-			} else if (KeyvMongoMock.resolveConnect) {
+			} else {
 				this.connect = Promise.resolve("ok");
 			}
-			if (KeyvMongoMock.useDisconnect) {
-				this.disconnect = async () => {
-					KeyvMongoMock.disconnects += 1;
-					if (KeyvMongoMock.failDisconnect) {
-						throw new Error("disconnect failed");
-					}
-				};
+		}
+
+		get data(): Map<string, unknown> {
+			return KeyvMongoMock.shared;
+		}
+
+		on(event: string, handler: (error: unknown) => void): this {
+			if (event === "error") {
+				this.listeners.push(handler);
 			}
-			if (KeyvMongoMock.useOn) {
-				const listeners: Array<(error: unknown) => void> = [];
-				this.on = (event, handler) => {
-					if (event === "error") {
-						listeners.push(handler);
-					}
-				};
-				this.emitError = (error) => {
-					for (const listener of listeners) {
-						listener(error);
-					}
-				};
+			return this;
+		}
+
+		emitError(error: unknown): void {
+			for (const listener of this.listeners) {
+				listener(error);
+			}
+		}
+
+		async disconnect(): Promise<void> {
+			KeyvMongoMock.disconnects += 1;
+			if (KeyvMongoMock.failDisconnect) {
+				throw new Error("disconnect failed");
 			}
 		}
 
@@ -93,16 +103,21 @@ const { handleAsNodeRequestMock, KeyvMongoMock } = vi.hoisted(() => {
 		static failSetFalse = false;
 		static failIterator: Error | undefined;
 		static failConnect: Error | undefined;
-		static resolveConnect = false;
-		static useOn = false;
-		static useDisconnect = true;
 		static failDisconnect = false;
 		static disconnects = 0;
 
-		connect?: Promise<unknown>;
-		on?: (event: string, handler: (error: unknown) => void) => void;
-		emitError?: (error: unknown) => void;
-		disconnect?: () => Promise<void>;
+		static reset(): void {
+			KeyvMongoMock.instances.length = 0;
+			KeyvMongoMock.shared.clear();
+			KeyvMongoMock.failConstruct = undefined;
+			KeyvMongoMock.failGet = undefined;
+			KeyvMongoMock.failSet = undefined;
+			KeyvMongoMock.failSetFalse = false;
+			KeyvMongoMock.failIterator = undefined;
+			KeyvMongoMock.failConnect = undefined;
+			KeyvMongoMock.failDisconnect = false;
+			KeyvMongoMock.disconnects = 0;
+		}
 	}
 
 	return {
@@ -142,17 +157,7 @@ describe("cloudflare worker", () => {
 	const dispatch = vi.fn();
 
 	afterEach(() => {
-		KeyvMongoMock.failConstruct = undefined;
-		KeyvMongoMock.failGet = undefined;
-		KeyvMongoMock.failSet = undefined;
-		KeyvMongoMock.failSetFalse = false;
-		KeyvMongoMock.failIterator = undefined;
-		KeyvMongoMock.failConnect = undefined;
-		KeyvMongoMock.resolveConnect = false;
-		KeyvMongoMock.useOn = false;
-		KeyvMongoMock.useDisconnect = true;
-		KeyvMongoMock.failDisconnect = false;
-		KeyvMongoMock.disconnects = 0;
+		KeyvMongoMock.reset();
 		workerMongoState.uri = undefined;
 		dispatch.mockReset();
 		dispatch.mockResolvedValue(new Response("ok", { status: 200 }));
@@ -214,6 +219,7 @@ describe("cloudflare worker", () => {
 				headers: { "cf-connecting-ip": "203.0.113.10" },
 			}),
 			{ RATE_LIMITER: { limit } },
+			undefined,
 			dispatch,
 		);
 
@@ -237,6 +243,7 @@ describe("cloudflare worker", () => {
 		const response = await handleWorkerFetch(
 			request,
 			{ RATE_LIMITER: { limit } },
+			undefined,
 			dispatch,
 		);
 
@@ -259,6 +266,7 @@ describe("cloudflare worker", () => {
 		await handleWorkerFetch(
 			new Request("https://mockhttp.org/get"),
 			{ ASSETS: { fetch: fetchAsset } },
+			undefined,
 			dispatch,
 		);
 
@@ -346,17 +354,7 @@ describe("cloudflare worker", () => {
 
 describe("worker Fastify app", () => {
 	afterEach(() => {
-		KeyvMongoMock.failConstruct = undefined;
-		KeyvMongoMock.failGet = undefined;
-		KeyvMongoMock.failSet = undefined;
-		KeyvMongoMock.failSetFalse = false;
-		KeyvMongoMock.failIterator = undefined;
-		KeyvMongoMock.failConnect = undefined;
-		KeyvMongoMock.resolveConnect = false;
-		KeyvMongoMock.useOn = false;
-		KeyvMongoMock.useDisconnect = true;
-		KeyvMongoMock.failDisconnect = false;
-		KeyvMongoMock.disconnects = 0;
+		KeyvMongoMock.reset();
 		workerMongoState.uri = undefined;
 		delete process.env.MONGODB_URI;
 	});
@@ -451,13 +449,17 @@ describe("worker Fastify app", () => {
 		});
 		expect(created.statusCode).toBe(200);
 		const store = KeyvMongoMock.instances[0];
+		// No request scope is active under `inject`, so the write opened its own
+		// client and closed it when it finished.
 		expect(KeyvMongoMock.instances).toHaveLength(1);
+		expect(KeyvMongoMock.disconnects).toBe(1);
 		expect(store?.url).toBe(uri);
 		expect(store?.options).toEqual({
 			collection: "bins",
-			maxPoolSize: 5,
+			maxPoolSize: 1,
 			minPoolSize: 0,
 			serverSelectionTimeoutMS: 5_000,
+			connectTimeoutMS: 5_000,
 		});
 		const id = created.json().id as string;
 		expect(store?.data.size).toBeGreaterThan(0);
@@ -484,8 +486,109 @@ describe("worker Fastify app", () => {
 		});
 		expect(removed.statusCode).toBe(204);
 		await mockHttp.bins.keyv.clear();
+		// Every operation outside a request opened one client and closed it.
+		expect(KeyvMongoMock.instances.length).toBeGreaterThan(1);
+		expect(KeyvMongoMock.disconnects).toBe(KeyvMongoMock.instances.length);
 		await mockHttp.close();
 		delete process.env.MONGODB_URI;
+	});
+
+	it("opens one client per Worker request and closes it after the response", async () => {
+		const uri = "mongodb+srv://user:pass@cluster.mongodb.net/mockhttp";
+		KeyvMongoMock.instances.length = 0;
+		const mockHttp = await createWorkerApp({ MONGODB_URI: uri });
+		const background: Promise<unknown>[] = [];
+		const ctx = {
+			waitUntil: (promise: Promise<unknown>) => {
+				background.push(promise);
+			},
+		};
+
+		// One request that creates a bin, captures into it, and reads it back:
+		// three bin operations, one client.
+		let id = "";
+		const response = await handleWorkerFetch(
+			new Request("https://mockhttp.org/bins", { method: "POST" }),
+			{ MONGODB_URI: uri },
+			ctx,
+			async () => {
+				const created = await mockHttp.server.inject({
+					method: "POST",
+					url: "/bins",
+				});
+				id = created.json().id as string;
+				const captured = await mockHttp.server.inject({
+					method: "POST",
+					url: `/b/${id}`,
+					payload: { ok: true },
+				});
+				expect(captured.statusCode).toBe(200);
+				const fetched = await mockHttp.server.inject({
+					method: "GET",
+					url: `/bins/${id}`,
+				});
+				return new Response(fetched.body, { status: fetched.statusCode });
+			},
+		);
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({ id, requestCount: 1 });
+		expect(KeyvMongoMock.instances).toHaveLength(1);
+		// The close is handed to `ctx.waitUntil`, not awaited before the response.
+		expect(background).toHaveLength(1);
+		await Promise.all(background);
+		expect(KeyvMongoMock.disconnects).toBe(1);
+
+		// The next request must not reuse that client.
+		const again = await handleWorkerFetch(
+			new Request(`https://mockhttp.org/bins/${id}`),
+			{ MONGODB_URI: uri },
+			ctx,
+			async () => {
+				const fetched = await mockHttp.server.inject({
+					method: "GET",
+					url: `/bins/${id}`,
+				});
+				return new Response(fetched.body, { status: fetched.statusCode });
+			},
+		);
+		expect(again.status).toBe(200);
+		expect(KeyvMongoMock.instances).toHaveLength(2);
+		await Promise.all(background);
+		expect(KeyvMongoMock.disconnects).toBe(2);
+		await mockHttp.close();
+	});
+
+	it("answers with JSON when the Node bridge itself throws", async () => {
+		const uri = "mongodb+srv://user:pass@cluster.mongodb.net/mockhttp";
+		const errorLog = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
+		workerMongoState.uri = uri;
+		const response = await handleWorkerFetch(
+			new Request("https://mockhttp.org/bins"),
+			{ MONGODB_URI: uri },
+			undefined,
+			vi
+				.fn()
+				.mockRejectedValue(
+					new Error(
+						`Cannot perform I/O on behalf of a different request ${uri}`,
+					),
+				),
+		);
+		expect(response.status).toBe(500);
+		expect(response.headers.get("content-type")).toContain("application/json");
+		const body = (await response.json()) as { message: string };
+		expect(body).toMatchObject({
+			statusCode: 500,
+			error: "Internal Server Error",
+		});
+		expect(body.message).toContain("different request");
+		expect(body.message).not.toContain("user:pass");
+		const logged = errorLog.mock.calls.join("\n");
+		expect(logged).toContain('"phase":"fetch"');
+		expect(logged).not.toContain("user:pass");
+		errorLog.mockRestore();
 	});
 
 	it("passes MONGODB_URI through without trimming or joining text", async () => {
@@ -618,6 +721,7 @@ describe("worker Fastify app", () => {
 		await handleWorkerFetch(
 			new Request("https://mockhttp.org/bins"),
 			{ MONGODB_URI: requestUri },
+			undefined,
 			vi.fn().mockResolvedValue(new Response("ok")),
 		);
 		const created = await mockHttp.server.inject({
@@ -684,7 +788,8 @@ describe("worker Fastify app", () => {
 		expect(logged).toContain("extraAt");
 		expect(logged).not.toContain(uri);
 		expect(logged).not.toContain("p@ssw");
-		expect(KeyvMongoMock.disconnects).toBe(1);
+		// A client whose connect failed has no topology to close.
+		expect(KeyvMongoMock.disconnects).toBe(0);
 		await mockHttp.close();
 
 		KeyvMongoMock.failConnect = undefined;
@@ -694,17 +799,24 @@ describe("worker Fastify app", () => {
 				name: "MongoParseError",
 			},
 		);
-		KeyvMongoMock.useDisconnect = false;
+		KeyvMongoMock.failDisconnect = true;
 		mockHttp = await createWorkerApp({
 			MONGODB_URI: "mongodb://user:pass@cluster.mongodb.net/mockhttp",
 		});
-		const noDisconnect = await mockHttp.server.inject({
+		const connected = await mockHttp.server.inject({
 			method: "POST",
 			url: "/bins",
 		});
-		expect(noDisconnect.statusCode).toBe(500);
-		expect(noDisconnect.body).toContain("Invalid connection string");
-		expect(noDisconnect.body).not.toContain("user:pass");
+		expect(connected.statusCode).toBe(500);
+		expect(connected.body).toContain("Invalid connection string");
+		expect(connected.body).not.toContain("user:pass");
+		// The failed write dropped the client once. The close failure is logged, not thrown.
+		expect(KeyvMongoMock.disconnects).toBe(1);
+		const closeLog = errorLog.mock.calls
+			.map((call) => String(call[0]))
+			.join("\n");
+		expect(closeLog).toContain("keyv.close");
+		expect(closeLog).not.toContain("user:pass");
 		errorLog.mockRestore();
 		await mockHttp.close();
 	});
@@ -717,7 +829,6 @@ describe("worker Fastify app", () => {
 		const errorLog = vi
 			.spyOn(console, "error")
 			.mockImplementation(() => undefined);
-		KeyvMongoMock.resolveConnect = true;
 		KeyvMongoMock.failSetFalse = true;
 		const mockHttp = await createWorkerApp({ MONGODB_URI: uri });
 		const saved = await mockHttp.server.inject({
@@ -758,7 +869,6 @@ describe("worker Fastify app", () => {
 		await mockHttp.close();
 
 		KeyvMongoMock.failIterator = undefined;
-		KeyvMongoMock.useOn = true;
 		KeyvMongoMock.instances.length = 0;
 		const again = await createWorkerApp({ MONGODB_URI: uri });
 		await again.server.inject({ method: "POST", url: "/bins" });
@@ -767,7 +877,8 @@ describe("worker Fastify app", () => {
 			name: "MongoNetworkError",
 			code: "ENOTFOUND",
 		});
-		expect(() => store?.emitError?.(failure)).toThrow(failure);
+		// Keyv has no error listener, so a forwarded store error is thrown.
+		expect(() => store?.emitError(failure)).toThrow(failure);
 		expect(errorLog.mock.calls.join("\n")).toContain("keyv.error");
 		expect(errorLog.mock.calls.join("\n")).not.toContain("user:pass");
 		errorLog.mockRestore();

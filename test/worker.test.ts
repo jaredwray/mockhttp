@@ -608,7 +608,6 @@ describe("worker Fastify app", () => {
 				connected: true,
 				latencyMs: 1,
 				uriPresent: true,
-				scheme: "mongodb",
 			},
 		});
 		const mockHttp = await createWorkerApp({ MONGODB_URI: uri });
@@ -659,9 +658,9 @@ describe("worker Fastify app", () => {
 				store: "memory",
 				connected: true,
 				uriPresent: false,
-				scheme: null,
 			},
 		});
+		expect(health.json().bins).not.toHaveProperty("scheme");
 		expect(health.json().bins.latencyMs).toEqual(expect.any(Number));
 		const spec = await mockHttp.server.inject({
 			method: "GET",
@@ -679,7 +678,6 @@ describe("worker Fastify app", () => {
 				store: "mongo",
 				connected: false,
 				uriPresent: true,
-				scheme: "mongodb+srv",
 				error: {
 					name: "MongoServerSelectionError",
 					message: "server selection failed",
@@ -699,10 +697,10 @@ describe("worker Fastify app", () => {
 			bins: {
 				store: "mongo",
 				connected: false,
-				scheme: "mongodb+srv",
 				uriPresent: true,
 			},
 		});
+		expect(health.json().bins).not.toHaveProperty("scheme");
 		expect(JSON.stringify(health.json())).not.toContain(uri);
 		ping.mockRestore();
 		await mockHttp.close();

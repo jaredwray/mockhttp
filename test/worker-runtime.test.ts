@@ -121,7 +121,7 @@ describe("worker mongo connect under workerd", () => {
 		expect(health.status, healthBody).toBe(503);
 		expect(healthBody).toContain('"store":"mongo"');
 		expect(healthBody).toContain('"connected":false');
-		expect(healthBody).toContain('"scheme":"mongodb"');
+		expect(healthBody).not.toContain('"scheme"');
 		expect(healthBody).toContain('"uriPresent":true');
 		expect(healthBody).not.toContain("Invalid connection string");
 		expect(healthBody).not.toContain("127.0.0.1");
@@ -157,21 +157,19 @@ describe("worker srv and unencoded password under workerd", () => {
 				bins: {
 					error: { message: string };
 					uri: {
-						host: string;
-						username: string;
-						passwordLength: number;
 						atCount: number;
 					};
 				};
 			};
-			expect(body).toContain('"scheme":"mongodb+srv"');
+			expect(body).not.toContain('"scheme"');
 			expect(report.bins.error.message).not.toContain(
 				"Invalid connection string",
 			);
 			expect(report.bins.error.message).not.toContain("Percent-encode");
-			expect(report.bins.uri.host).toBe("cluster0.example.invalid");
-			expect(report.bins.uri.username).toBe("user");
-			expect(report.bins.uri.passwordLength).toBe(4);
+			expect(report.bins.uri).not.toHaveProperty("host");
+			expect(report.bins.uri).not.toHaveProperty("username");
+			expect(report.bins.uri).not.toHaveProperty("passwordLength");
+			expect(body).not.toContain("cluster0.example.invalid");
 			expect(report.bins.uri.atCount).toBe(1);
 			expect(body).not.toContain("user:pass");
 			expect(body).not.toContain("mongodb+srv://");
@@ -198,9 +196,6 @@ describe("worker srv and unencoded password under workerd", () => {
 				bins: {
 					error: { name: string; message: string };
 					uri: {
-						host: string;
-						username: string;
-						passwordLength: number;
 						passwordReserved: string[];
 						atCount: number;
 					};
@@ -210,9 +205,10 @@ describe("worker srv and unencoded password under workerd", () => {
 			expect(report.bins.error.message).toContain("Invalid connection string");
 			expect(report.bins.error.message).toContain("Percent-encode");
 			expect(report.bins.uri.atCount).toBe(2);
-			expect(report.bins.uri.host).toBe("cluster0.example.invalid");
-			expect(report.bins.uri.username).toBe("user");
-			expect(report.bins.uri.passwordLength).toBe(8);
+			expect(report.bins.uri).not.toHaveProperty("host");
+			expect(report.bins.uri).not.toHaveProperty("username");
+			expect(report.bins.uri).not.toHaveProperty("passwordLength");
+			expect(body).not.toContain("cluster0.example.invalid");
 			expect(report.bins.uri.passwordReserved).toEqual(["@"]);
 			expect(body).not.toContain("p@ssw");
 			expect(body).not.toContain("mongodb+srv://");

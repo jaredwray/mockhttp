@@ -493,7 +493,6 @@ export async function pingMongoBinStore(uri: string): Promise<BinHealth> {
 				connected: true,
 				latencyMs: Date.now() - started,
 				uriPresent: facts.present,
-				scheme: facts.scheme,
 				uri: uriDiagnostics(uri),
 			},
 		};
@@ -505,7 +504,6 @@ export async function pingMongoBinStore(uri: string): Promise<BinHealth> {
 				store: "mongo",
 				connected: false,
 				uriPresent: facts.present,
-				scheme: facts.scheme,
 				uri: uriDiagnostics(uri),
 				error: redactStoreError(error, uri),
 			},

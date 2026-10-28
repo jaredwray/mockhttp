@@ -67,15 +67,14 @@ A memory store sends HTTP 200:
     "store": "memory",
     "connected": true,
     "latencyMs": 1,
-    "uriPresent": false,
-    "scheme": null
+    "uriPresent": false
   }
 }
 ```
 
 The Worker uses MongoDB when `MONGODB_URI` is set. The check opens a client, sends an admin ping, and then closes the client. The timeout is short. The check does not keep the client after a failure.
 
-A successful ping sends HTTP 200. `store` is `mongo`. `scheme` is `mongodb` or `mongodb+srv`.
+A successful ping sends HTTP 200. `store` is `mongo`.
 
 A failed ping sends HTTP 503:
 
@@ -86,7 +85,6 @@ A failed ping sends HTTP 503:
     "store": "mongo",
     "connected": false,
     "uriPresent": true,
-    "scheme": "mongodb+srv",
     "uri": {
       "length": 78,
       "leadingWhitespace": false,
@@ -94,9 +92,6 @@ A failed ping sends HTTP 503:
       "newline": false,
       "wrappedQuotes": false,
       "atCount": 2,
-      "host": "cluster0.example.invalid",
-      "username": "user",
-      "passwordLength": 8,
       "passwordReserved": ["@"],
       "passwordHasPercent": false
     },
@@ -109,9 +104,9 @@ A failed ping sends HTTP 503:
 }
 ```
 
-A MongoDB result includes `bins.uri` on success and on failure. A memory result omits `bins.uri`. `uri.host` is the text after the last `@` before the first `/` or `?`. An `@` in the query string does not change the host. `uri.username` is the username. `uri.passwordLength` is the password length.
+A MongoDB result includes `bins.uri` on success and on failure. A memory result omits `bins.uri`. The response does not include the scheme, the host, the username, or the password length.
 
-`uri.passwordReserved` lists raw reserved characters in the password. `uri.passwordLength` is null when the password has only reserved characters. `uri.passwordHasPercent` is true when the password contains `%`. The response does not contain the connection string or the password. The logs do not contain the connection string, the username, the password, or the host. `uriPresent` is a boolean, and `scheme` is `mongodb`, `mongodb+srv`, or `null`.
+`uri.passwordReserved` lists raw reserved characters in the password. The list is empty when the password has only reserved characters. `uri.passwordHasPercent` is true when the password contains `%`. The response does not contain the connection string or the password. The logs do not contain the connection string, the username, the password, or the host. `uriPresent` is a boolean.
 
 `Invalid connection string` is the driver text. MockHTTP adds the percent-encode hint only for that text or for `unescaped characters`. A DNS error stays a DNS error. `Invalid connection string` means that the URI has a second `@`. It also means that you did not encode a reserved character in the username or the password. Encode these characters:
 

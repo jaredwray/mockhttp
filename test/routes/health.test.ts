@@ -17,9 +17,9 @@ describe("GET /healthz", () => {
 				store: "memory",
 				connected: true,
 				uriPresent: false,
-				scheme: null,
 			},
 		});
+		expect(health.json().bins).not.toHaveProperty("scheme");
 		expect(health.json().bins.latencyMs).toEqual(expect.any(Number));
 		const spec = mock.server.swagger() as { paths: Record<string, unknown> };
 		expect(spec.paths["/healthz"]).toBeDefined();
@@ -43,12 +43,12 @@ describe("GET /healthz", () => {
 				store: "memory",
 				connected: false,
 				uriPresent: false,
-				scheme: null,
 				error: { name: "Error" },
 			},
 		});
 		expect(health.body).not.toContain("user:pass");
 		expect(health.body).not.toContain("secret-host");
+		expect(health.json().bins).not.toHaveProperty("scheme");
 		expect(errorLog.mock.calls.join("\n")).toContain("healthz");
 		await mock.close();
 	});

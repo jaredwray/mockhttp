@@ -111,12 +111,12 @@ describe("bin store diagnostics", () => {
 			newline: false,
 			wrappedQuotes: false,
 			atCount: 1,
-			host: "cluster.example.invalid:27017",
-			username: "user",
-			passwordLength: 4,
 			passwordReserved: [],
 			passwordHasPercent: false,
 		});
+		expect(uriDiagnostics(clean)).not.toHaveProperty("host");
+		expect(uriDiagnostics(clean)).not.toHaveProperty("username");
+		expect(uriDiagnostics(clean)).not.toHaveProperty("passwordLength");
 
 		const dirty = ` "mongodb+srv://user:p@ss:/?#[]%40rd@cluster0.example.invalid/mockhttp"\n`;
 		const report = uriDiagnostics(dirty);
@@ -126,9 +126,6 @@ describe("bin store diagnostics", () => {
 		expect(report.newline).toBe(true);
 		expect(report.wrappedQuotes).toBe(true);
 		expect(report.atCount).toBe(2);
-		expect(report.host).toBe("cluster0.example.invalid");
-		expect(report.username).toBe("user");
-		expect(report.passwordLength).toBe("p@ss:/?#[]%40rd".length);
 		expect(report.passwordReserved).toEqual([
 			"@",
 			":",
@@ -141,75 +138,58 @@ describe("bin store diagnostics", () => {
 		expect(report.passwordHasPercent).toBe(true);
 		expect(JSON.stringify(report)).not.toContain("p@ss");
 		expect(JSON.stringify(report)).not.toContain("%40rd");
+		expect(JSON.stringify(report)).not.toContain("cluster0.example.invalid");
 
 		expect(uriDiagnostics("mongodb://127.0.0.1:1/mockhttp")).toMatchObject({
 			atCount: 0,
-			host: null,
-			username: null,
-			passwordLength: null,
 			passwordReserved: [],
 			passwordHasPercent: false,
 		});
 		expect(
-			uriDiagnostics("mongodb://onlyuser@cluster.example.invalid/db"),
-		).toMatchObject({
-			username: "onlyuser",
-			passwordLength: null,
-			host: "cluster.example.invalid",
-		});
-		expect(uriDiagnostics("not-a-uri@example.invalid/db")).toMatchObject({
-			username: "not-a-uri",
-			host: "example.invalid",
-			passwordLength: null,
-		});
-		expect(uriDiagnostics("mongodb://user:pass@")).toMatchObject({
-			host: null,
-			username: "user",
-			passwordLength: 4,
-		});
+			JSON.stringify(
+				uriDiagnostics("mongodb://onlyuser@cluster.example.invalid/db"),
+			),
+		).not.toContain("onlyuser");
+		expect(
+			JSON.stringify(uriDiagnostics("not-a-uri@example.invalid/db")),
+		).not.toContain("not-a-uri");
+		expect(uriDiagnostics("mongodb://user:pass@").passwordReserved).toEqual([]);
 		const emptyUser = uriDiagnostics("mongodb://:secret@example.invalid/db");
-		expect(emptyUser).toMatchObject({
-			username: null,
-			passwordLength: 6,
-			host: "example.invalid",
-		});
+		expect(emptyUser.passwordHasPercent).toBe(false);
 		expect(JSON.stringify(emptyUser)).not.toContain("secret");
+		expect(JSON.stringify(emptyUser)).not.toContain("example.invalid");
 
 		const query = uriDiagnostics(
 			"mongodb://user:pass@cluster.example.invalid/db?appName=ops@example.com",
 		);
-		expect(query.host).toBe("cluster.example.invalid");
-		expect(query.username).toBe("user");
-		expect(query.passwordLength).toBe(4);
 		expect(query.passwordReserved).toEqual([]);
 		expect(query.atCount).toBe(2);
 		expect(JSON.stringify(query)).not.toContain("ops@example.com");
+		expect(JSON.stringify(query)).not.toContain("cluster.example.invalid");
 
 		expect(
 			uriDiagnostics("mongodb://user:pa$ss@cluster.example.invalid/db")
 				.passwordReserved,
 		).toEqual(["$"]);
 
-		expect(
-			uriDiagnostics("mongodb://user:pass@localhost/db?appName=ops@example.com")
-				.host,
-		).toBe("localhost");
-		expect(
-			uriDiagnostics(
-				"mongodb://user:pass@127.0.0.1:27017/db?appName=ops@example.com",
-			).host,
-		).toBe("127.0.0.1:27017");
-		expect(
-			uriDiagnostics("mongodb://user:pass@[::1]/db?appName=ops@example.com")
-				.host,
-		).toBe("[::1]");
+		for (const sample of [
+			"mongodb://user:pass@localhost/db?appName=ops@example.com",
+			"mongodb://user:pass@127.0.0.1:27017/db?appName=ops@example.com",
+			"mongodb://user:pass@[::1]/db?appName=ops@example.com",
+		]) {
+			const facts = uriDiagnostics(sample);
+			expect(facts.passwordReserved).toEqual([]);
+			expect(facts).not.toHaveProperty("host");
+			expect(JSON.stringify(facts)).not.toContain("localhost");
+			expect(JSON.stringify(facts)).not.toContain("127.0.0.1");
+			expect(JSON.stringify(facts)).not.toContain("[::1]");
+		}
 
 		const marks = uriDiagnostics("mongodb://user:@@@@@cluster.example.invalid");
 		expect(marks.atCount).toBe(5);
-		expect(marks.host).toBe("cluster.example.invalid");
-		expect(marks.passwordLength).toBeNull();
 		expect(marks.passwordReserved).toEqual([]);
 		expect(JSON.stringify(marks)).not.toContain("@@@@");
+		expect(JSON.stringify(marks)).not.toContain("cluster.example.invalid");
 	});
 
 	it("adds a percent-encoding hint for parser failures", () => {

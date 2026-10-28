@@ -29,11 +29,11 @@ Bins stay in memory in the isolate when `MONGODB_URI` is not set. A bin from one
 
 Percent-encode reserved characters in the username and the password. `@` is `%40`. An unencoded `@` makes the driver throw `Invalid connection string` before it contacts Atlas.
 
-`GET /healthz` reports the bin store. A successful admin ping returns HTTP 200 and `bins.connected: true`. A failed ping returns HTTP 503 with the driver error name, a redacted message, and a code. The body has `uriPresent` (boolean) and `scheme` (`mongodb` or `mongodb+srv`). On the Node server, this route reports the memory store.
+`GET /healthz` reports the bin store. A successful admin ping returns HTTP 200 and `bins.connected: true`. A failed ping returns HTTP 503 with the driver error name, a redacted message, and a code. The body has `uriPresent` (boolean). It does not have the scheme. On the Node server, this route reports the memory store.
 
-When `MONGODB_URI` is set, `bins.uri` has the URI length and the `@` count. It also has flags for whitespace, a newline, and quote marks. It has the host, the username, and the password length. The host is the text after the last `@` before `/` or `?`. An `@` in the query string does not change the host. The body does not have the password or the full URI.
+When `MONGODB_URI` is set, `bins.uri` has the URI length and the `@` count. It also has flags for whitespace, a newline, and quote marks. It does not have the host, the username, or the password length. The body does not have the password or the full URI.
 
-The percent-encode hint is added only for `Invalid connection string` or `unescaped characters`. A DNS error keeps the driver text. `uri.passwordLength` is null when the password has only reserved characters. Worker logs still omit the URI, the username, the password, and the host.
+The percent-encode hint is added only for `Invalid connection string` or `unescaped characters`. A DNS error keeps the driver text. `uri.passwordReserved` is empty when the password has only reserved characters. Worker logs still omit the URI, the username, the password, and the host.
 
 Taps are a library API (`mock.taps.inject`). They have no HTTP routes, so a deployed Worker has no way to inject one.
 

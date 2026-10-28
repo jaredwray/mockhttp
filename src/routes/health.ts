@@ -19,7 +19,6 @@ export async function checkMemoryBinStore(keyv: {
 				connected: true,
 				latencyMs: Math.max(0, Date.now() - started),
 				uriPresent: false,
-				scheme: null,
 			},
 		};
 	} catch (error) {
@@ -30,7 +29,6 @@ export async function checkMemoryBinStore(keyv: {
 				store: "memory",
 				connected: false,
 				uriPresent: false,
-				scheme: null,
 				error: redactStoreError(error),
 			},
 		};
@@ -46,9 +44,6 @@ const uriDiagnosticsSchema = {
 		newline: { type: "boolean" },
 		wrappedQuotes: { type: "boolean" },
 		atCount: { type: "integer" },
-		host: { type: ["string", "null"] },
-		username: { type: ["string", "null"] },
-		passwordLength: { type: ["integer", "null"] },
 		passwordReserved: { type: "array", items: { type: "string" } },
 		passwordHasPercent: { type: "boolean" },
 	},
@@ -59,9 +54,6 @@ const uriDiagnosticsSchema = {
 		"newline",
 		"wrappedQuotes",
 		"atCount",
-		"host",
-		"username",
-		"passwordLength",
 		"passwordReserved",
 		"passwordHasPercent",
 	],
@@ -72,13 +64,12 @@ const binHealthFields = {
 	connected: { type: "boolean" },
 	latencyMs: { type: "integer" },
 	uriPresent: { type: "boolean" },
-	scheme: { type: ["string", "null"], enum: ["mongodb", "mongodb+srv", null] },
 	uri: uriDiagnosticsSchema,
 };
 
 const healthSchema: FastifySchema = {
 	description:
-		"Report whether bin storage is reachable. MongoDB failures include the driver error. The password and the full URI are never returned. A MongoDB result can include the host, the username, the URI length, and the password length.",
+		"Report whether bin storage is reachable. MongoDB failures include the driver error. The scheme, the host, the username, the password, the password length, and the full URI are never returned.",
 	tags: ["Health"],
 	response: {
 		200: {
@@ -88,7 +79,7 @@ const healthSchema: FastifySchema = {
 				bins: {
 					type: "object",
 					properties: binHealthFields,
-					required: ["store", "connected", "latencyMs", "uriPresent", "scheme"],
+					required: ["store", "connected", "latencyMs", "uriPresent"],
 				},
 			},
 			required: ["status", "bins"],
@@ -111,7 +102,7 @@ const healthSchema: FastifySchema = {
 							required: ["name", "message", "code"],
 						},
 					},
-					required: ["store", "connected", "uriPresent", "scheme", "error"],
+					required: ["store", "connected", "uriPresent", "error"],
 				},
 			},
 			required: ["status", "bins"],
@@ -140,7 +131,6 @@ export const healthRoute =
 							store: "mongo",
 							connected: false,
 							uriPresent: false,
-							scheme: null,
 							error: info,
 						},
 					});

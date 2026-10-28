@@ -2,8 +2,8 @@
  * Diagnostics for the bin store.
  * Logs can show the error name, a safe message, and URI shape flags.
  * Logs cannot show the URI, the username, the password, or the host.
- * `GET /healthz` can show the host, the username, and the password length.
- * It cannot show the password or the full URI.
+ * `GET /healthz` cannot show the scheme, the host, the username, the password,
+ * or the password length. It cannot show the full URI.
  */
 
 export type BinStoreScheme = "mongodb" | "mongodb+srv";
@@ -22,7 +22,6 @@ export type BinHealth =
 				connected: true;
 				latencyMs: number;
 				uriPresent: boolean;
-				scheme: BinStoreScheme | null;
 				uri?: UriDiagnostics;
 			};
 	  }
@@ -32,7 +31,6 @@ export type BinHealth =
 				store: "mongo" | "memory";
 				connected: false;
 				uriPresent: boolean;
-				scheme: BinStoreScheme | null;
 				uri?: UriDiagnostics;
 				error: BinStoreErrorInfo;
 			};
@@ -52,9 +50,6 @@ export type UriDiagnostics = {
 	newline: boolean;
 	wrappedQuotes: boolean;
 	atCount: number;
-	host: string | null;
-	username: string | null;
-	passwordLength: number | null;
 	passwordReserved: string[];
 	passwordHasPercent: boolean;
 };
@@ -185,23 +180,16 @@ function userinfoAndHost(uri: string): {
 }
 
 /**
- * Host is the text after the last `@` in the authority section.
- * The search stops at the first `/` or `?` after that host.
- * Username is the text before the first `:` in the userinfo.
  * The password is not returned.
- * When every password character is reserved, the length and the list stay empty.
- * Those two values rebuild the password.
+ * When every password character is reserved, the reserved list stays empty.
+ * That list plus a length would rebuild the password.
  */
 export function uriDiagnostics(uri: string): UriDiagnostics {
 	const parts = userinfoAndHost(uri);
-	let username: string | null = null;
 	let password: string | null = null;
 	if (parts.userinfo !== null) {
 		const colon = parts.userinfo.indexOf(":");
-		if (colon < 0) {
-			username = parts.userinfo.length > 0 ? parts.userinfo : null;
-		} else {
-			username = parts.userinfo.slice(0, colon) || null;
+		if (colon >= 0) {
 			password = parts.userinfo.slice(colon + 1);
 		}
 	}
@@ -219,9 +207,6 @@ export function uriDiagnostics(uri: string): UriDiagnostics {
 		newline: /[\r\n]/.test(uri),
 		wrappedQuotes: hasWrappedQuotes(uri),
 		atCount: uri.split("@").length - 1,
-		host: parts.host,
-		username,
-		passwordLength: secret === null || onlyReserved ? null : secret.length,
 		passwordReserved:
 			secret === null || onlyReserved
 				? []

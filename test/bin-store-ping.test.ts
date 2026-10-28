@@ -31,7 +31,7 @@ describe("mongo bin store ping", () => {
 			expect(report.bins.store).toBe("mongo");
 			expect(report.bins.connected).toBe(false);
 			expect(report.bins.uriPresent).toBe(true);
-			expect(report.bins.scheme).toBe("mongodb+srv");
+			expect(report.bins).not.toHaveProperty("scheme");
 			expect(report.bins.error.name).toBe("MongoParseError");
 			expect(report.bins.error.message).toContain("Invalid connection string");
 			expect(report.bins.error.message).toContain("Percent-encode");
@@ -47,9 +47,6 @@ describe("mongo bin store ping", () => {
 				newline: false,
 				wrappedQuotes: false,
 				atCount: 2,
-				host: "cluster0.example.invalid",
-				username: "user",
-				passwordLength: 8,
 				passwordReserved: ["@"],
 				passwordHasPercent: false,
 			});
@@ -78,14 +75,14 @@ describe("mongo bin store ping", () => {
 				store: "mongo",
 				connected: true,
 				uriPresent: true,
-				scheme: "mongodb",
 			},
 		});
 		if (report.status === "ok") {
 			expect(report.bins.latencyMs).toEqual(expect.any(Number));
-			expect(report.bins.uri?.host).toBe("cluster0.example.invalid:27017");
-			expect(report.bins.uri?.username).toBe("user");
-			expect(report.bins.uri?.passwordLength).toBe(4);
+			expect(report.bins).not.toHaveProperty("scheme");
+			expect(report.bins.uri).not.toHaveProperty("host");
+			expect(report.bins.uri).not.toHaveProperty("username");
+			expect(report.bins.uri).not.toHaveProperty("passwordLength");
 		}
 		expect(JSON.stringify(report)).not.toContain("user:pass");
 		expect(errorLog.mock.calls.join("\n")).toContain("healthz.close");
@@ -120,7 +117,10 @@ describe("mongo bin store ping", () => {
 			);
 			expect(report.bins.error.message).not.toContain("Percent-encode");
 			expect(report.bins.error.message).not.toContain("cluster0");
-			expect(report.bins.uri?.host).toBe("cluster0.example.invalid");
+			expect(report.bins).not.toHaveProperty("scheme");
+			expect(report.bins.uri).not.toHaveProperty("host");
+			expect(report.bins.uri).not.toHaveProperty("username");
+			expect(report.bins.uri).not.toHaveProperty("passwordLength");
 			expect(report.bins.uri?.passwordHasPercent).toBe(false);
 		}
 	});

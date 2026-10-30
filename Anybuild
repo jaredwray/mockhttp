@@ -14,6 +14,14 @@ config = node_config(
     node_server = "fastify",
     node_version = "24",
     pnpm_version = "12.12.1",
+    # pnpm 12 reads overrides from pnpm-workspace.yaml, and the lockfile
+    # records them. This install step bind-mounts only the listed inputs, so
+    # the workspace file has to be here. Without it, frozen install fails
+    # with ERR_PNPM_LOCKFILE_CONFIG_MISMATCH.
+    node_install_inputs = [
+        "package.json",
+        "pnpm-workspace.yaml",
+    ],
 )
 
 build = node_build(config)

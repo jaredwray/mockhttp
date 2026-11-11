@@ -1,5 +1,5 @@
 # Use an official Node.js image as the base
-FROM node:24.22.1-alpine3.24@sha256:feb76650b7195319268c59cb2d419c732d6c499b13bf5296f16ab59eb1f0a4f3
+FROM node:24.22.3-alpine3.24@sha256:98e4e60b35fd50143e1838da2957488c25aa3a3efbd48bb679923f77d6d3d873
 
 # Set working directory
 WORKDIR /app

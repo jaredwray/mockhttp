@@ -15,7 +15,7 @@ Profile: npm library · public
 
 ## 3. Dependencies (pnpm)
 - [x] `packageManager: pnpm@11.3+` pinned in `package.json` (#185; currently `pnpm@12.12.1`)
-- [x] 7-day cooldown: `minimumReleaseAge: 10080`, `minimumReleaseAgeStrict: true`, `minimumReleaseAgeIgnoreMissingTime: false`; temporary `minimumReleaseAgeExclude` for `undici@7.30.1` and `undici@8.12.2` (Oct 15 security patches; remove after 2026-10-22 ~8:05 AM PT), `@jaredwray/fumanchu@4.7.5` (markdown-it 15.0.3), and `mongodb@7.8.0` (CVE-2026-119179, published 2026-10-30). Needs Jared's sign-off.
+- [x] 7-day cooldown: `minimumReleaseAge: 10080`, `minimumReleaseAgeStrict: true`, `minimumReleaseAgeIgnoreMissingTime: false`. `pnpm-workspace.yaml` has no `minimumReleaseAgeExclude` list.
 - [x] `trustPolicy: no-downgrade`; no first-party `trustPolicyExclude` — verified on main
 - [x] Lifecycle scripts blocked: `strictDepBuilds: true`, `dangerouslyAllowAllBuilds: false`, `allowBuilds: {}` baseline (#186; exceptions `@swc/core`, `esbuild`)
 - [x] `blockExoticSubdeps: true` — verified on main

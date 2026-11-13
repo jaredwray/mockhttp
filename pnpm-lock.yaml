@@ -165,6 +165,7 @@ settings:
 overrides:
   miniflare>undici: 7.30.1
   miniflare>sharp: 0.35.5
+  set-cookie-parser@<2.7.3: 2.7.3
 
 importers:
 
@@ -2971,8 +2972,8 @@ packages:
   serve-handler@6.1.7:
     resolution: {integrity: sha512-CinAq1xWb0vR3twAv9evEU8cNWkXCb9kd5ePAHUKJBkOsUpR1wt/CvGdeca7vqumL1U5cSaeVQ6zZMxiJ3yWsg==}
 
-  set-cookie-parser@2.7.2:
-    resolution: {integrity: sha512-oeM1lpU/UvhTxw+g3cIfxXHyJRc/uidd3yK1P242gzHds0udQBYzs3y8j4gCCW+ZJ7ad0yctld8RYO+bdurlvw==}
+  set-cookie-parser@2.7.3:
+    resolution: {integrity: sha512-irZHtTqurLna57KQG/s+fzOwv/J6XSH4cs8M/vsrY3uCaQ3S6+QJguAH0WdN47SXlk82voMZ4naWMQf8fdEoIg==}
 
   setprototypeof@1.2.0:
     resolution: {integrity: sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==}
@@ -5144,7 +5145,7 @@ snapshots:
     dependencies:
       cookie: 1.1.1
       process-warning: 4.0.1
-      set-cookie-parser: 2.7.2
+      set-cookie-parser: 2.7.3
 
   lightningcss-android-arm64@1.33.0:
     optional: true
@@ -6176,7 +6177,7 @@ snapshots:
       path-to-regexp: 3.3.0
       range-parser: 1.2.0
 
-  set-cookie-parser@2.7.2: {}
+  set-cookie-parser@2.7.3: {}
 
   setprototypeof@1.2.0: {}
 

@@ -26,11 +26,14 @@ const FRAMING_HEADERS = new Set([
 
 const invalidHeaderSchema = {
 	type: "object",
+	additionalProperties: true,
 	properties: {
 		error: { type: "string" },
 		header: { type: "string" },
+		statusCode: { type: "integer" },
+		code: { type: "string" },
+		message: { type: "string" },
 	},
-	required: ["error", "header"],
 };
 
 const responseHeadersSchema: FastifySchema = {
@@ -102,12 +105,14 @@ async function echoHeaders(
 	reply: FastifyReply,
 	sources: Array<Record<string, string>>,
 ) {
-	const body: Record<string, string> = {};
+	// A null prototype keeps `__proto__` as an own field.
+	const body: Record<string, string> = Object.create(null);
+	const committedHeaders: string[] = [];
 	for (const source of sources) {
 		for (const [name, raw] of Object.entries(source)) {
 			const escaped = commitEchoHeader(reply, name, raw);
 			if (escaped === undefined) {
-				for (const setName of Object.keys(body)) {
+				for (const setName of committedHeaders) {
 					reply.removeHeader(setName);
 				}
 				return reply.code(400).send({
@@ -116,6 +121,7 @@ async function echoHeaders(
 				});
 			}
 			body[name] = escaped;
+			committedHeaders.push(name);
 		}
 	}
 	return reply.send(body);

@@ -65,6 +65,18 @@ describe("Response Headers Routes", () => {
 		expect(response.json()).toEqual({});
 	});
 
+	it("returns 400 for invalid JSON", async () => {
+		const response = await fastify.inject({
+			method: "POST",
+			url: "/response-headers",
+			headers: { "content-type": "application/json" },
+			payload: "{",
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json().code).toBe("FST_ERR_CTP_INVALID_JSON_BODY");
+	});
+
 	it("should treat a POST with no body as an empty header set", async () => {
 		const response = await fastify.inject({
 			method: "POST",
@@ -179,5 +191,35 @@ describe("Response header name guard", () => {
 
 		const stillUp = await mock.server.inject({ method: "GET", url: "/get" });
 		expect(stillUp.statusCode).toBe(200);
+	});
+
+	it("echoes a prototype key and drops it when a later name is rejected", async () => {
+		const protoName = ["__", "proto__"].join("");
+		const echoed = await mock.server.inject({
+			method: "GET",
+			url: `/response-headers?${encodeURIComponent(protoName)}=safe`,
+		});
+		expect(echoed.statusCode).toBe(200);
+		const echoedBody = JSON.parse(echoed.body) as Record<string, unknown>;
+		expect(Object.hasOwn(echoedBody, protoName)).toBe(true);
+		expect(Object.getOwnPropertyDescriptor(echoedBody, protoName)?.value).toBe(
+			"safe",
+		);
+
+		const rejected = await mock.server.inject({
+			method: "GET",
+			url: `/response-headers?${encodeURIComponent(protoName)}=safe&trailer=x`,
+		});
+		expect(rejected.statusCode).toBe(400);
+		expect(rejected.json()).toEqual({
+			error: "invalid_header_name",
+			header: "trailer",
+		});
+		const rejectedHeaders = (
+			rejected.raw as {
+				res: { getHeaders: () => Record<string, unknown> };
+			}
+		).res.getHeaders();
+		expect(Object.hasOwn(rejectedHeaders, protoName)).toBe(false);
 	});
 });

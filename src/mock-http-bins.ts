@@ -25,6 +25,17 @@ const ID_ATTEMPTS = 8;
 /** Hex ids of this length or less are scanned, so a free id is not missed. */
 const SCANNED_ID_LENGTH = 4;
 
+/** Keep `idLength` as a positive integer. A fraction is rejected. */
+function normalizeIdLength(value: number | undefined): number {
+	if (value === undefined) {
+		return DEFAULT_ID_LENGTH;
+	}
+	if (!Number.isInteger(value) || value < 1) {
+		throw new Error("MockHttpBins: idLength must be a positive integer");
+	}
+	return value;
+}
+
 /** SHA-256 digest of an owner token. */
 function ownerTokenHash(token: string): Buffer {
 	return createHash("sha256").update(token).digest();
@@ -72,6 +83,18 @@ const DEFAULT_MAX_REQUESTS = 100;
 const DEFAULT_MAX_BODY_SIZE = 128 * 1024;
 const DEFAULT_ID_LENGTH = 12;
 const BIN_KEY_PREFIX = "bin:";
+const keyvLocks = new WeakMap<object, Map<string, Promise<void>>>();
+
+/** One lock map per Keyv object, so two bin stores that share it wait together. */
+function locksFor(keyv: object): Map<string, Promise<void>> {
+	const existing = keyvLocks.get(keyv);
+	if (existing) {
+		return existing;
+	}
+	const created = new Map<string, Promise<void>>();
+	keyvLocks.set(keyv, created);
+	return created;
+}
 
 /**
  * Stores request bins in Keyv.
@@ -83,7 +106,6 @@ export class MockHttpBins {
 	private readonly _maxRequestsPerBin: number;
 	private readonly _maxBodySize: number;
 	private readonly _idLength: number;
-	private readonly _locks = new Map<string, Promise<void>>();
 
 	constructor(options?: MockHttpBinsOptions) {
 		this._keyv = options?.keyv ?? new Keyv<BinDocument>();
@@ -94,7 +116,7 @@ export class MockHttpBins {
 			options?.maxRequestsPerBin ?? DEFAULT_MAX_REQUESTS,
 		);
 		this._maxBodySize = options?.maxBodySize ?? DEFAULT_MAX_BODY_SIZE;
-		this._idLength = options?.idLength ?? DEFAULT_ID_LENGTH;
+		this._idLength = normalizeIdLength(options?.idLength);
 	}
 
 	/** Keyv instance that stores the bins. */
@@ -446,19 +468,21 @@ export class MockHttpBins {
 
 	/**
 	 * Run writes for one bin in order.
+	 * Instances that share one Keyv share this lock.
 	 * A failed write does not block the next write for that bin.
 	 */
 	private enqueue<T>(id: string, fn: () => Promise<T>): Promise<T> {
-		const previous = this._locks.get(id) ?? Promise.resolve();
+		const locks = locksFor(this._keyv);
+		const previous = locks.get(id) ?? Promise.resolve();
 		const run = previous.then(fn);
 		const settled = run.then(
 			() => undefined,
 			() => undefined,
 		);
-		this._locks.set(id, settled);
+		locks.set(id, settled);
 		void settled.finally(() => {
-			if (this._locks.get(id) === settled) {
-				this._locks.delete(id);
+			if (locks.get(id) === settled) {
+				locks.delete(id);
 			}
 		});
 		return run;

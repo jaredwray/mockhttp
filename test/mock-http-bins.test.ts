@@ -45,6 +45,15 @@ describe("MockHttpBins", () => {
 			expect((await limited.getBin(bin.id))?.requestCount).toBe(0);
 		});
 
+		it("rejects an id length that is not a positive integer", () => {
+			expect(() => new MockHttpBins({ idLength: 1.5 })).toThrow(
+				/positive integer/,
+			);
+			expect(() => new MockHttpBins({ idLength: 0 })).toThrow(
+				/positive integer/,
+			);
+		});
+
 		it("uses the Keyv instance and limits that the caller passes", () => {
 			const keyv = new Keyv();
 			const custom = new MockHttpBins({
@@ -108,6 +117,60 @@ describe("MockHttpBins", () => {
 			} finally {
 				ids.mockRestore();
 			}
+		});
+
+		it("does not let a second store overwrite a shared short id", async () => {
+			const keyv = new Keyv();
+			const first = new MockHttpBins({ keyv, idLength: 1 });
+			const second = new MockHttpBins({ keyv, idLength: 1 });
+			for (let n = 1; n < 16; n++) {
+				await keyv.set(
+					`bin:${n.toString(16)}`,
+					{
+						bin: {
+							id: n.toString(16),
+							createdAt: new Date(0).toISOString(),
+							expiresAt: new Date(60_000).toISOString(),
+							requestCount: 0,
+						},
+						tokenHash: "ab".repeat(32),
+						requests: [],
+					},
+					60_000,
+				);
+			}
+			const set = keyv.set.bind(keyv);
+			let release: (() => void) | undefined;
+			const gate = new Promise<void>((resolve) => {
+				release = resolve;
+			});
+			let writes = 0;
+			vi.spyOn(keyv, "set").mockImplementation(async (key, value, ttl) => {
+				writes += 1;
+				if (writes === 1) {
+					await gate;
+				}
+				return set(key, value, ttl);
+			});
+			const pending = Promise.allSettled([
+				first.createBin(),
+				second.createBin(),
+			]);
+			await vi.waitFor(() => expect(writes).toBe(1));
+			release?.();
+			const settled = await pending;
+			const created = settled.flatMap((result) =>
+				result.status === "fulfilled" ? [result.value] : [],
+			);
+			expect(created).toHaveLength(1);
+			expect(
+				(
+					await first.authorizeOwner(
+						created[0]?.id ?? "",
+						created[0]?.token ?? "",
+					)
+				).ok,
+			).toBe(true);
 		});
 
 		it("fills a one-character id space before it reports the space full", async () => {

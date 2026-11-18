@@ -803,7 +803,7 @@ mock.bins = new MockHttpBins({
 
 Each capture writes the full bin again. A large body or a high request limit makes that write large. Set `maxBodySize` and `maxRequestsPerBin` to limit the size. With the defaults, a full bin of binary bodies is about 17 MB.
 
-Two processes that share one Keyv can lose a capture. This occurs when both processes write the same bin at the same time.
+Two processes that share one Keyv can lose a capture. This occurs when both processes write the same bin at the same time. Keyv does not offer a conditional create, so two processes can also replace a new bin. Two instances in one process that share one Keyv wait on the same bin id.
 
 If Keyv does not store a write, the bin route returns `500` with the standard Fastify error body: `statusCode`, `error`, and `message`.
 

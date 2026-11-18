@@ -1,6 +1,7 @@
 import {
 	createHash,
 	randomBytes,
+	randomInt,
 	randomUUID,
 	timingSafeEqual,
 } from "node:crypto";
@@ -21,6 +22,8 @@ type BinDocument = {
 
 const OWNER_TOKEN_BYTES = 32;
 const ID_ATTEMPTS = 8;
+/** Hex ids of this length or less are scanned, so a free id is not missed. */
+const SCANNED_ID_LENGTH = 4;
 
 /** SHA-256 digest of an owner token. */
 function ownerTokenHash(token: string): Buffer {
@@ -120,30 +123,61 @@ export class MockHttpBins {
 	 * Throws when Keyv does not store the bin.
 	 */
 	public async createBin(): Promise<Bin & { token: string }> {
+		if (this._idLength <= SCANNED_ID_LENGTH) {
+			return this.createByScan(16 ** this._idLength);
+		}
 		for (let attempt = 0; attempt < ID_ATTEMPTS; attempt++) {
-			const id = this.generateId();
-			const token = randomBytes(OWNER_TOKEN_BYTES).toString("base64url");
-			const now = Date.now();
-			const bin: Bin = {
-				id,
-				createdAt: new Date(now).toISOString(),
-				expiresAt: new Date(now + this._defaultTtlMs).toISOString(),
-				requestCount: 0,
-			};
-			const stored = await this.enqueue(id, async () => {
-				const existing = await this._keyv.get(this.binKey(id));
-				if (existing) {
-					return false;
-				}
-				await this.save({
-					bin,
-					tokenHash: ownerTokenHash(token).toString("hex"),
-					requests: [],
-				});
-				return true;
+			const created = await this.tryStore(this.generateId());
+			if (created) {
+				return created;
+			}
+		}
+		throw new Error("MockHttpBins: could not allocate a unique bin id");
+	}
+
+	/**
+	 * Store a bin when the id is free.
+	 * Return undefined when the id is already in use.
+	 */
+	private async tryStore(
+		id: string,
+	): Promise<(Bin & { token: string }) | undefined> {
+		const token = randomBytes(OWNER_TOKEN_BYTES).toString("base64url");
+		const now = Date.now();
+		const bin: Bin = {
+			id,
+			createdAt: new Date(now).toISOString(),
+			expiresAt: new Date(now + this._defaultTtlMs).toISOString(),
+			requestCount: 0,
+		};
+		const stored = await this.enqueue(id, async () => {
+			const existing = await this._keyv.get(this.binKey(id));
+			if (existing) {
+				return false;
+			}
+			await this.save({
+				bin,
+				tokenHash: ownerTokenHash(token).toString("hex"),
+				requests: [],
 			});
-			if (stored) {
-				return { ...bin, token };
+			return true;
+		});
+		return stored ? { ...bin, token } : undefined;
+	}
+
+	/**
+	 * Try each id in a short space.
+	 * Throw only when every id is already in use.
+	 */
+	private async createByScan(space: number): Promise<Bin & { token: string }> {
+		const start = randomInt(space);
+		for (let offset = 0; offset < space; offset++) {
+			const id = ((start + offset) % space)
+				.toString(16)
+				.padStart(this._idLength, "0");
+			const created = await this.tryStore(id);
+			if (created) {
+				return created;
 			}
 		}
 		throw new Error("MockHttpBins: could not allocate a unique bin id");

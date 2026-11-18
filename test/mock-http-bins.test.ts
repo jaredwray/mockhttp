@@ -110,6 +110,16 @@ describe("MockHttpBins", () => {
 			}
 		});
 
+		it("fills a one-character id space before it reports the space full", async () => {
+			const small = new MockHttpBins({ idLength: 1 });
+			const ids = new Set<string>();
+			for (let n = 0; n < 16; n++) {
+				ids.add((await small.createBin()).id);
+			}
+			expect(ids.size).toBe(16);
+			await expect(small.createBin()).rejects.toThrow(/unique bin id/);
+		});
+
 		it("throws when every id attempt finds an existing bin", async () => {
 			const first = await bins.createBin();
 			const ids = vi

@@ -7,7 +7,7 @@ dangerouslyAllowAllBuilds: false
 trustPolicy: no-downgrade
 
 overrides:
-  "miniflare>undici": "7.30.1"
+  "miniflare>undici": "8.12.2"
   # miniflare@5.20260826.0-alpha pins sharp@0.35.2 exactly.
   "miniflare>sharp": "0.35.5"
   # light-my-request 6.6.0 accepts set-cookie-parser ^2.6.0. That range contains 2.7.2.

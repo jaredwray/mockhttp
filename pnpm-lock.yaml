@@ -163,7 +163,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  miniflare>undici: 7.30.1
+  miniflare>undici: 8.12.2
   miniflare>sharp: 0.35.5
   set-cookie-parser@<2.7.3: 2.7.3
 
@@ -1554,11 +1554,6 @@ packages:
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
-    peerDependencies:
-      ajv: ^8.0.0
-    peerDependenciesMeta:
-      ajv:
-        optional: true
 
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
@@ -2117,10 +2112,6 @@ packages:
 
   hookified@2.2.0:
     resolution: {integrity: sha512-p/LgFzRN5FeoD3DLS6bkUapeye6E4SI6yJs6KetENd18S+FBthqYq2amJUWpt5z0EQwwHemidjY5OqJGEKm5uA==}
-
-  hookified@3.0.3:
-    resolution: {integrity: sha512-ZcbRytYgERoKtosiaXolUIPIWMgUCrSiWQEzFZ0kc8etD/LPgpy4/KOrtssFdK7ZXlTTyb4cob2veqj7osv8yA==}
-    engines: {node: '>=22.18.0'}
 
   hookified@3.0.4:
     resolution: {integrity: sha512-Uos6DSO6BKv4DeR1C22UosRpeUaaoQgEQ+eDCyoJRll2OGzGpZc708vL7orIvqrYLo6zhVV+pkwO9zKVCsq3PQ==}
@@ -3761,7 +3752,7 @@ snapshots:
   '@fastify/ajv-compiler@4.0.7':
     dependencies:
       ajv: 8.20.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
+      ajv-formats: 3.0.1
       fast-uri: 4.2.2
 
   '@fastify/cookie@11.1.3':
@@ -4350,8 +4341,8 @@ snapshots:
       '@ai-sdk/provider-utils': 5.0.36(zod@4.6.7)
       zod: 4.6.7
 
-  ajv-formats@3.0.1(ajv@8.20.0):
-    optionalDependencies:
+  ajv-formats@3.0.1:
+    dependencies:
       ajv: 8.20.0
 
   ajv@8.20.0:
@@ -4748,7 +4739,7 @@ snapshots:
     dependencies:
       '@fastify/merge-json-schemas': 0.2.1
       ajv: 8.20.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
+      ajv-formats: 3.0.1
       fast-uri: 4.2.2
       json-schema-ref-resolver: 3.0.0
       rfdc: 1.4.1
@@ -4869,7 +4860,7 @@ snapshots:
 
   hashery@3.0.1:
     dependencies:
-      hookified: 3.0.3
+      hookified: 3.0.4
 
   hasown@2.0.4:
     dependencies:
@@ -4994,8 +4985,6 @@ snapshots:
   hookified@1.15.1: {}
 
   hookified@2.2.0: {}
-
-  hookified@3.0.3: {}
 
   hookified@3.0.4: {}
 
@@ -5722,7 +5711,7 @@ snapshots:
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       sharp: 0.35.5(@types/node@24.12.2)
-      undici: 7.30.1
+      undici: 8.12.2
       workerd: 1.20260826.1
       ws: 8.21.0
       youch: 4.1.0-beta.10
@@ -6594,7 +6583,7 @@ snapshots:
       ai: 7.0.91(zod@4.6.7)
       cacheable: 2.5.0
       hashery: 3.0.1
-      hookified: 3.0.3
+      hookified: 3.0.4
       html-react-parser: 6.1.7(react@19.2.8)
       js-yaml: 5.4.1
       react: 19.2.8

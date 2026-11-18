@@ -165,7 +165,6 @@ settings:
 overrides:
   miniflare>undici: 8.12.2
   miniflare>sharp: 0.35.5
-  set-cookie-parser@<2.7.3: 2.7.3
 
 importers:
 

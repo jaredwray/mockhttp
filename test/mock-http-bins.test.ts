@@ -91,6 +91,38 @@ describe("MockHttpBins", () => {
 			expect((await custom.createBin()).id).toHaveLength(8);
 		});
 
+		it("does not replace a bin when the new id is already in use", async () => {
+			const first = await bins.createBin();
+			const ids = vi
+				.spyOn(bins as unknown as { generateId: () => string }, "generateId")
+				.mockReturnValueOnce(first.id)
+				.mockReturnValueOnce("freshid12ab");
+			try {
+				const second = await bins.createBin();
+				expect(second.id).toBe("freshid12ab");
+				expect((await bins.getBin(first.id))?.id).toBe(first.id);
+				expect(await bins.authorizeOwner(first.id, first.token)).toEqual({
+					ok: true,
+					bin: expect.objectContaining({ id: first.id }),
+				});
+			} finally {
+				ids.mockRestore();
+			}
+		});
+
+		it("throws when every id attempt finds an existing bin", async () => {
+			const first = await bins.createBin();
+			const ids = vi
+				.spyOn(bins as unknown as { generateId: () => string }, "generateId")
+				.mockReturnValue(first.id);
+			try {
+				await expect(bins.createBin()).rejects.toThrow(/unique bin id/);
+				expect((await bins.getBin(first.id))?.id).toBe(first.id);
+			} finally {
+				ids.mockRestore();
+			}
+		});
+
 		it("lets Keyv expire a bin whose lifetime is zero", async () => {
 			vi.useFakeTimers();
 			const immediate = new MockHttpBins({ defaultTtlMs: 0 });
@@ -177,6 +209,32 @@ describe("MockHttpBins", () => {
 			expect((await namespaced.listBins()).map((entry) => entry.id)).toEqual([
 				bin.id,
 			]);
+		});
+	});
+
+	describe("owned reads and writes", () => {
+		it("does not read, clear, or delete a replacement bin for a stale token", async () => {
+			const first = await bins.createBin();
+			await bins.recordRequest(first.id, RAW);
+			const replacement = await bins.createBin();
+			const stored = await bins.keyv.get(`bin:${replacement.id}`);
+			if (!stored) {
+				throw new Error("expected stored bin");
+			}
+			await bins.keyv.set(`bin:${first.id}`, stored, 60_000);
+
+			expect(
+				await bins.readOwnedRequests(first.id, first.token),
+			).toBeUndefined();
+			expect(
+				await bins.readOwnedRequest(first.id, first.token, "missing"),
+			).toEqual({ ok: false });
+			expect(await bins.clearOwnedRequests(first.id, first.token)).toBe(false);
+			expect(await bins.deleteOwnedBin(first.id, first.token)).toBe(false);
+			expect((await bins.getBin(first.id))?.id).toBe(replacement.id);
+			expect(await bins.readOwnedRequests(first.id, replacement.token)).toEqual(
+				[],
+			);
 		});
 	});
 

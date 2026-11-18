@@ -337,11 +337,15 @@ export const binsManagementRoute = (bins: MockHttpBins) => {
 			"/bins/:id/requests",
 			{ schema: listRequestsSchema },
 			async (request: BinIdRequest, reply: FastifyReply) => {
-				const access = await ownerAccess(bins, request, request.params.id);
-				if (access.status !== "ok") {
-					return sendOwnerFailure(reply, access.status);
+				const token = bearerOwnerToken(request.headers.authorization);
+				if (!token) {
+					return sendOwnerFailure(reply, "unauthorized");
 				}
-				return { requests: await bins.getRequests(request.params.id) };
+				const requests = await bins.readOwnedRequests(request.params.id, token);
+				if (!requests) {
+					return sendOwnerFailure(reply, "not_found");
+				}
+				return { requests };
 			},
 		);
 
@@ -349,18 +353,22 @@ export const binsManagementRoute = (bins: MockHttpBins) => {
 			"/bins/:id/requests/:reqId",
 			{ schema: getRequestSchema },
 			async (request: RequestIdRequest, reply: FastifyReply) => {
-				const access = await ownerAccess(bins, request, request.params.id);
-				if (access.status !== "ok") {
-					return sendOwnerFailure(reply, access.status);
+				const token = bearerOwnerToken(request.headers.authorization);
+				if (!token) {
+					return sendOwnerFailure(reply, "unauthorized");
 				}
-				const captured = await bins.getRequest(
+				const found = await bins.readOwnedRequest(
 					request.params.id,
+					token,
 					request.params.reqId,
 				);
-				if (!captured) {
+				if (!found.ok) {
+					return sendOwnerFailure(reply, "not_found");
+				}
+				if (!found.request) {
 					return reply.code(404).send({ error: "request_not_found" });
 				}
-				return captured;
+				return found.request;
 			},
 		);
 
@@ -368,11 +376,14 @@ export const binsManagementRoute = (bins: MockHttpBins) => {
 			"/bins/:id/requests",
 			{ schema: clearRequestsSchema },
 			async (request: BinIdRequest, reply: FastifyReply) => {
-				const access = await ownerAccess(bins, request, request.params.id);
-				if (access.status !== "ok") {
-					return sendOwnerFailure(reply, access.status);
+				const token = bearerOwnerToken(request.headers.authorization);
+				if (!token) {
+					return sendOwnerFailure(reply, "unauthorized");
 				}
-				await bins.clearRequests(request.params.id);
+				const cleared = await bins.clearOwnedRequests(request.params.id, token);
+				if (!cleared) {
+					return sendOwnerFailure(reply, "not_found");
+				}
 				return reply.code(204).send();
 			},
 		);
@@ -381,11 +392,14 @@ export const binsManagementRoute = (bins: MockHttpBins) => {
 			"/bins/:id",
 			{ schema: deleteBinSchema },
 			async (request: BinIdRequest, reply: FastifyReply) => {
-				const access = await ownerAccess(bins, request, request.params.id);
-				if (access.status !== "ok") {
-					return sendOwnerFailure(reply, access.status);
+				const token = bearerOwnerToken(request.headers.authorization);
+				if (!token) {
+					return sendOwnerFailure(reply, "unauthorized");
 				}
-				await bins.deleteBin(request.params.id);
+				const removed = await bins.deleteOwnedBin(request.params.id, token);
+				if (!removed) {
+					return sendOwnerFailure(reply, "not_found");
+				}
 				return reply.code(204).send();
 			},
 		);

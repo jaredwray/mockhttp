@@ -20,6 +20,7 @@ type BinDocument = {
 };
 
 const OWNER_TOKEN_BYTES = 32;
+const ID_ATTEMPTS = 8;
 
 /** SHA-256 digest of an owner token. */
 function ownerTokenHash(token: string): Buffer {
@@ -119,21 +120,33 @@ export class MockHttpBins {
 	 * Throws when Keyv does not store the bin.
 	 */
 	public async createBin(): Promise<Bin & { token: string }> {
-		const id = this.generateId();
-		const token = randomBytes(OWNER_TOKEN_BYTES).toString("base64url");
-		const now = Date.now();
-		const bin: Bin = {
-			id,
-			createdAt: new Date(now).toISOString(),
-			expiresAt: new Date(now + this._defaultTtlMs).toISOString(),
-			requestCount: 0,
-		};
-		await this.save({
-			bin,
-			tokenHash: ownerTokenHash(token).toString("hex"),
-			requests: [],
-		});
-		return { ...bin, token };
+		for (let attempt = 0; attempt < ID_ATTEMPTS; attempt++) {
+			const id = this.generateId();
+			const token = randomBytes(OWNER_TOKEN_BYTES).toString("base64url");
+			const now = Date.now();
+			const bin: Bin = {
+				id,
+				createdAt: new Date(now).toISOString(),
+				expiresAt: new Date(now + this._defaultTtlMs).toISOString(),
+				requestCount: 0,
+			};
+			const stored = await this.enqueue(id, async () => {
+				const existing = await this._keyv.get(this.binKey(id));
+				if (existing) {
+					return false;
+				}
+				await this.save({
+					bin,
+					tokenHash: ownerTokenHash(token).toString("hex"),
+					requests: [],
+				});
+				return true;
+			});
+			if (stored) {
+				return { ...bin, token };
+			}
+		}
+		throw new Error("MockHttpBins: could not allocate a unique bin id");
 	}
 
 	/**
@@ -229,6 +242,73 @@ export class MockHttpBins {
 		return recorded ? captured : undefined;
 	}
 
+	/**
+	 * Read captured requests when the token matches the current document.
+	 * Return undefined when the bin is missing or the token does not match.
+	 */
+	public async readOwnedRequests(
+		id: string,
+		token: string,
+	): Promise<CapturedRequest[] | undefined> {
+		const doc = await this.ownedDocument(id, token);
+		if (!doc) {
+			return undefined;
+		}
+		return [...doc.requests];
+	}
+
+	/**
+	 * Read one capture when the token matches the current document.
+	 * `ok: false` means the bin is missing or the token does not match.
+	 */
+	public async readOwnedRequest(
+		id: string,
+		token: string,
+		reqId: string,
+	): Promise<
+		{ ok: false } | { ok: true; request: CapturedRequest | undefined }
+	> {
+		const doc = await this.ownedDocument(id, token);
+		if (!doc) {
+			return { ok: false };
+		}
+		return {
+			ok: true,
+			request: doc.requests.find((request) => request.id === reqId),
+		};
+	}
+
+	/**
+	 * Clear captures when the token matches the current document.
+	 * The check and the write share one lock, so a replacement bin is not cleared.
+	 */
+	public async clearOwnedRequests(id: string, token: string): Promise<boolean> {
+		return this.enqueue(id, async () => {
+			const doc = await this.ownedDocument(id, token);
+			if (!doc) {
+				return false;
+			}
+			doc.requests = [];
+			doc.bin.requestCount = 0;
+			await this.save(doc);
+			return true;
+		});
+	}
+
+	/**
+	 * Delete a bin when the token matches the current document.
+	 * The check and the delete share one lock, so a replacement bin stays.
+	 */
+	public async deleteOwnedBin(id: string, token: string): Promise<boolean> {
+		return this.enqueue(id, async () => {
+			const doc = await this.ownedDocument(id, token);
+			if (!doc) {
+				return false;
+			}
+			return this._keyv.delete(this.binKey(id));
+		});
+	}
+
 	/** List captured requests for a bin, newest first. */
 	public async getRequests(binId: string): Promise<CapturedRequest[]> {
 		const doc = await this._keyv.get(this.binKey(binId));
@@ -260,6 +340,18 @@ export class MockHttpBins {
 			await this.save(doc);
 			return true;
 		});
+	}
+
+	/** Return the current document when the owner token matches. */
+	private async ownedDocument(
+		id: string,
+		token: string,
+	): Promise<BinDocument | undefined> {
+		const doc = await this._keyv.get(this.binKey(id));
+		if (!doc || !ownerHashMatches(doc.tokenHash, token)) {
+			return undefined;
+		}
+		return doc;
 	}
 
 	/** Keyv 6 yields nothing when the store has no iterator. Listing must fail instead. */

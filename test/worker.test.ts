@@ -451,10 +451,10 @@ describe("worker Fastify app", () => {
 		});
 		expect(created.statusCode).toBe(200);
 		const store = KeyvMongoMock.instances[0];
-		// No request scope is active under `inject`, so the write opened its own
-		// client and closed it when it finished.
-		expect(KeyvMongoMock.instances).toHaveLength(1);
-		expect(KeyvMongoMock.disconnects).toBe(1);
+		// No request scope is active under `inject`, so each Keyv call opens a
+		// client. Create reads the id, then writes the bin.
+		expect(KeyvMongoMock.instances).toHaveLength(2);
+		expect(KeyvMongoMock.disconnects).toBe(2);
 		expect(store?.url).toBe(uri);
 		expect(store?.options).toEqual({
 			collection: "bins",
@@ -648,7 +648,7 @@ describe("worker Fastify app", () => {
 			url: "/bins",
 		});
 		expect(created.statusCode).toBe(200);
-		expect(KeyvMongoMock.instances).toHaveLength(1);
+		expect(KeyvMongoMock.instances).toHaveLength(2);
 		expect(KeyvMongoMock.instances[0]?.url).toBe(uri);
 		await mockHttp.close();
 		delete process.env.MONGODB_URI;
@@ -818,8 +818,9 @@ describe("worker Fastify app", () => {
 		expect(connected.statusCode).toBe(500);
 		expect(connected.body).toContain("Invalid connection string");
 		expect(connected.body).not.toContain("user:pass");
-		// The failed write dropped the client once. The close failure is logged, not thrown.
-		expect(KeyvMongoMock.disconnects).toBe(1);
+		// The id check closes one client. The failed write closes another.
+		// The close failure is logged, not thrown.
+		expect(KeyvMongoMock.disconnects).toBe(2);
 		const closeLog = errorLog.mock.calls
 			.map((call) => String(call[0]))
 			.join("\n");

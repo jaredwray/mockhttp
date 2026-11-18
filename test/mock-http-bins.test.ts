@@ -69,6 +69,21 @@ describe("MockHttpBins", () => {
 			expect(Date.parse(bin.expiresAt)).toBeGreaterThan(
 				Date.parse(bin.createdAt),
 			);
+			expect(Buffer.from(bin.token, "base64url").length).toBeGreaterThanOrEqual(
+				32,
+			);
+			const { token, ...publicBin } = bin;
+			expect(await bins.getBin(bin.id)).toEqual(publicBin);
+			expect(await bins.authorizeOwner(bin.id, token)).toEqual({
+				ok: true,
+				bin: publicBin,
+			});
+			expect(await bins.authorizeOwner(bin.id, "other-token")).toEqual({
+				ok: false,
+			});
+			expect(await bins.authorizeOwner("missing", token)).toEqual({
+				ok: false,
+			});
 		});
 
 		it("honours the configured id length", async () => {
@@ -135,11 +150,18 @@ describe("MockHttpBins", () => {
 
 			const ids = (await bins.listBins()).map((bin) => bin.id);
 			expect(ids).toEqual([fresh.id]);
+			expect(
+				(await bins.listBinsForToken(fresh.token)).map((bin) => bin.id),
+			).toEqual([fresh.id]);
+			expect(await bins.listBinsForToken("other-token")).toEqual([]);
 		});
 
 		it("throws from listBins when the Keyv store has no iterator", async () => {
 			bins.keyv.store.iterator = undefined;
 			await expect(bins.listBins()).rejects.toThrow(
+				/does not support iteration/,
+			);
+			await expect(bins.listBinsForToken("token")).rejects.toThrow(
 				/does not support iteration/,
 			);
 		});

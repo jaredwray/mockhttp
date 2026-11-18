@@ -147,7 +147,9 @@ Use `mockHttp.bins` to control request bins. See [Request Bins](#request-bins) f
 
 Create a new bin with the configured TTL. Throws when Keyv does not store the bin.
 
-**Returns:** `Promise<Bin>` — `{ id, createdAt, expiresAt, requestCount }`
+**Returns:** `Promise<Bin & { token: string }>` — `{ id, createdAt, expiresAt, requestCount, token }`
+
+The `token` value is the owner secret. `POST /bins` returns it one time. Send it as `Authorization: Bearer <token>` on management routes. These in-process methods do not require the token.
 
 ### `bins.getBin(id)`
 
@@ -157,7 +159,7 @@ Look up a bin by id. Returns `undefined` if the bin does not exist or Keyv has e
 
 ### `bins.listBins()`
 
-List the bins that Keyv still holds.
+List the bins that Keyv still holds. `GET /bins` returns only the bin for the presented Bearer token.
 
 **Returns:** `Promise<Bin[]>`
 

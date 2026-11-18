@@ -53,8 +53,8 @@ describe("worker under workerd", () => {
 		expect(await ip.json()).toMatchObject({ ip: "203.0.113.10" });
 
 		const listed = await worker.fetch("https://mockhttp.org/bins");
-		expect(listed.status, await textOf(listed)).toBe(200);
-		expect(await listed.json()).toEqual({ bins: [] });
+		expect(listed.status, await textOf(listed)).toBe(401);
+		expect(await listed.json()).toEqual({ error: "unauthorized" });
 
 		const created = await worker.fetch("https://mockhttp.org/bins", {
 			method: "POST",
@@ -253,7 +253,8 @@ describe.skipIf(!process.env.MOCKHTTP_TEST_MONGODB_URI)(
 					method: "POST",
 				});
 				expect(created.status, await textOf(created)).toBe(200);
-				const bin = (await created.json()) as { id: string };
+				const bin = (await created.json()) as { id: string; token: string };
+				const auth = { authorization: `Bearer ${bin.token}` };
 
 				for (let i = 0; i < 3; i++) {
 					const captured = await worker.fetch(
@@ -270,6 +271,7 @@ describe.skipIf(!process.env.MOCKHTTP_TEST_MONGODB_URI)(
 				for (let i = 0; i < 3; i++) {
 					const fetched = await worker.fetch(
 						`https://mockhttp.org/bins/${bin.id}`,
+						{ headers: auth },
 					);
 					expect(fetched.status, await textOf(fetched)).toBe(200);
 					expect(await fetched.json()).toMatchObject({
@@ -280,6 +282,7 @@ describe.skipIf(!process.env.MOCKHTTP_TEST_MONGODB_URI)(
 
 				const requests = await worker.fetch(
 					`https://mockhttp.org/bins/${bin.id}/requests`,
+					{ headers: auth },
 				);
 				expect(requests.status, await textOf(requests)).toBe(200);
 				expect(
@@ -288,10 +291,13 @@ describe.skipIf(!process.env.MOCKHTTP_TEST_MONGODB_URI)(
 
 				const missing = await worker.fetch(
 					"https://mockhttp.org/bins/does-not-exist",
+					{ headers: auth },
 				);
 				expect(missing.status, await textOf(missing)).toBe(404);
 
-				const listed = await worker.fetch("https://mockhttp.org/bins");
+				const listed = await worker.fetch("https://mockhttp.org/bins", {
+					headers: auth,
+				});
 				expect(listed.status, await textOf(listed)).toBe(200);
 				expect(
 					((await listed.json()) as { bins: Array<{ id: string }> }).bins,
@@ -301,7 +307,7 @@ describe.skipIf(!process.env.MOCKHTTP_TEST_MONGODB_URI)(
 
 				const removed = await worker.fetch(
 					`https://mockhttp.org/bins/${bin.id}`,
-					{ method: "DELETE" },
+					{ method: "DELETE", headers: auth },
 				);
 				expect(removed.status, await textOf(removed)).toBe(204);
 			}

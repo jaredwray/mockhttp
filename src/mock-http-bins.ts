@@ -1,15 +1,48 @@
-import { randomUUID } from "node:crypto";
+import {
+	createHash,
+	randomBytes,
+	randomUUID,
+	timingSafeEqual,
+} from "node:crypto";
 import Keyv from "keyv";
 import type { Bin, CapturedRequest } from "./bin-store.js";
 import { BinStoreFailure, isBinStoreFailure } from "./bin-store-diagnostics.js";
 
 /**
  * One bin and its captured requests, stored as a single Keyv value.
+ * `tokenHash` is the SHA-256 hex digest of the owner token.
+ * The store does not keep the raw token.
  */
 type BinDocument = {
 	bin: Bin;
+	tokenHash?: string;
 	requests: CapturedRequest[];
 };
+
+const OWNER_TOKEN_BYTES = 32;
+
+/** SHA-256 digest of an owner token. */
+function ownerTokenHash(token: string): Buffer {
+	return createHash("sha256").update(token).digest();
+}
+
+/**
+ * Compare a stored hash with the hash of a presented token.
+ * The compare uses `timingSafeEqual`. A missing hash does not match.
+ */
+function ownerHashMatches(
+	storedHex: string | undefined,
+	token: string,
+): boolean {
+	const presented = ownerTokenHash(token);
+	const parsed = Buffer.from(storedHex ?? "", "hex");
+	const stored = Buffer.alloc(presented.length);
+	if (parsed.length === presented.length) {
+		stored.set(parsed);
+	}
+	const equal = timingSafeEqual(stored, presented);
+	return parsed.length === presented.length && equal;
+}
 
 /**
  * Options for a {@link MockHttpBins} instance.
@@ -81,11 +114,13 @@ export class MockHttpBins {
 	}
 
 	/**
-	 * Create a new bin with the configured lifetime.
+	 * Create a bin and an owner token.
+	 * The method returns the token once. The store keeps only the SHA-256 hash.
 	 * Throws when Keyv does not store the bin.
 	 */
-	public async createBin(): Promise<Bin> {
+	public async createBin(): Promise<Bin & { token: string }> {
 		const id = this.generateId();
+		const token = randomBytes(OWNER_TOKEN_BYTES).toString("base64url");
 		const now = Date.now();
 		const bin: Bin = {
 			id,
@@ -93,8 +128,29 @@ export class MockHttpBins {
 			expiresAt: new Date(now + this._defaultTtlMs).toISOString(),
 			requestCount: 0,
 		};
-		await this.save({ bin, requests: [] });
-		return bin;
+		await this.save({
+			bin,
+			tokenHash: ownerTokenHash(token).toString("hex"),
+			requests: [],
+		});
+		return { ...bin, token };
+	}
+
+	/**
+	 * Return the bin when the owner token matches.
+	 * A missing bin and a wrong token both fail.
+	 * The result does not say which one occurred.
+	 */
+	public async authorizeOwner(
+		id: string,
+		token: string,
+	): Promise<{ ok: true; bin: Bin } | { ok: false }> {
+		const doc = await this._keyv.get(this.binKey(id));
+		const matches = ownerHashMatches(doc?.tokenHash, token);
+		if (!doc || !matches) {
+			return { ok: false };
+		}
+		return { ok: true, bin: doc.bin };
 	}
 
 	/**
@@ -113,16 +169,32 @@ export class MockHttpBins {
 	 * When the Keyv instance has an `error` listener, a failed walk returns the bins read before the error.
 	 */
 	public async listBins(): Promise<Bin[]> {
-		if (!this.canIterate()) {
-			throw new Error(
-				"MockHttpBins: the configured Keyv store does not support iteration; listBins() is unavailable",
-			);
-		}
+		this.requireIterator();
 		const bins: Bin[] = [];
 		// Keyv 6 reads `this` inside iterator(). Keep the call on the instance.
 		for await (const [key, value] of this._keyv.iterator()) {
 			if (key.startsWith(BIN_KEY_PREFIX)) {
 				bins.push((value as BinDocument).bin);
+			}
+		}
+		return bins;
+	}
+
+	/**
+	 * List the bins that match this owner token.
+	 * The method returns no other bins.
+	 * Throws when the Keyv store has no iterator.
+	 */
+	public async listBinsForToken(token: string): Promise<Bin[]> {
+		this.requireIterator();
+		const bins: Bin[] = [];
+		for await (const [key, value] of this._keyv.iterator()) {
+			if (!key.startsWith(BIN_KEY_PREFIX)) {
+				continue;
+			}
+			const doc = value as BinDocument;
+			if (ownerHashMatches(doc.tokenHash, token)) {
+				bins.push(doc.bin);
 			}
 		}
 		return bins;
@@ -193,6 +265,15 @@ export class MockHttpBins {
 	/** Keyv 6 yields nothing when the store has no iterator. Listing must fail instead. */
 	private canIterate(): boolean {
 		return typeof this._keyv.store.iterator === "function";
+	}
+
+	/** Throw when the Keyv store has no iterator. */
+	private requireIterator(): void {
+		if (!this.canIterate()) {
+			throw new Error(
+				"MockHttpBins: the configured Keyv store does not support iteration; listBins() is unavailable",
+			);
+		}
 	}
 
 	/** Returns false when the bin does not exist. */

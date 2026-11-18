@@ -61,17 +61,17 @@
 	},
 	"homepage": "https://github.com/jaredwray/mockhttp#readme",
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.15",
+		"@biomejs/biome": "^2.6.6",
 		"@swc/core": "^1.16.18",
 		"@types/html-escaper": "^3.0.4",
-		"@vitest/coverage-v8": "^5.0.3",
+		"@vitest/coverage-v8": "^5.1.0",
 		"docula": "^3.0.1",
 		"rimraf": "^6.1.4",
 		"tsdown": "^0.23.1",
 		"tsx": "^4.23.15",
 		"typescript": "7.0.2",
 		"vite": "^8.3.4",
-		"vitest": "^5.0.3",
+		"vitest": "^5.1.0",
 		"wrangler": "4.127.0"
 	},
 	"dependencies": {

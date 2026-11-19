@@ -65,7 +65,7 @@
 		"@swc/core": "^1.16.22",
 		"@types/html-escaper": "^3.0.4",
 		"@vitest/coverage-v8": "^5.1.0",
-		"docula": "^3.0.1",
+		"docula": "^3.0.2",
 		"rimraf": "^6.1.4",
 		"tsdown": "^0.23.7",
 		"tsx": "^4.23.15",

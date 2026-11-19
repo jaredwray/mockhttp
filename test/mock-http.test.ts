@@ -248,7 +248,8 @@ describe("MockHttp", () => {
 				url: "/bins",
 			});
 			expect(created.statusCode).toBe(200);
-			const id = created.json().id;
+			const id = created.json().id as string;
+			const token = created.json().token as string;
 
 			const captured = await mock.server.inject({
 				method: "POST",
@@ -260,6 +261,7 @@ describe("MockHttp", () => {
 			const list = await mock.server.inject({
 				method: "GET",
 				url: `/bins/${id}/requests`,
+				headers: { authorization: `Bearer ${token}` },
 			});
 			expect(list.json().requests).toHaveLength(1);
 			expect(list.json().requests[0].path).toBe("/webhook");

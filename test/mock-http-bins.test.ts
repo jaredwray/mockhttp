@@ -45,6 +45,15 @@ describe("MockHttpBins", () => {
 			expect((await limited.getBin(bin.id))?.requestCount).toBe(0);
 		});
 
+		it("rejects an id length that is not a positive integer", () => {
+			expect(() => new MockHttpBins({ idLength: 1.5 })).toThrow(
+				/positive integer/,
+			);
+			expect(() => new MockHttpBins({ idLength: 0 })).toThrow(
+				/positive integer/,
+			);
+		});
+
 		it("uses the Keyv instance and limits that the caller passes", () => {
 			const keyv = new Keyv();
 			const custom = new MockHttpBins({
@@ -69,11 +78,122 @@ describe("MockHttpBins", () => {
 			expect(Date.parse(bin.expiresAt)).toBeGreaterThan(
 				Date.parse(bin.createdAt),
 			);
+			expect(Buffer.from(bin.token, "base64url").length).toBeGreaterThanOrEqual(
+				32,
+			);
+			const { token, ...publicBin } = bin;
+			expect(await bins.getBin(bin.id)).toEqual(publicBin);
+			expect(await bins.authorizeOwner(bin.id, token)).toEqual({
+				ok: true,
+				bin: publicBin,
+			});
+			expect(await bins.authorizeOwner(bin.id, "other-token")).toEqual({
+				ok: false,
+			});
+			expect(await bins.authorizeOwner("missing", token)).toEqual({
+				ok: false,
+			});
 		});
 
 		it("honours the configured id length", async () => {
 			const custom = new MockHttpBins({ idLength: 8 });
 			expect((await custom.createBin()).id).toHaveLength(8);
+		});
+
+		it("does not replace a bin when the new id is already in use", async () => {
+			const first = await bins.createBin();
+			const ids = vi
+				.spyOn(bins as unknown as { generateId: () => string }, "generateId")
+				.mockReturnValueOnce(first.id)
+				.mockReturnValueOnce("freshid12ab");
+			try {
+				const second = await bins.createBin();
+				expect(second.id).toBe("freshid12ab");
+				expect((await bins.getBin(first.id))?.id).toBe(first.id);
+				expect(await bins.authorizeOwner(first.id, first.token)).toEqual({
+					ok: true,
+					bin: expect.objectContaining({ id: first.id }),
+				});
+			} finally {
+				ids.mockRestore();
+			}
+		});
+
+		it("does not let a second store overwrite a shared short id", async () => {
+			const keyv = new Keyv();
+			const first = new MockHttpBins({ keyv, idLength: 1 });
+			const second = new MockHttpBins({ keyv, idLength: 1 });
+			for (let n = 1; n < 16; n++) {
+				await keyv.set(
+					`bin:${n.toString(16)}`,
+					{
+						bin: {
+							id: n.toString(16),
+							createdAt: new Date(0).toISOString(),
+							expiresAt: new Date(60_000).toISOString(),
+							requestCount: 0,
+						},
+						tokenHash: "ab".repeat(32),
+						requests: [],
+					},
+					60_000,
+				);
+			}
+			const set = keyv.set.bind(keyv);
+			let release: (() => void) | undefined;
+			const gate = new Promise<void>((resolve) => {
+				release = resolve;
+			});
+			let writes = 0;
+			vi.spyOn(keyv, "set").mockImplementation(async (key, value, ttl) => {
+				writes += 1;
+				if (writes === 1) {
+					await gate;
+				}
+				return set(key, value, ttl);
+			});
+			const pending = Promise.allSettled([
+				first.createBin(),
+				second.createBin(),
+			]);
+			await vi.waitFor(() => expect(writes).toBe(1));
+			release?.();
+			const settled = await pending;
+			const created = settled.flatMap((result) =>
+				result.status === "fulfilled" ? [result.value] : [],
+			);
+			expect(created).toHaveLength(1);
+			expect(
+				(
+					await first.authorizeOwner(
+						created[0]?.id ?? "",
+						created[0]?.token ?? "",
+					)
+				).ok,
+			).toBe(true);
+		});
+
+		it("fills a one-character id space before it reports the space full", async () => {
+			const small = new MockHttpBins({ idLength: 1 });
+			const ids = new Set<string>();
+			for (let n = 0; n < 16; n++) {
+				ids.add((await small.createBin()).id);
+			}
+			expect(ids.size).toBe(16);
+			await expect(small.createBin()).rejects.toThrow(/unique bin id/);
+		});
+
+		it("throws when every id attempt finds an existing bin", async () => {
+			const first = await bins.createBin();
+			const ids = vi
+				.spyOn(bins as unknown as { generateId: () => string }, "generateId")
+				.mockReturnValue(first.id);
+			try {
+				await expect(bins.createBin()).rejects.toThrow(/unique bin id/);
+				expect((await bins.getBin(first.id))?.id).toBe(first.id);
+			} finally {
+				ids.mockRestore();
+			}
 		});
 
 		it("lets Keyv expire a bin whose lifetime is zero", async () => {
@@ -135,11 +255,18 @@ describe("MockHttpBins", () => {
 
 			const ids = (await bins.listBins()).map((bin) => bin.id);
 			expect(ids).toEqual([fresh.id]);
+			expect(
+				(await bins.listBinsForToken(fresh.token)).map((bin) => bin.id),
+			).toEqual([fresh.id]);
+			expect(await bins.listBinsForToken("other-token")).toEqual([]);
 		});
 
 		it("throws from listBins when the Keyv store has no iterator", async () => {
 			bins.keyv.store.iterator = undefined;
 			await expect(bins.listBins()).rejects.toThrow(
+				/does not support iteration/,
+			);
+			await expect(bins.listBinsForToken("token")).rejects.toThrow(
 				/does not support iteration/,
 			);
 		});
@@ -155,6 +282,32 @@ describe("MockHttpBins", () => {
 			expect((await namespaced.listBins()).map((entry) => entry.id)).toEqual([
 				bin.id,
 			]);
+		});
+	});
+
+	describe("owned reads and writes", () => {
+		it("does not read, clear, or delete a replacement bin for a stale token", async () => {
+			const first = await bins.createBin();
+			await bins.recordRequest(first.id, RAW);
+			const replacement = await bins.createBin();
+			const stored = await bins.keyv.get(`bin:${replacement.id}`);
+			if (!stored) {
+				throw new Error("expected stored bin");
+			}
+			await bins.keyv.set(`bin:${first.id}`, stored, 60_000);
+
+			expect(
+				await bins.readOwnedRequests(first.id, first.token),
+			).toBeUndefined();
+			expect(
+				await bins.readOwnedRequest(first.id, first.token, "missing"),
+			).toEqual({ ok: false });
+			expect(await bins.clearOwnedRequests(first.id, first.token)).toBe(false);
+			expect(await bins.deleteOwnedBin(first.id, first.token)).toBe(false);
+			expect((await bins.getBin(first.id))?.id).toBe(replacement.id);
+			expect(await bins.readOwnedRequests(first.id, replacement.token)).toEqual(
+				[],
+			);
 		});
 	});
 

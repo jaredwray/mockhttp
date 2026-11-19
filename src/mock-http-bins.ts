@@ -1,15 +1,63 @@
-import { randomUUID } from "node:crypto";
+import {
+	createHash,
+	randomBytes,
+	randomInt,
+	randomUUID,
+	timingSafeEqual,
+} from "node:crypto";
 import Keyv from "keyv";
 import type { Bin, CapturedRequest } from "./bin-store.js";
 import { BinStoreFailure, isBinStoreFailure } from "./bin-store-diagnostics.js";
 
 /**
  * One bin and its captured requests, stored as a single Keyv value.
+ * `tokenHash` is the SHA-256 hex digest of the owner token.
+ * The store does not keep the raw token.
  */
 type BinDocument = {
 	bin: Bin;
+	tokenHash?: string;
 	requests: CapturedRequest[];
 };
+
+const OWNER_TOKEN_BYTES = 32;
+const ID_ATTEMPTS = 8;
+/** Hex ids of this length or less are scanned, so a free id is not missed. */
+const SCANNED_ID_LENGTH = 4;
+
+/** Keep `idLength` as a positive integer. A fraction is rejected. */
+function normalizeIdLength(value: number | undefined): number {
+	if (value === undefined) {
+		return DEFAULT_ID_LENGTH;
+	}
+	if (!Number.isInteger(value) || value < 1) {
+		throw new Error("MockHttpBins: idLength must be a positive integer");
+	}
+	return value;
+}
+
+/** SHA-256 digest of an owner token. */
+function ownerTokenHash(token: string): Buffer {
+	return createHash("sha256").update(token).digest();
+}
+
+/**
+ * Compare a stored hash with the hash of a presented token.
+ * The compare uses `timingSafeEqual`. A missing hash does not match.
+ */
+function ownerHashMatches(
+	storedHex: string | undefined,
+	token: string,
+): boolean {
+	const presented = ownerTokenHash(token);
+	const parsed = Buffer.from(storedHex ?? "", "hex");
+	const stored = Buffer.alloc(presented.length);
+	if (parsed.length === presented.length) {
+		stored.set(parsed);
+	}
+	const equal = timingSafeEqual(stored, presented);
+	return parsed.length === presented.length && equal;
+}
 
 /**
  * Options for a {@link MockHttpBins} instance.
@@ -35,6 +83,18 @@ const DEFAULT_MAX_REQUESTS = 100;
 const DEFAULT_MAX_BODY_SIZE = 128 * 1024;
 const DEFAULT_ID_LENGTH = 12;
 const BIN_KEY_PREFIX = "bin:";
+const keyvLocks = new WeakMap<object, Map<string, Promise<void>>>();
+
+/** One lock map per Keyv object, so two bin stores that share it wait together. */
+function locksFor(keyv: object): Map<string, Promise<void>> {
+	const existing = keyvLocks.get(keyv);
+	if (existing) {
+		return existing;
+	}
+	const created = new Map<string, Promise<void>>();
+	keyvLocks.set(keyv, created);
+	return created;
+}
 
 /**
  * Stores request bins in Keyv.
@@ -46,7 +106,6 @@ export class MockHttpBins {
 	private readonly _maxRequestsPerBin: number;
 	private readonly _maxBodySize: number;
 	private readonly _idLength: number;
-	private readonly _locks = new Map<string, Promise<void>>();
 
 	constructor(options?: MockHttpBinsOptions) {
 		this._keyv = options?.keyv ?? new Keyv<BinDocument>();
@@ -57,7 +116,7 @@ export class MockHttpBins {
 			options?.maxRequestsPerBin ?? DEFAULT_MAX_REQUESTS,
 		);
 		this._maxBodySize = options?.maxBodySize ?? DEFAULT_MAX_BODY_SIZE;
-		this._idLength = options?.idLength ?? DEFAULT_ID_LENGTH;
+		this._idLength = normalizeIdLength(options?.idLength);
 	}
 
 	/** Keyv instance that stores the bins. */
@@ -81,11 +140,31 @@ export class MockHttpBins {
 	}
 
 	/**
-	 * Create a new bin with the configured lifetime.
+	 * Create a bin and an owner token.
+	 * The method returns the token once. The store keeps only the SHA-256 hash.
 	 * Throws when Keyv does not store the bin.
 	 */
-	public async createBin(): Promise<Bin> {
-		const id = this.generateId();
+	public async createBin(): Promise<Bin & { token: string }> {
+		if (this._idLength <= SCANNED_ID_LENGTH) {
+			return this.createByScan(16 ** this._idLength);
+		}
+		for (let attempt = 0; attempt < ID_ATTEMPTS; attempt++) {
+			const created = await this.tryStore(this.generateId());
+			if (created) {
+				return created;
+			}
+		}
+		throw new Error("MockHttpBins: could not allocate a unique bin id");
+	}
+
+	/**
+	 * Store a bin when the id is free.
+	 * Return undefined when the id is already in use.
+	 */
+	private async tryStore(
+		id: string,
+	): Promise<(Bin & { token: string }) | undefined> {
+		const token = randomBytes(OWNER_TOKEN_BYTES).toString("base64url");
 		const now = Date.now();
 		const bin: Bin = {
 			id,
@@ -93,8 +172,54 @@ export class MockHttpBins {
 			expiresAt: new Date(now + this._defaultTtlMs).toISOString(),
 			requestCount: 0,
 		};
-		await this.save({ bin, requests: [] });
-		return bin;
+		const stored = await this.enqueue(id, async () => {
+			const existing = await this._keyv.get(this.binKey(id));
+			if (existing) {
+				return false;
+			}
+			await this.save({
+				bin,
+				tokenHash: ownerTokenHash(token).toString("hex"),
+				requests: [],
+			});
+			return true;
+		});
+		return stored ? { ...bin, token } : undefined;
+	}
+
+	/**
+	 * Try each id in a short space.
+	 * Throw only when every id is already in use.
+	 */
+	private async createByScan(space: number): Promise<Bin & { token: string }> {
+		const start = randomInt(space);
+		for (let offset = 0; offset < space; offset++) {
+			const id = ((start + offset) % space)
+				.toString(16)
+				.padStart(this._idLength, "0");
+			const created = await this.tryStore(id);
+			if (created) {
+				return created;
+			}
+		}
+		throw new Error("MockHttpBins: could not allocate a unique bin id");
+	}
+
+	/**
+	 * Return the bin when the owner token matches.
+	 * A missing bin and a wrong token both fail.
+	 * The result does not say which one occurred.
+	 */
+	public async authorizeOwner(
+		id: string,
+		token: string,
+	): Promise<{ ok: true; bin: Bin } | { ok: false }> {
+		const doc = await this._keyv.get(this.binKey(id));
+		const matches = ownerHashMatches(doc?.tokenHash, token);
+		if (!doc || !matches) {
+			return { ok: false };
+		}
+		return { ok: true, bin: doc.bin };
 	}
 
 	/**
@@ -113,16 +238,32 @@ export class MockHttpBins {
 	 * When the Keyv instance has an `error` listener, a failed walk returns the bins read before the error.
 	 */
 	public async listBins(): Promise<Bin[]> {
-		if (!this.canIterate()) {
-			throw new Error(
-				"MockHttpBins: the configured Keyv store does not support iteration; listBins() is unavailable",
-			);
-		}
+		this.requireIterator();
 		const bins: Bin[] = [];
 		// Keyv 6 reads `this` inside iterator(). Keep the call on the instance.
 		for await (const [key, value] of this._keyv.iterator()) {
 			if (key.startsWith(BIN_KEY_PREFIX)) {
 				bins.push((value as BinDocument).bin);
+			}
+		}
+		return bins;
+	}
+
+	/**
+	 * List the bins that match this owner token.
+	 * The method returns no other bins.
+	 * Throws when the Keyv store has no iterator.
+	 */
+	public async listBinsForToken(token: string): Promise<Bin[]> {
+		this.requireIterator();
+		const bins: Bin[] = [];
+		for await (const [key, value] of this._keyv.iterator()) {
+			if (!key.startsWith(BIN_KEY_PREFIX)) {
+				continue;
+			}
+			const doc = value as BinDocument;
+			if (ownerHashMatches(doc.tokenHash, token)) {
+				bins.push(doc.bin);
 			}
 		}
 		return bins;
@@ -155,6 +296,73 @@ export class MockHttpBins {
 			this.appendRequest(binId, captured),
 		);
 		return recorded ? captured : undefined;
+	}
+
+	/**
+	 * Read captured requests when the token matches the current document.
+	 * Return undefined when the bin is missing or the token does not match.
+	 */
+	public async readOwnedRequests(
+		id: string,
+		token: string,
+	): Promise<CapturedRequest[] | undefined> {
+		const doc = await this.ownedDocument(id, token);
+		if (!doc) {
+			return undefined;
+		}
+		return [...doc.requests];
+	}
+
+	/**
+	 * Read one capture when the token matches the current document.
+	 * `ok: false` means the bin is missing or the token does not match.
+	 */
+	public async readOwnedRequest(
+		id: string,
+		token: string,
+		reqId: string,
+	): Promise<
+		{ ok: false } | { ok: true; request: CapturedRequest | undefined }
+	> {
+		const doc = await this.ownedDocument(id, token);
+		if (!doc) {
+			return { ok: false };
+		}
+		return {
+			ok: true,
+			request: doc.requests.find((request) => request.id === reqId),
+		};
+	}
+
+	/**
+	 * Clear captures when the token matches the current document.
+	 * The check and the write share one lock, so a replacement bin is not cleared.
+	 */
+	public async clearOwnedRequests(id: string, token: string): Promise<boolean> {
+		return this.enqueue(id, async () => {
+			const doc = await this.ownedDocument(id, token);
+			if (!doc) {
+				return false;
+			}
+			doc.requests = [];
+			doc.bin.requestCount = 0;
+			await this.save(doc);
+			return true;
+		});
+	}
+
+	/**
+	 * Delete a bin when the token matches the current document.
+	 * The check and the delete share one lock, so a replacement bin stays.
+	 */
+	public async deleteOwnedBin(id: string, token: string): Promise<boolean> {
+		return this.enqueue(id, async () => {
+			const doc = await this.ownedDocument(id, token);
+			if (!doc) {
+				return false;
+			}
+			return this._keyv.delete(this.binKey(id));
+		});
 	}
 
 	/** List captured requests for a bin, newest first. */
@@ -190,9 +398,30 @@ export class MockHttpBins {
 		});
 	}
 
+	/** Return the current document when the owner token matches. */
+	private async ownedDocument(
+		id: string,
+		token: string,
+	): Promise<BinDocument | undefined> {
+		const doc = await this._keyv.get(this.binKey(id));
+		if (!doc || !ownerHashMatches(doc.tokenHash, token)) {
+			return undefined;
+		}
+		return doc;
+	}
+
 	/** Keyv 6 yields nothing when the store has no iterator. Listing must fail instead. */
 	private canIterate(): boolean {
 		return typeof this._keyv.store.iterator === "function";
+	}
+
+	/** Throw when the Keyv store has no iterator. */
+	private requireIterator(): void {
+		if (!this.canIterate()) {
+			throw new Error(
+				"MockHttpBins: the configured Keyv store does not support iteration; listBins() is unavailable",
+			);
+		}
 	}
 
 	/** Returns false when the bin does not exist. */
@@ -239,19 +468,21 @@ export class MockHttpBins {
 
 	/**
 	 * Run writes for one bin in order.
+	 * Instances that share one Keyv share this lock.
 	 * A failed write does not block the next write for that bin.
 	 */
 	private enqueue<T>(id: string, fn: () => Promise<T>): Promise<T> {
-		const previous = this._locks.get(id) ?? Promise.resolve();
+		const locks = locksFor(this._keyv);
+		const previous = locks.get(id) ?? Promise.resolve();
 		const run = previous.then(fn);
 		const settled = run.then(
 			() => undefined,
 			() => undefined,
 		);
-		this._locks.set(id, settled);
+		locks.set(id, settled);
 		void settled.finally(() => {
-			if (this._locks.get(id) === settled) {
-				this._locks.delete(id);
+			if (locks.get(id) === settled) {
+				locks.delete(id);
 			}
 		});
 		return run;

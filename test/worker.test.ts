@@ -418,9 +418,11 @@ describe("worker Fastify app", () => {
 		});
 		expect(created.statusCode).toBe(200);
 		const id = created.json().id as string;
+		const token = created.json().token as string;
 		const fetched = await mockHttp.server.inject({
 			method: "GET",
 			url: `/bins/${id}`,
+			headers: { authorization: `Bearer ${token}` },
 		});
 		expect(fetched.statusCode).toBe(200);
 		expect(fetched.json()).toMatchObject({ id });
@@ -449,10 +451,10 @@ describe("worker Fastify app", () => {
 		});
 		expect(created.statusCode).toBe(200);
 		const store = KeyvMongoMock.instances[0];
-		// No request scope is active under `inject`, so the write opened its own
-		// client and closed it when it finished.
-		expect(KeyvMongoMock.instances).toHaveLength(1);
-		expect(KeyvMongoMock.disconnects).toBe(1);
+		// No request scope is active under `inject`, so each Keyv call opens a
+		// client. Create reads the id, then writes the bin.
+		expect(KeyvMongoMock.instances).toHaveLength(2);
+		expect(KeyvMongoMock.disconnects).toBe(2);
 		expect(store?.url).toBe(uri);
 		expect(store?.options).toEqual({
 			collection: "bins",
@@ -462,11 +464,13 @@ describe("worker Fastify app", () => {
 			connectTimeoutMS: 5_000,
 		});
 		const id = created.json().id as string;
+		const token = created.json().token as string;
 		expect(store?.data.size).toBeGreaterThan(0);
 
 		const fetched = await mockHttp.server.inject({
 			method: "GET",
 			url: `/bins/${id}`,
+			headers: { authorization: `Bearer ${token}` },
 		});
 		expect(fetched.statusCode).toBe(200);
 		expect(fetched.json()).toMatchObject({ id });
@@ -474,6 +478,7 @@ describe("worker Fastify app", () => {
 		const listed = await mockHttp.server.inject({
 			method: "GET",
 			url: "/bins",
+			headers: { authorization: `Bearer ${token}` },
 		});
 		expect(listed.statusCode).toBe(200);
 		expect(listed.json().bins).toEqual(
@@ -483,6 +488,7 @@ describe("worker Fastify app", () => {
 		const removed = await mockHttp.server.inject({
 			method: "DELETE",
 			url: `/bins/${id}`,
+			headers: { authorization: `Bearer ${token}` },
 		});
 		expect(removed.statusCode).toBe(204);
 		await mockHttp.bins.keyv.clear();
@@ -507,6 +513,7 @@ describe("worker Fastify app", () => {
 		// One request that creates a bin, captures into it, and reads it back:
 		// three bin operations, one client.
 		let id = "";
+		let token = "";
 		const response = await handleWorkerFetch(
 			new Request("https://mockhttp.org/bins", { method: "POST" }),
 			{ MONGODB_URI: uri },
@@ -517,6 +524,7 @@ describe("worker Fastify app", () => {
 					url: "/bins",
 				});
 				id = created.json().id as string;
+				token = created.json().token as string;
 				const captured = await mockHttp.server.inject({
 					method: "POST",
 					url: `/b/${id}`,
@@ -526,6 +534,7 @@ describe("worker Fastify app", () => {
 				const fetched = await mockHttp.server.inject({
 					method: "GET",
 					url: `/bins/${id}`,
+					headers: { authorization: `Bearer ${token}` },
 				});
 				return new Response(fetched.body, { status: fetched.statusCode });
 			},
@@ -547,6 +556,7 @@ describe("worker Fastify app", () => {
 				const fetched = await mockHttp.server.inject({
 					method: "GET",
 					url: `/bins/${id}`,
+					headers: { authorization: `Bearer ${token}` },
 				});
 				return new Response(fetched.body, { status: fetched.statusCode });
 			},
@@ -638,7 +648,7 @@ describe("worker Fastify app", () => {
 			url: "/bins",
 		});
 		expect(created.statusCode).toBe(200);
-		expect(KeyvMongoMock.instances).toHaveLength(1);
+		expect(KeyvMongoMock.instances).toHaveLength(2);
 		expect(KeyvMongoMock.instances[0]?.url).toBe(uri);
 		await mockHttp.close();
 		delete process.env.MONGODB_URI;
@@ -808,8 +818,9 @@ describe("worker Fastify app", () => {
 		expect(connected.statusCode).toBe(500);
 		expect(connected.body).toContain("Invalid connection string");
 		expect(connected.body).not.toContain("user:pass");
-		// The failed write dropped the client once. The close failure is logged, not thrown.
-		expect(KeyvMongoMock.disconnects).toBe(1);
+		// The id check closes one client. The failed write closes another.
+		// The close failure is logged, not thrown.
+		expect(KeyvMongoMock.disconnects).toBe(2);
 		const closeLog = errorLog.mock.calls
 			.map((call) => String(call[0]))
 			.join("\n");
@@ -855,10 +866,16 @@ describe("worker Fastify app", () => {
 			"iterator down mongodb://user:pass@cluster.mongodb.net/mockhttp",
 		);
 		const mockHttp = await createWorkerApp({ MONGODB_URI: uri });
-		await mockHttp.server.inject({ method: "POST", url: "/bins" });
+		const created = await mockHttp.server.inject({
+			method: "POST",
+			url: "/bins",
+		});
 		const listed = await mockHttp.server.inject({
 			method: "GET",
 			url: "/bins",
+			headers: {
+				authorization: `Bearer ${created.json().token as string}`,
+			},
 		});
 		expect(listed.statusCode).toBe(500);
 		expect(listed.body).toContain("iterator down");

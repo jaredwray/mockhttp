@@ -1,3 +1,4 @@
+import { validateHeaderName, validateHeaderValue } from "node:http";
 import type {
 	FastifyInstance,
 	FastifyReply,
@@ -6,8 +7,21 @@ import type {
 } from "fastify";
 import { escape as escapeHtml } from "html-escaper";
 
+const invalidHeaderSchema = {
+	type: "object",
+	additionalProperties: true,
+	properties: {
+		error: { type: "string" },
+		statusCode: { type: "integer" },
+		code: { type: "string" },
+		message: { type: "string" },
+	},
+	description: "A header name is not permitted.",
+};
+
 const responseHeadersSchema: FastifySchema = {
-	description: "Returns a set of response headers based on the query string.",
+	description:
+		"Copy query fields into response headers. Return HTTP 400 for a name the server does not permit.",
 	tags: ["Response Inspection"],
 	querystring: {
 		type: "object",
@@ -21,23 +35,24 @@ const responseHeadersSchema: FastifySchema = {
 			additionalProperties: true,
 			description: "Response headers as per query string parameters.",
 		},
-		400: {
-			type: "object",
-			properties: {
-				error: { type: "string" },
-			},
-			description: "A header name is not permitted.",
-		},
+		400: invalidHeaderSchema,
 	},
+};
+
+const responseHeadersPostSchema: FastifySchema = {
+	...responseHeadersSchema,
+	description:
+		"Copy query and body fields into response headers. Return HTTP 400 for a name the server does not permit.",
 };
 
 // RFC 9110 section 5.6.2 defines the characters of a header name.
 const HEADER_NAME_TOKEN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
 
-// The server owns these headers. Node.js throws in writeHead for some of them,
-// and Fastify cannot send an error response after that.
+// The server owns these headers. Node.js throws in writeHead for some of them.
 const RESERVED_HEADER_NAMES = new Set([
 	"connection",
+	"content-length",
+	"host",
 	"http2-settings",
 	"keep-alive",
 	"proxy-connection",
@@ -47,28 +62,55 @@ const RESERVED_HEADER_NAMES = new Set([
 	"upgrade",
 ]);
 
-const isPermittedHeaderName = (name: string): boolean =>
-	HEADER_NAME_TOKEN.test(name) &&
-	!RESERVED_HEADER_NAMES.has(name.toLowerCase());
+const headerError = (name: string) =>
+	`The header name "${escapeHtml(name)}" is not permitted.`;
+
+/**
+ * Return true when the name and the value can be a response header.
+ * A colon prefix fails the token rule. A reserved name is rejected.
+ */
+function isPermittedHeader(name: string, value: string): boolean {
+	if (
+		!HEADER_NAME_TOKEN.test(name) ||
+		RESERVED_HEADER_NAMES.has(name.toLowerCase())
+	) {
+		return false;
+	}
+	try {
+		validateHeaderName(name);
+		validateHeaderValue(name, value);
+		validateHeaderValue(name, escapeHtml(value));
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 const sendResponseHeaders = async (
 	reply: FastifyReply,
-	parameters: Record<string, string>,
+	sources: Array<Record<string, string>>,
 ) => {
-	const rejectedName = Object.keys(parameters).find(
-		(name) => !isPermittedHeaderName(name),
-	);
-	if (rejectedName !== undefined) {
-		return reply.code(400).send({
-			error: `The header name "${escapeHtml(rejectedName)}" is not permitted.`,
-		});
+	const entries: Array<[string, string]> = [];
+	for (const source of sources) {
+		for (const [name, value] of Object.entries(source)) {
+			entries.push([name, value]);
+		}
 	}
 
-	const cleanedResponse = Object.fromEntries(
-		Object.entries(parameters).map(([key, value]) => [key, escapeHtml(value)]),
-	);
-	reply.headers(cleanedResponse);
-	await reply.send(cleanedResponse);
+	for (const [name, value] of entries) {
+		if (!isPermittedHeader(name, value)) {
+			return reply.code(400).send({ error: headerError(name) });
+		}
+	}
+
+	// A null prototype keeps a prototype key as an own field.
+	const body: Record<string, string> = Object.create(null);
+	for (const [name, value] of entries) {
+		const escaped = escapeHtml(value);
+		reply.header(name, escaped);
+		body[name] = escaped;
+	}
+	await reply.send(body);
 };
 
 export const responseHeadersRoutes = (fastify: FastifyInstance) => {
@@ -76,18 +118,21 @@ export const responseHeadersRoutes = (fastify: FastifyInstance) => {
 		"/response-headers",
 		{ schema: responseHeadersSchema },
 		async (request: FastifyRequest, reply) => {
-			await sendResponseHeaders(reply, request.query as Record<string, string>);
+			await sendResponseHeaders(reply, [
+				request.query as Record<string, string>,
+			]);
 		},
 	);
 
 	fastify.post(
 		"/response-headers",
-		{ schema: responseHeadersSchema },
+		{ schema: responseHeadersPostSchema },
 		async (request: FastifyRequest, reply) => {
-			await sendResponseHeaders(reply, {
-				...(request.query as Record<string, string>),
-				...(request.body as Record<string, string> | undefined),
-			});
+			const body = request.body == null ? {} : request.body;
+			await sendResponseHeaders(reply, [
+				request.query as Record<string, string>,
+				body as Record<string, string>,
+			]);
 		},
 	);
 };

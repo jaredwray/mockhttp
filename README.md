@@ -454,16 +454,33 @@ response, they record everything they receive. Useful for:
 
 There are two URL prefixes:
 
-- **`/bins`** — JSON management API: create, list, inspect, delete bins
+- **`/bins`** — JSON management API. Create, read, clear, and delete need the owner token.
 - **`/b/:id`** — the capture URL. Any HTTP method, any sub-path, any body sent
   here is stored against bin `:id`
+
+## Owner token
+
+`POST /bins` returns an owner token one time. The server stores only the SHA-256 hash of that token.
+
+Send this header on every management call:
+
+`Authorization: Bearer <token>`
+
+`GET /bins` returns only the bin for that token. It does not return other bins.
+
+Send no token and the route returns HTTP 401. Send a token that does not match and the route returns HTTP 404. A missing bin returns the same HTTP 404. The response does not show that the bin exists.
+
+The capture URL `/b/:id` stays open. A caller does not send the owner token to record a request.
+
+The curl examples below use `$TOKEN`. `$TOKEN` is the owner token from `POST /bins`.
 
 ## Quick Start
 
 ```bash
-# 1. create a bin
+# 1. create a bin and keep the owner token
 curl -s -X POST http://localhost:3000/bins
-# → { "id": "abc123def456", "url": "http://localhost:3000/b/abc123def456",
+# → { "id": "abc123def456", "token": "<owner-token>",
+#     "url": "http://localhost:3000/b/abc123def456",
 #     "createdAt": "2026-05-18T12:00:00.000Z",
 #     "expiresAt": "2026-05-19T12:00:00.000Z",
 #     "requestCount": 0 }
@@ -475,21 +492,24 @@ curl -X POST "http://localhost:3000/b/abc123def456/webhook?source=stripe" \
 # → { "ok": true, "binId": "abc123def456", "requestId": "f9c2e1a40b3d" }
 
 # 3. list captured requests (newest first)
-curl http://localhost:3000/bins/abc123def456/requests
+curl -H "Authorization: Bearer <owner-token>" \
+  http://localhost:3000/bins/abc123def456/requests
 ```
 
 ## Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/bins` | Create a new bin |
-| GET | `/bins` | List all active bins |
-| GET | `/bins/:id` | Get bin metadata |
-| GET | `/bins/:id/requests` | List captured requests (newest first) |
-| GET | `/bins/:id/requests/:reqId` | Get a single captured request |
-| DELETE | `/bins/:id/requests` | Clear all captured requests in a bin |
-| DELETE | `/bins/:id` | Delete a bin |
-| ANY | `/b/:id` and `/b/:id/*` | Capture requests sent to a bin |
+| POST | `/bins` | Create a bin and return the owner token one time |
+| GET | `/bins` | List the bin for the Bearer token |
+| GET | `/bins/:id` | Read bin metadata. Needs the owner token |
+| GET | `/bins/:id/requests` | List captured requests. Needs the owner token |
+| GET | `/bins/:id/requests/:reqId` | Read one captured request. Needs the owner token |
+| DELETE | `/bins/:id/requests` | Clear captured requests. Needs the owner token |
+| DELETE | `/bins/:id` | Delete a bin. Needs the owner token |
+| ANY | `/b/:id` and `/b/:id/*` | Capture requests. No owner token |
+
+Management routes need `Authorization: Bearer <token>`. The capture routes do not.
 
 ## End-to-End Webhook Debugging Example
 
@@ -499,7 +519,9 @@ A complete walkthrough using curl:
 BASE=http://localhost:3000
 
 # Create the bin and grab its id
-ID=$(curl -s -X POST $BASE/bins | jq -r .id)
+CREATE=$(curl -s -X POST $BASE/bins)
+ID=$(echo "$CREATE" | jq -r .id)
+TOKEN=$(echo "$CREATE" | jq -r .token)
 echo "Bin URL: $BASE/b/$ID"
 
 # Simulate a Stripe webhook
@@ -515,11 +537,11 @@ curl -s -X POST "$BASE/b/$ID/github" \
   -d '{"action":"opened","number":42}'
 
 # Inspect everything that arrived
-curl -s "$BASE/bins/$ID/requests" | jq
+curl -s -H "Authorization: Bearer $TOKEN" "$BASE/bins/$ID/requests" | jq
 
 # Drill into the most recent one
-RID=$(curl -s "$BASE/bins/$ID/requests" | jq -r '.requests[0].id')
-curl -s "$BASE/bins/$ID/requests/$RID" | jq
+RID=$(curl -s -H "Authorization: Bearer $TOKEN" "$BASE/bins/$ID/requests" | jq -r '.requests[0].id')
+curl -s -H "Authorization: Bearer $TOKEN" "$BASE/bins/$ID/requests/$RID" | jq
 #   {
 #     "id": "f9c2e1a40b3d",
 #     "binId": "abc123def456",
@@ -542,8 +564,8 @@ curl -s "$BASE/bins/$ID/requests/$RID" | jq
 #   }
 
 # Clean up
-curl -s -X DELETE "$BASE/bins/$ID/requests"  # clear captures, keep the bin
-curl -s -X DELETE "$BASE/bins/$ID"           # delete the bin entirely
+curl -s -X DELETE -H "Authorization: Bearer $TOKEN" "$BASE/bins/$ID/requests"  # clear captures, keep the bin
+curl -s -X DELETE -H "Authorization: Bearer $TOKEN" "$BASE/bins/$ID"           # delete the bin entirely
 ```
 
 ## Captured Request Shape
@@ -588,7 +610,7 @@ curl -X POST "http://localhost:3000/b/$ID" \
   -H 'content-type: application/json' \
   -d '{"hello":"world"}'
 
-curl -s "http://localhost:3000/bins/$ID/requests" | jq '.requests[0] | {bodyEncoding, body}'
+curl -s -H "Authorization: Bearer $TOKEN" "http://localhost:3000/bins/$ID/requests" | jq '.requests[0] | {bodyEncoding, body}'
 # {
 #   "bodyEncoding": "utf8",
 #   "body": "{\"hello\":\"world\"}"
@@ -605,14 +627,14 @@ curl -X POST "http://localhost:3000/b/$ID/upload" \
   -H 'content-type: image/png' \
   --data-binary @logo.png
 
-curl -s "http://localhost:3000/bins/$ID/requests" | jq '.requests[0] | {bodyEncoding, bodySize}'
+curl -s -H "Authorization: Bearer $TOKEN" "http://localhost:3000/bins/$ID/requests" | jq '.requests[0] | {bodyEncoding, bodySize}'
 # {
 #   "bodyEncoding": "base64",
 #   "bodySize": 14823
 # }
 
 # Decode the body back to bytes
-curl -s "http://localhost:3000/bins/$ID/requests" \
+curl -s -H "Authorization: Bearer $TOKEN" "http://localhost:3000/bins/$ID/requests" \
   | jq -r '.requests[0].body' | base64 -d > recovered.png
 ```
 
@@ -634,7 +656,7 @@ head -c 5000 /dev/urandom | curl -X POST "http://localhost:3000/b/$ID" \
   -H 'content-type: application/octet-stream' \
   --data-binary @-
 
-curl -s "http://localhost:3000/bins/$ID/requests" | jq '.requests[0] | {bodySize, truncated, body_len: (.body | length)}'
+curl -s -H "Authorization: Bearer $TOKEN" "http://localhost:3000/bins/$ID/requests" | jq '.requests[0] | {bodySize, truncated, body_len: (.body | length)}'
 # {
 #   "bodySize": 5000,        ← original size
 #   "truncated": true,
@@ -654,11 +676,11 @@ for i in $(seq 1 105); do
 done
 
 # The bin holds the most recent 100; the first 5 are gone
-curl -s "http://localhost:3000/bins/$ID/requests" | jq '.requests | length'
+curl -s -H "Authorization: Bearer $TOKEN" "http://localhost:3000/bins/$ID/requests" | jq '.requests | length'
 # 100
 
 # Newest is at the top
-curl -s "http://localhost:3000/bins/$ID/requests" | jq '.requests[0].path'
+curl -s -H "Authorization: Bearer $TOKEN" "http://localhost:3000/bins/$ID/requests" | jq '.requests[0].path'
 # "/event/105"
 ```
 
@@ -781,7 +803,7 @@ mock.bins = new MockHttpBins({
 
 Each capture writes the full bin again. A large body or a high request limit makes that write large. Set `maxBodySize` and `maxRequestsPerBin` to limit the size. With the defaults, a full bin of binary bodies is about 17 MB.
 
-Two processes that share one Keyv can lose a capture. This occurs when both processes write the same bin at the same time.
+Two processes that share one Keyv can lose a capture. This occurs when both processes write the same bin at the same time. Keyv does not offer a conditional create, so two processes can also replace a new bin. Two instances in one process that share one Keyv wait on the same bin id.
 
 If Keyv does not store a write, the bin route returns `500` with the standard Fastify error body: `statusCode`, `error`, and `message`.
 
@@ -1128,7 +1150,9 @@ Use `mockHttp.bins` to control request bins. See [Request Bins](#request-bins) f
 
 Create a new bin with the configured TTL. Throws when Keyv does not store the bin.
 
-**Returns:** `Promise<Bin>` — `{ id, createdAt, expiresAt, requestCount }`
+**Returns:** `Promise<Bin & { token: string }>` — `{ id, createdAt, expiresAt, requestCount, token }`
+
+The `token` value is the owner secret. `POST /bins` returns it one time. Send it as `Authorization: Bearer <token>` on management routes. These in-process methods do not require the token.
 
 ### `bins.getBin(id)`
 
@@ -1138,7 +1162,7 @@ Look up a bin by id. Returns `undefined` if the bin does not exist or Keyv has e
 
 ### `bins.listBins()`
 
-List the bins that Keyv still holds.
+List the bins that Keyv still holds. `GET /bins` returns only the bin for the presented Bearer token.
 
 **Returns:** `Promise<Bin[]>`
 

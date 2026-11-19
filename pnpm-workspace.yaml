@@ -8,8 +8,6 @@ trustPolicy: no-downgrade
 
 overrides:
   "miniflare>undici": "8.12.2"
-  # miniflare@5.20261110.2-beta pins sharp@0.35.5 exactly.
-  "miniflare>sharp": "0.35.5"
 
 allowBuilds:
   '@swc/core': true

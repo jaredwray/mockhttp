@@ -173,7 +173,6 @@ settings:
 
 overrides:
   miniflare>undici: 8.12.2
-  miniflare>sharp: 0.35.5
 
 importers:
 

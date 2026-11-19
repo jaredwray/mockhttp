@@ -83,7 +83,7 @@
 		"@keyv/mongo": "^6.1.0",
 		"detect-port": "^2.1.0",
 		"fastify": "^5.12.8",
-		"hookified": "^3.0.4",
+		"hookified": "^3.1.0",
 		"html-escaper": "^3.0.3",
 		"keyv": "^6.1.0",
 		"mongodb": "^7.9.0",

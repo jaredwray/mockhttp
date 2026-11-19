@@ -94,7 +94,7 @@ jobs:
 
       - name: Install Wrangler
         # zizmor: ignore[adhoc-packages] pinned Wrangler for Cloudflare Workers deploy
-        run: sfw npm install --global wrangler@4.127.0
+        run: sfw npm install --global wrangler@4.161.0
 
       - name: Deploy to Cloudflare Workers
         env:

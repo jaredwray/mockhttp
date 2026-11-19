@@ -41,7 +41,7 @@ Assets are checked before the Worker. A file under `site/dist` (the docs site, f
 
 ## Deploy your own Worker
 
-You need a Cloudflare account and permission to deploy Workers. This repository pins Wrangler to `4.127.0`.
+You need a Cloudflare account and permission to deploy Workers. This repository pins Wrangler to `4.161.0`.
 
 Change `name` and `routes` in `wrangler.jsonc` before you deploy a fork. The route in this repo attaches the custom domain `mockhttp.org`. `workers_dev` is enabled, so a `*.workers.dev` hostname is available as well. Adjust the `RATE_LIMITER` binding if you want a different limit than 1000 requests per 60 seconds.
 
@@ -53,7 +53,7 @@ Wrangler bundles `worker/index.ts` from source, so you do not need `pnpm build` 
 pnpm install
 pnpm website:build
 pnpm prepare:worker-assets
-npx wrangler@4.127.0 deploy
+npx wrangler@4.161.0 deploy
 ```
 
 `pnpm prepare:worker-assets` copies `public/` into `site/dist` so favicon and logo files ship with the docs site. Wrangler reads `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from the environment when you are not logged in locally.
@@ -62,6 +62,6 @@ After deploy, open the workers.dev hostname or your custom domain and request `/
 
 ## Deploy from GitHub Actions
 
-[`.github/workflows/deploy-site.yaml`](https://github.com/jaredwray/mockhttp/blob/main/.github/workflows/deploy-site.yaml) deploys this Worker on the `released` event (a published release, not a prerelease) and when the workflow is started by hand. The `production` environment provides `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The deploy job installs production dependencies, downloads the built site, copies `public/` into `site/dist`, installs Wrangler `4.127.0`, and runs `wrangler deploy`.
+[`.github/workflows/deploy-site.yaml`](https://github.com/jaredwray/mockhttp/blob/main/.github/workflows/deploy-site.yaml) deploys this Worker on the `released` event (a published release, not a prerelease) and when the workflow is started by hand. The `production` environment provides `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The deploy job installs production dependencies, downloads the built site, copies `public/` into `site/dist`, installs Wrangler `4.161.0`, and runs `wrangler deploy`.
 
 That workflow does not deploy the [Wasmer](/docs/how-to-deploy/wasmer/) app. Docker image publishing is a separate workflow, documented in [Docker](/docs/how-to-deploy/docker/).

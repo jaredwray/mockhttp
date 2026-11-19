@@ -1,5 +1,5 @@
 {
-	"$schema": "https://unpkg.com/wrangler@4.127.0/config-schema.json",
+	"$schema": "https://unpkg.com/wrangler@4.161.0/config-schema.json",
 	"name": "mockhttp",
 	"main": "worker/index.ts",
 	"compatibility_date": "2026-08-27",

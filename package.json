@@ -72,7 +72,7 @@
 		"typescript": "7.0.2",
 		"vite": "^8.3.8",
 		"vitest": "^5.1.0",
-		"wrangler": "4.127.0"
+		"wrangler": "4.161.0"
 	},
 	"dependencies": {
 		"@fastify/cookie": "^11.1.5",

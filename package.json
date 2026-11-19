@@ -61,7 +61,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/mockhttp#readme",
 	"devDependencies": {
-		"@biomejs/biome": "^2.6.6",
+		"@biomejs/biome": "^2.6.7",
 		"@swc/core": "^1.16.22",
 		"@types/html-escaper": "^3.0.4",
 		"@vitest/coverage-v8": "^5.1.0",

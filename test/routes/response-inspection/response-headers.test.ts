@@ -99,6 +99,83 @@ describe("Response Headers Routes", () => {
 		expect(response.statusCode).toBe(200);
 		expect(response.json()).toEqual({ foo: "bar" });
 	});
+
+	// Node.js throws in writeHead for "trailer" on HTTP/1.1 and for the
+	// connection headers on HTTP/2. The error stops the server process.
+	const rejectedHeaderNames = [
+		"trailer",
+		"Trailer",
+		"transfer-encoding",
+		"connection",
+		"keep-alive",
+		"proxy-connection",
+		"te",
+		"upgrade",
+		"http2-settings",
+		":status",
+		"a b",
+	];
+
+	it.each(rejectedHeaderNames)(
+		"should reject the header name %j for GET requests",
+		async (name) => {
+			const response = await fastify.inject({
+				method: "GET",
+				url: "/response-headers",
+				query: { accepted: "1", [name]: "x" },
+			});
+
+			expect(response.statusCode).toBe(400);
+			expect(response.json()).toEqual({
+				error: `The header name "${name}" is not permitted.`,
+			});
+			expect(response.headers.accepted).toBeUndefined();
+			expect(response.headers[name.toLowerCase()]).not.toBe("x");
+		},
+	);
+
+	it("should reject a header name in the query string for POST requests", async () => {
+		const response = await fastify.inject({
+			method: "POST",
+			url: "/response-headers?trailer=x",
+			payload: { accepted: "1" },
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toEqual({
+			error: 'The header name "trailer" is not permitted.',
+		});
+		expect(response.headers.accepted).toBeUndefined();
+		expect(response.headers.trailer).toBeUndefined();
+	});
+
+	it("should reject a header name in the body for POST requests", async () => {
+		const response = await fastify.inject({
+			method: "POST",
+			url: "/response-headers?accepted=1",
+			payload: { trailer: "x" },
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toEqual({
+			error: 'The header name "trailer" is not permitted.',
+		});
+		expect(response.headers.accepted).toBeUndefined();
+		expect(response.headers.trailer).toBeUndefined();
+	});
+
+	it("should escape a rejected header name in the error", async () => {
+		const response = await fastify.inject({
+			method: "GET",
+			url: "/response-headers",
+			query: { "<b>": "x" },
+		});
+
+		expect(response.statusCode).toBe(400);
+		expect(response.json()).toEqual({
+			error: 'The header name "&lt;b&gt;" is not permitted.',
+		});
+	});
 });
 
 describe("Response header name guard", () => {
@@ -122,8 +199,7 @@ describe("Response header name guard", () => {
 			});
 			expect(get.statusCode, `GET ${name}`).toBe(400);
 			expect(get.json()).toEqual({
-				error: "invalid_header_name",
-				header: name,
+				error: `The header name "${name}" is not permitted.`,
 			});
 
 			const post = await mock.server.inject({
@@ -133,8 +209,7 @@ describe("Response header name guard", () => {
 			});
 			expect(post.statusCode, `POST ${name}`).toBe(400);
 			expect(post.json()).toEqual({
-				error: "invalid_header_name",
-				header: name,
+				error: `The header name "${name}" is not permitted.`,
 			});
 		}
 
@@ -144,7 +219,9 @@ describe("Response header name guard", () => {
 				url: `/response-headers?${encodeURIComponent(name)}=x`,
 			});
 			expect(response.statusCode, name).toBe(400);
-			expect(response.json().error).toBe("invalid_header_name");
+			expect(response.json().error).toBe(
+				`The header name "${name}" is not permitted.`,
+			);
 		}
 
 		const spaced = await mock.server.inject({
@@ -153,8 +230,7 @@ describe("Response header name guard", () => {
 		});
 		expect(spaced.statusCode).toBe(400);
 		expect(spaced.json()).toEqual({
-			error: "invalid_header_name",
-			header: "bad name",
+			error: 'The header name "bad name" is not permitted.',
 		});
 
 		const newline = await mock.server.inject({
@@ -162,7 +238,9 @@ describe("Response header name guard", () => {
 			url: "/response-headers?x-custom=a%0Ab",
 		});
 		expect(newline.statusCode).toBe(400);
-		expect(newline.json().error).toBe("invalid_header_name");
+		expect(newline.json().error).toBe(
+			'The header name "x-custom" is not permitted.',
+		);
 
 		const mixed = await mock.server.inject({
 			method: "GET",
@@ -212,8 +290,7 @@ describe("Response header name guard", () => {
 		});
 		expect(rejected.statusCode).toBe(400);
 		expect(rejected.json()).toEqual({
-			error: "invalid_header_name",
-			header: "trailer",
+			error: 'The header name "trailer" is not permitted.',
 		});
 		const rejectedHeaders = (
 			rejected.raw as {

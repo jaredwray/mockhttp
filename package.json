@@ -5,7 +5,7 @@
 	"type": "module",
 	"main": "dist/index.mjs",
 	"types": "dist/index.d.mts",
-	"packageManager": "pnpm@12.12.1+sha512.b7f98934c0b1f29a65f5da52f2d7f994e7faad573ffdddea1497fb4dcb5aec051590ee7c7d95a38172b4bfae103a5b83edf2ee866e11731c2cafa96063610ac5",
+	"packageManager": "pnpm@12.20.0+sha512.6ccc74997ccef4e67999788e18dbfbfa583e2a849668668db4707b6a8306662f47156e650232a985bd3ec24cf9364c1aa154d37e51ed7aac62c1cd1e3afc80c3",
 	"engines": {
 		"node": ">=22.19.0"
 	},
@@ -62,15 +62,15 @@
 	"homepage": "https://github.com/jaredwray/mockhttp#readme",
 	"devDependencies": {
 		"@biomejs/biome": "^2.6.6",
-		"@swc/core": "^1.16.18",
+		"@swc/core": "^1.16.22",
 		"@types/html-escaper": "^3.0.4",
 		"@vitest/coverage-v8": "^5.1.0",
 		"docula": "^3.0.1",
 		"rimraf": "^6.1.4",
-		"tsdown": "^0.23.1",
+		"tsdown": "^0.23.7",
 		"tsx": "^4.23.15",
 		"typescript": "7.0.2",
-		"vite": "^8.3.4",
+		"vite": "^8.3.8",
 		"vitest": "^5.1.0",
 		"wrangler": "4.127.0"
 	},

@@ -1,4 +1,9 @@
-import type { FastifyInstance, FastifyRequest, FastifySchema } from "fastify";
+import type {
+	FastifyInstance,
+	FastifyReply,
+	FastifyRequest,
+	FastifySchema,
+} from "fastify";
 import { escape as escapeHtml } from "html-escaper";
 
 const responseHeadersSchema: FastifySchema = {
@@ -16,7 +21,54 @@ const responseHeadersSchema: FastifySchema = {
 			additionalProperties: true,
 			description: "Response headers as per query string parameters.",
 		},
+		400: {
+			type: "object",
+			properties: {
+				error: { type: "string" },
+			},
+			description: "A header name is not permitted.",
+		},
 	},
+};
+
+// RFC 9110 section 5.6.2 defines the characters of a header name.
+const HEADER_NAME_TOKEN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+
+// The server owns these headers. Node.js throws in writeHead for some of them,
+// and Fastify cannot send an error response after that.
+const RESERVED_HEADER_NAMES = new Set([
+	"connection",
+	"http2-settings",
+	"keep-alive",
+	"proxy-connection",
+	"te",
+	"trailer",
+	"transfer-encoding",
+	"upgrade",
+]);
+
+const isPermittedHeaderName = (name: string): boolean =>
+	HEADER_NAME_TOKEN.test(name) &&
+	!RESERVED_HEADER_NAMES.has(name.toLowerCase());
+
+const sendResponseHeaders = async (
+	reply: FastifyReply,
+	parameters: Record<string, string>,
+) => {
+	const rejectedName = Object.keys(parameters).find(
+		(name) => !isPermittedHeaderName(name),
+	);
+	if (rejectedName !== undefined) {
+		return reply.code(400).send({
+			error: `The header name "${escapeHtml(rejectedName)}" is not permitted.`,
+		});
+	}
+
+	const cleanedResponse = Object.fromEntries(
+		Object.entries(parameters).map(([key, value]) => [key, escapeHtml(value)]),
+	);
+	reply.headers(cleanedResponse);
+	await reply.send(cleanedResponse);
 };
 
 export const responseHeadersRoutes = (fastify: FastifyInstance) => {
@@ -24,20 +76,7 @@ export const responseHeadersRoutes = (fastify: FastifyInstance) => {
 		"/response-headers",
 		{ schema: responseHeadersSchema },
 		async (request: FastifyRequest, reply) => {
-			const queryParameters = request.query as Record<string, string>;
-
-			for (const [key, value] of Object.entries(queryParameters)) {
-				reply.header(key, escapeHtml(value));
-			}
-
-			const cleanedResponse = Object.fromEntries(
-				Object.entries(queryParameters).map(([key, value]) => [
-					key,
-					escapeHtml(value),
-				]),
-			);
-
-			await reply.send(cleanedResponse);
+			await sendResponseHeaders(reply, request.query as Record<string, string>);
 		},
 	);
 
@@ -45,25 +84,10 @@ export const responseHeadersRoutes = (fastify: FastifyInstance) => {
 		"/response-headers",
 		{ schema: responseHeadersSchema },
 		async (request: FastifyRequest, reply) => {
-			const queryParameters = (request.query ?? {}) as Record<string, string>;
-			const body = (request.body ?? {}) as Record<string, string>;
-
-			for (const [key, value] of Object.entries(queryParameters)) {
-				reply.header(key, escapeHtml(value));
-			}
-
-			for (const [key, value] of Object.entries(body)) {
-				reply.header(key, escapeHtml(value));
-			}
-
-			const cleanedResponse = Object.fromEntries(
-				Object.entries({ ...queryParameters, ...body }).map(([key, value]) => [
-					key,
-					escapeHtml(value),
-				]),
-			);
-
-			await reply.send(cleanedResponse);
+			await sendResponseHeaders(reply, {
+				...(request.query as Record<string, string>),
+				...(request.body as Record<string, string> | undefined),
+			});
 		},
 	);
 };

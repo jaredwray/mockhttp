@@ -204,8 +204,8 @@ importers:
         specifier: ^5.12.8
         version: 5.12.8
       hookified:
-        specifier: ^3.0.4
-        version: 3.0.4
+        specifier: ^3.1.0
+        version: 3.1.0
       html-escaper:
         specifier: ^3.0.3
         version: 3.0.3
@@ -2227,8 +2227,8 @@ packages:
   hookified@2.2.0:
     resolution: {integrity: sha512-p/LgFzRN5FeoD3DLS6bkUapeye6E4SI6yJs6KetENd18S+FBthqYq2amJUWpt5z0EQwwHemidjY5OqJGEKm5uA==}
 
-  hookified@3.0.4:
-    resolution: {integrity: sha512-Uos6DSO6BKv4DeR1C22UosRpeUaaoQgEQ+eDCyoJRll2OGzGpZc708vL7orIvqrYLo6zhVV+pkwO9zKVCsq3PQ==}
+  hookified@3.1.0:
+    resolution: {integrity: sha512-G2jPVpzwIiV7pcYcg62ngNvY+y0iCkKmuJIaQpomFdvtY89UiSvWuPiNo1AalSr1t2op1cdz21ZThZc3DSbmvA==}
     engines: {node: '>=22.18.0'}
 
   html-dom-parser@8.0.2:
@@ -4087,7 +4087,7 @@ snapshots:
 
   '@keyv/mongo@6.1.0(keyv@6.1.0)':
     dependencies:
-      hookified: 3.0.4
+      hookified: 3.1.0
       keyv: 6.1.0
       mongodb: 7.9.0
     transitivePeerDependencies:
@@ -4788,7 +4788,7 @@ snapshots:
       '@jaredwray/fumanchu': 4.7.5
       cacheable: 2.5.0
       ejs: 6.0.1
-      hookified: 3.0.4
+      hookified: 3.1.0
       liquidjs: 10.29.0
       nunjucks: 3.2.4
       pug: 3.0.4
@@ -5044,7 +5044,7 @@ snapshots:
 
   hashery@3.0.1:
     dependencies:
-      hookified: 3.0.4
+      hookified: 3.1.0
 
   hasown@2.0.4:
     dependencies:
@@ -5170,7 +5170,7 @@ snapshots:
 
   hookified@2.2.0: {}
 
-  hookified@3.0.4: {}
+  hookified@3.1.0: {}
 
   html-dom-parser@8.0.2:
     dependencies:
@@ -5309,7 +5309,7 @@ snapshots:
 
   keyv@6.1.0:
     dependencies:
-      hookified: 3.0.4
+      hookified: 3.1.0
 
   kleur@4.1.5: {}
 
@@ -6788,7 +6788,7 @@ snapshots:
       ai: 7.0.91(zod@4.6.7)
       cacheable: 2.5.0
       hashery: 3.0.1
-      hookified: 3.0.4
+      hookified: 3.1.0
       html-react-parser: 6.1.7(react@19.2.8)
       js-yaml: 5.4.1
       react: 19.2.8
